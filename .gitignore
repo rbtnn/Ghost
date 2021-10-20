@@ -96,6 +96,7 @@ projectFilesBackup
 .dist
 .tmp
 
+/core/server/frontend/
 /core/server/data/export/exported*
 /content/tmp/*
 /content/data/*
