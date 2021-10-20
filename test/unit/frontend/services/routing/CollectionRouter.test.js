@@ -1,7 +1,6 @@
 const should = require('should');
 const sinon = require('sinon');
 const express = require('../../../../../core/shared/express')._express;
-const settingsCache = require('../../../../../core/shared/settings-cache');
 const events = require('../../../../../core/server/lib/common/events');
 const controllers = require('../../../../../core/frontend/services/routing/controllers');
 const CollectionRouter = require('../../../../../core/frontend/services/routing/CollectionRouter');
@@ -11,10 +10,12 @@ describe('UNIT - services/routing/CollectionRouter', function () {
     let req;
     let res;
     let next;
+    let routerCreatedSpy;
 
     beforeEach(function () {
         sinon.stub(events, 'emit');
         sinon.stub(events, 'on');
+        routerCreatedSpy = sinon.spy();
 
         sinon.spy(CollectionRouter.prototype, 'mountRoute');
         sinon.spy(CollectionRouter.prototype, 'mountRouter');
@@ -34,7 +35,7 @@ describe('UNIT - services/routing/CollectionRouter', function () {
 
     describe('instantiate', function () {
         it('default', function () {
-            const collectionRouter = new CollectionRouter('/', {permalink: '/:slug/'}, RESOURCE_CONFIG);
+            const collectionRouter = new CollectionRouter('/', {permalink: '/:slug/'}, RESOURCE_CONFIG, routerCreatedSpy);
 
             should.exist(collectionRouter.router);
 
@@ -43,10 +44,8 @@ describe('UNIT - services/routing/CollectionRouter', function () {
             collectionRouter.templates.should.eql([]);
             collectionRouter.getPermalinks().getValue().should.eql('/:slug/');
 
-            events.emit.calledOnce.should.be.true();
-            events.emit.calledWith('router.created', collectionRouter).should.be.true();
-
-            events.on.calledTwice.should.be.false();
+            routerCreatedSpy.calledOnce.should.be.true();
+            routerCreatedSpy.calledWith(collectionRouter).should.be.true();
 
             collectionRouter.mountRoute.callCount.should.eql(3);
             express.Router.param.callCount.should.eql(2);
@@ -69,9 +68,9 @@ describe('UNIT - services/routing/CollectionRouter', function () {
         });
 
         it('router name', function () {
-            const collectionRouter1 = new CollectionRouter('/', {permalink: '/:slug/'}, RESOURCE_CONFIG);
-            const collectionRouter2 = new CollectionRouter('/podcast/', {permalink: '/:slug/'}, RESOURCE_CONFIG);
-            const collectionRouter3 = new CollectionRouter('/hello/world/', {permalink: '/:slug/'}, RESOURCE_CONFIG);
+            const collectionRouter1 = new CollectionRouter('/', {permalink: '/:slug/'}, RESOURCE_CONFIG, routerCreatedSpy);
+            const collectionRouter2 = new CollectionRouter('/podcast/', {permalink: '/:slug/'}, RESOURCE_CONFIG, routerCreatedSpy);
+            const collectionRouter3 = new CollectionRouter('/hello/world/', {permalink: '/:slug/'}, RESOURCE_CONFIG, routerCreatedSpy);
 
             collectionRouter1.routerName.should.eql('index');
             collectionRouter2.routerName.should.eql('podcast');
@@ -83,7 +82,7 @@ describe('UNIT - services/routing/CollectionRouter', function () {
         });
 
         it('collection lives under /blog/', function () {
-            const collectionRouter = new CollectionRouter('/blog/', {permalink: '/blog/:year/:slug/'}, RESOURCE_CONFIG);
+            const collectionRouter = new CollectionRouter('/blog/', {permalink: '/blog/:year/:slug/'}, RESOURCE_CONFIG, routerCreatedSpy);
 
             should.exist(collectionRouter.router);
 
@@ -92,10 +91,8 @@ describe('UNIT - services/routing/CollectionRouter', function () {
             collectionRouter.templates.should.eql([]);
             collectionRouter.getPermalinks().getValue().should.eql('/blog/:year/:slug/');
 
-            events.emit.calledOnce.should.be.true();
-            events.emit.calledWith('router.created', collectionRouter).should.be.true();
-
-            events.on.calledTwice.should.be.false();
+            routerCreatedSpy.calledOnce.should.be.true();
+            routerCreatedSpy.calledWith(collectionRouter).should.be.true();
 
             collectionRouter.mountRoute.callCount.should.eql(3);
 
@@ -117,13 +114,13 @@ describe('UNIT - services/routing/CollectionRouter', function () {
         });
 
         it('with custom filter', function () {
-            const collectionRouter = new CollectionRouter('/', {permalink: '/:slug/', filter: 'featured:true'}, RESOURCE_CONFIG);
+            const collectionRouter = new CollectionRouter('/', {permalink: '/:slug/', filter: 'featured:true'}, RESOURCE_CONFIG, routerCreatedSpy);
 
             collectionRouter.getFilter().should.eql('featured:true');
         });
 
         it('with templates', function () {
-            const collectionRouter = new CollectionRouter('/magic/', {permalink: '/:slug/', templates: ['home', 'index']}, RESOURCE_CONFIG);
+            const collectionRouter = new CollectionRouter('/magic/', {permalink: '/:slug/', templates: ['home', 'index']}, RESOURCE_CONFIG, routerCreatedSpy);
 
             // they are getting reversed because we unshift the templates in the helper
             collectionRouter.templates.should.eql(['index', 'home']);
@@ -132,7 +129,7 @@ describe('UNIT - services/routing/CollectionRouter', function () {
 
     describe('fn: _prepareEntriesContext', function () {
         it('index collection', function () {
-            const collectionRouter = new CollectionRouter('/', {permalink: '/:slug/'}, RESOURCE_CONFIG);
+            const collectionRouter = new CollectionRouter('/', {permalink: '/:slug/'}, RESOURCE_CONFIG, routerCreatedSpy);
 
             collectionRouter._prepareEntriesContext(req, res, next);
 
@@ -160,7 +157,7 @@ describe('UNIT - services/routing/CollectionRouter', function () {
                 order: 'published asc',
                 limit: 19,
                 templates: ['home', 'index']
-            }, RESOURCE_CONFIG);
+            }, RESOURCE_CONFIG, routerCreatedSpy);
 
             collectionRouter._prepareEntriesContext(req, res, next);
 
@@ -179,64 +176,6 @@ describe('UNIT - services/routing/CollectionRouter', function () {
                 data: {},
                 order: 'published asc',
                 limit: 19
-            });
-        });
-    });
-
-    describe('timezone changes', function () {
-        describe('no dated permalink', function () {
-            it('default', function () {
-                const collectionRouter = new CollectionRouter('/magic/', {permalink: '/:slug/'}, RESOURCE_CONFIG);
-
-                sinon.stub(collectionRouter, 'emit');
-
-                events.on.args[0][1]({
-                    attributes: {value: 'America/Los_Angeles'},
-                    _previousAttributes: {value: 'Europe/London'}
-                });
-
-                collectionRouter.emit.called.should.be.false();
-            });
-
-            it('tz has not changed', function () {
-                const collectionRouter = new CollectionRouter('/magic/', {permalink: '/:slug/'}, RESOURCE_CONFIG);
-
-                sinon.stub(collectionRouter, 'emit');
-
-                events.on.args[0][1]({
-                    attributes: {value: 'America/Los_Angeles'},
-                    _previousAttributes: {value: 'America/Los_Angeles'}
-                });
-
-                collectionRouter.emit.called.should.be.false();
-            });
-        });
-
-        describe('with dated permalink', function () {
-            it('default', function () {
-                const collectionRouter = new CollectionRouter('/magic/', {permalink: '/:year/:slug/'}, RESOURCE_CONFIG);
-
-                sinon.stub(collectionRouter, 'emit');
-
-                events.on.args[0][1]({
-                    attributes: {value: 'America/Los_Angeles'},
-                    _previousAttributes: {value: 'Europe/London'}
-                });
-
-                collectionRouter.emit.calledOnce.should.be.true();
-            });
-
-            it('tz has not changed', function () {
-                const collectionRouter = new CollectionRouter('/magic/', {permalink: '/:year/:slug/'}, RESOURCE_CONFIG);
-
-                sinon.stub(collectionRouter, 'emit');
-
-                events.on.args[0][1]({
-                    attributes: {value: 'America/Los_Angeles'},
-                    _previousAttributes: {value: 'America/Los_Angeles'}
-                });
-
-                collectionRouter.emit.called.should.be.false();
             });
         });
     });

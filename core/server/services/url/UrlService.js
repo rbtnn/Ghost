@@ -9,7 +9,7 @@ const Resources = require('./Resources');
 const urlUtils = require('../../../shared/url-utils');
 
 // This listens to services.themes.api.changed, routing events, and it's own queue events
-const events = require('../../../server/lib/common/events');
+const events = require('../../lib/common/events');
 
 /**
  * The url service class holds all instances in a centralized place.
@@ -35,9 +35,6 @@ class UrlService {
      * @private
      */
     _listeners() {
-        this._onRouterAddedListener = this._onRouterAddedType.bind(this);
-        events.on('router.created', this._onRouterAddedListener);
-
         this._onThemeChangedListener = this._onThemeChangedListener.bind(this);
         events.on('services.themes.api.changed', this._onThemeChangedListener);
 
@@ -77,20 +74,21 @@ class UrlService {
     /**
      * @description Router was created, connect it with a url generator.
      * @param {ExpressRouter} router
-     * @private
      */
-    _onRouterAddedType(router) {
-        // CASE: there are router types which do not generate resource urls
-        //       e.g. static route router
-        //       we are listening on the general `router.created` event - every router throws this event
-        if (!router || !router.getPermalinks()) {
-            return;
-        }
-
-        debug('router.created');
+    onRouterAddedType(router) {
+        debug('Registering route: ', router.name);
 
         let urlGenerator = new UrlGenerator(router, this.queue, this.resources, this.urls, this.urlGenerators.length);
         this.urlGenerators.push(urlGenerator);
+    }
+
+    /**
+     * @description Router update handler - regenerates it's resources
+     * @param {ExpressRouter} router
+     */
+    onRouterUpdated(router) {
+        const generator = this.urlGenerators.find(g => g.router.id === router.id);
+        generator.regenerateResources();
     }
 
     /**
@@ -307,7 +305,6 @@ class UrlService {
         if (!options.keepListeners) {
             this._onQueueStartedListener && this.queue.removeListener('started', this._onQueueStartedListener);
             this._onQueueEndedListener && this.queue.removeListener('ended', this._onQueueEndedListener);
-            this._onRouterAddedListener && events.removeListener('router.created', this._onRouterAddedListener);
             this._onThemeChangedListener && events.removeListener('services.themes.api.changed', this._onThemeChangedListener);
         }
     }
