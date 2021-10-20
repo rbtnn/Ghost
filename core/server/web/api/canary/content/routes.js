@@ -10,6 +10,9 @@ module.exports = function apiRoutes() {
 
     const http = api.http;
 
+    // ## bsm_podcast
+    router.get('/bsm_podcast/:uuid', mw.bsmPodcast, http(api.bsmPodcast.browse));
+
     // ## Posts
     router.get('/posts', mw.authenticatePublic, http(api.postsPublic.browse));
     router.get('/posts/:id', mw.authenticatePublic, http(api.postsPublic.read));

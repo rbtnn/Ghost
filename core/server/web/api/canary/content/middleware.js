@@ -21,3 +21,9 @@ module.exports.authenticatePublic = [
     shared.middlewares.urlRedirects.adminSSLAndHostRedirect,
     shared.middlewares.prettyUrls
 ];
+
+module.exports.bsmPodcast = [
+    cors(),
+    shared.middlewares.urlRedirects.adminSSLAndHostRedirect,
+    shared.middlewares.prettyUrls
+];

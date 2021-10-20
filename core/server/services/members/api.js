@@ -46,14 +46,14 @@ function createApiInstance(config) {
                 const siteTitle = settingsCache.get('title');
                 switch (type) {
                 case 'subscribe':
-                    return `📫 Confirm your subscription to ${siteTitle}`;
+                    return `backspace.fm: 購読の確認`;
                 case 'signup':
-                    return `🙌 Complete your sign up to ${siteTitle}!`;
+                    return `backspace.fm: サイトアップ`;
                 case 'updateEmail':
-                    return `📫 Confirm your email update for ${siteTitle}!`;
+                    return `backspace.fm: メール認証`;
                 case 'signin':
                 default:
-                    return `🔑 Secure sign in link for ${siteTitle}`;
+                    return `backspace.fm: サイトイン`;
                 }
             },
             getText(url, type, email) {
