@@ -70,7 +70,6 @@ function createApiInstance(config) {
                         For your security, the link will expire in 24 hours time.
 
                         All the best!
-                        The team at ${siteTitle}
 
                         ---
 
@@ -81,14 +80,13 @@ function createApiInstance(config) {
                     return `
                         Hey there!
 
-                        Thanks for signing up for ${siteTitle} — use this link to complete the sign up process and be automatically signed in:
+                        Tap the link below to complete the signup process for ${siteTitle}, and be automatically signed in:
 
                         ${url}
 
                         For your security, the link will expire in 24 hours time.
 
                         See you soon!
-                        The team at ${siteTitle}
 
                         ---
 
@@ -122,7 +120,6 @@ function createApiInstance(config) {
                         For your security, the link will expire in 24 hours time.
 
                         See you soon!
-                        The team at ${siteTitle}
 
                         ---
 
@@ -181,6 +178,7 @@ function createApiInstance(config) {
             MemberProductEvent: models.MemberProductEvent,
             MemberAnalyticEvent: models.MemberAnalyticEvent,
             OfferRedemption: models.OfferRedemption,
+            Offer: models.Offer,
             StripeProduct: models.StripeProduct,
             StripePrice: models.StripePrice,
             Product: models.Product,
