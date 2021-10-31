@@ -1296,14 +1296,6 @@
     "@tryghost/root-utils" "^0.3.4"
     debug "^4.3.1"
 
-"@tryghost/debug@^0.1.8":
-  version "0.1.8"
-  resolved "https://registry.yarnpkg.com/@tryghost/debug/-/debug-0.1.8.tgz#3d97634a14fd463a9a590a335e79f4d1f2cf189c"
-  integrity sha512-vgf3n+wcaOxmuA7RhBl8YiG4cRQcHg7+XkQfJ2OzgUVm8XZaPlCfT5IagBT1q0sNThdS8fglFKFupcHZO5ZggA==
-  dependencies:
-    "@tryghost/root-utils" "^0.3.6"
-    debug "^4.3.1"
-
 "@tryghost/domain-events@^0.1.3":
   version "0.1.3"
   resolved "https://registry.yarnpkg.com/@tryghost/domain-events/-/domain-events-0.1.3.tgz#e01f6c4c7662bf834d1bccb3fe887f1a6f84bdef"
@@ -1316,18 +1308,18 @@
   dependencies:
     "@elastic/elasticsearch" "^7.10.0"
 
-"@tryghost/elasticsearch@^0.1.2":
-  version "0.1.2"
-  resolved "https://registry.yarnpkg.com/@tryghost/elasticsearch/-/elasticsearch-0.1.2.tgz#a2d25ddbd7a9ab7a1a42b32cad7147fc264aaf9d"
-  integrity sha512-jAGTegtGc0P80uOpzHQpA9XERDanKxAkD4rSOhX3gOOqGsTVYIDUERssTrID7dFcCWXSMShOVdYPqDirtAQfVQ==
-  dependencies:
-    "@elastic/elasticsearch" "^7.15.0"
-    "@tryghost/debug" "^0.1.8"
-
 "@tryghost/elasticsearch@^0.1.3":
   version "0.1.3"
   resolved "https://registry.yarnpkg.com/@tryghost/elasticsearch/-/elasticsearch-0.1.3.tgz#fa3a37a5f9966393dc036c2d2bbe72429af59c72"
   integrity sha512-c/hcjo5xaJKkVCWHBcAnstYxRL4xERnjr2731eA7AAMQZq/OLfss9On3LX6XZ837ru9YBad5OImT9ihvawrvZg==
+  dependencies:
+    "@elastic/elasticsearch" "^7.15.0"
+    "@tryghost/debug" "^0.1.9"
+
+"@tryghost/elasticsearch@^1.0.0":
+  version "1.0.0"
+  resolved "https://registry.yarnpkg.com/@tryghost/elasticsearch/-/elasticsearch-1.0.0.tgz#287167c7dd130fa36eb25347a6e1297d12c2de05"
+  integrity sha512-iVPQoNzkHUGCc8opEGmqRewwBOtf4c3XqxFyf6Bdpr3RLIwdKoa35HMKbtz5GJUAQ14Q++zJcWCxiKSHUexW+w==
   dependencies:
     "@elastic/elasticsearch" "^7.15.0"
     "@tryghost/debug" "^0.1.9"
@@ -1478,18 +1470,18 @@
     lodash "^4.17.21"
     luxon "^1.26.0"
 
-"@tryghost/logging@0.2.2", "@tryghost/logging@^0.2.0":
-  version "0.2.2"
-  resolved "https://registry.yarnpkg.com/@tryghost/logging/-/logging-0.2.2.tgz#b77ff4a203073d5172520379754da7c098bc266d"
-  integrity sha512-phZxz9dWQicLeOnMRxx0yXkhXO2rqey2o+BdIPerS06bnRQBrwHXUKyG1M/aRTojCx5ptbTKT3DmhY0ZPtDRCA==
+"@tryghost/logging@1.0.0", "@tryghost/logging@^1.0.0":
+  version "1.0.0"
+  resolved "https://registry.yarnpkg.com/@tryghost/logging/-/logging-1.0.0.tgz#c68b06929a3ad84a903fc4f368c2000026ae4f68"
+  integrity sha512-0xoVtyf2FMo+ZzQjjVsKjav9d81iNG6zHpHOtHQBu4SDtEbBUPJ3T6xe3+kz3JRM/xZS3jzUZT71Pps1RM3UVg==
   dependencies:
     "@tryghost/bunyan-rotating-filestream" "^0.0.7"
-    "@tryghost/elasticsearch" "^0.1.2"
-    "@tryghost/pretty-stream" "^0.1.1"
-    "@tryghost/root-utils" "^0.3.6"
+    "@tryghost/elasticsearch" "^1.0.0"
+    "@tryghost/pretty-stream" "^0.1.2"
+    "@tryghost/root-utils" "^0.3.7"
     bunyan "^1.8.15"
     bunyan-loggly "^1.4.2"
-    fs-extra "^9.1.0"
+    fs-extra "^10.0.0"
     gelf-stream "^1.1.1"
     json-stringify-safe "^5.0.1"
     lodash "^4.17.21"
@@ -1671,15 +1663,6 @@
     chalk "^4.1.0"
     sywac "^1.3.0"
 
-"@tryghost/pretty-stream@^0.1.1":
-  version "0.1.1"
-  resolved "https://registry.yarnpkg.com/@tryghost/pretty-stream/-/pretty-stream-0.1.1.tgz#8be18694f3081424c0efb832fa32469d5891356b"
-  integrity sha512-+FYAVozEmYctaVI+4xEhRnpep0xSnGL7FiT91dffxTLx2QVQxI1qADD9Dfb9EzIYIDRttUKoZJ4xzrVpnzD0WQ==
-  dependencies:
-    lodash "^4.17.21"
-    moment "^2.29.1"
-    prettyjson "^1.2.1"
-
 "@tryghost/pretty-stream@^0.1.2":
   version "0.1.2"
   resolved "https://registry.yarnpkg.com/@tryghost/pretty-stream/-/pretty-stream-0.1.2.tgz#30cb24c95ccb8f4af2c5b7095e77947ac7941198"
@@ -1731,14 +1714,6 @@
     caller "^1.0.1"
     find-root "^1.1.0"
 
-"@tryghost/root-utils@^0.3.6":
-  version "0.3.6"
-  resolved "https://registry.yarnpkg.com/@tryghost/root-utils/-/root-utils-0.3.6.tgz#424b012fe94f68f4c137a510a4929639e5281a3a"
-  integrity sha512-fLUKGxpiwBQ8UCpxkbhT4L4VBRha8nU1YMOnWVdRa2LQPtaZ8+Nvs9LsAm86p1Qjsdr6x5PrNwpy5HBHEdNsYA==
-  dependencies:
-    caller "^1.0.1"
-    find-root "^1.1.0"
-
 "@tryghost/security@0.2.13":
   version "0.2.13"
   resolved "https://registry.yarnpkg.com/@tryghost/security/-/security-0.2.13.tgz#dcf190fbd5a7af6a604a12387d4ed430cc021d76"
@@ -1782,14 +1757,14 @@
   dependencies:
     lodash.template "^4.5.0"
 
-"@tryghost/update-check-service@0.2.4":
-  version "0.2.4"
-  resolved "https://registry.yarnpkg.com/@tryghost/update-check-service/-/update-check-service-0.2.4.tgz#d335cf6ef073df015c74dfca5a3fb39e1742b364"
-  integrity sha512-Gpr5Ah8vfn2cZBz25jBhNYD7VdsB/4WGff0SWPTgiCvw2kJigjbJyru2FrPavNb6iFYh3bwr0PpI/SjAzX/+GQ==
+"@tryghost/update-check-service@0.2.5":
+  version "0.2.5"
+  resolved "https://registry.yarnpkg.com/@tryghost/update-check-service/-/update-check-service-0.2.5.tgz#cde8b28ed54cece4024cdcad91ceaffdc2d4693a"
+  integrity sha512-LdvSpwtnsOX/il5v5VAoFFQc8V1mUsVqKptW/mvsvfMAEVnVtNHXAL0hZry/TDeq+4IU0h2UX+/Ziul8Wf4amA==
   dependencies:
     "@tryghost/debug" "^0.1.5"
     "@tryghost/errors" "^0.2.11"
-    "@tryghost/logging" "^0.2.0"
+    "@tryghost/logging" "^1.0.0"
     "@tryghost/tpl" "^0.1.3"
     bluebird "^3.7.2"
     lodash "^4.17.21"
