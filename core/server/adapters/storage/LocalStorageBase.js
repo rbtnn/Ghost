@@ -1,12 +1,11 @@
-// # Local File System Image Storage module
-// The (default) module for storing images, using the local file system
+// # Local File Base Storage module
+// The (default) module for storing files using the local file system
 const serveStatic = require('../../../shared/express').static;
 
 const fs = require('fs-extra');
 const path = require('path');
 const Promise = require('bluebird');
 const moment = require('moment');
-const config = require('../../../shared/config');
 const tpl = require('@tryghost/tpl');
 const logging = require('@tryghost/logging');
 const errors = require('@tryghost/errors');
@@ -15,68 +14,57 @@ const urlUtils = require('../../../shared/url-utils');
 const StorageBase = require('ghost-storage-base');
 
 const messages = {
-    imageNotFound: 'Image not found',
-    imageNotFoundWithRef: 'Image not found: {img}',
-    cannotReadImage: 'Could not read image: {img}'
+    notFound: 'File not found',
+    notFoundWithRef: 'File not found: {file}',
+    cannotRead: 'Could not read file: {file}'
 };
 
-class LocalFileStore extends StorageBase {
-    constructor() {
+class LocalStorageBase extends StorageBase {
+    /**
+     *
+     * @param {Object} options
+     * @param {String} options.storagePath
+     * @param {String} [options.staticFileURLPrefix]
+     * @param {Object} [options.errorMessages]
+     * @param {String} [options.errorMessages.notFound]
+     * @param {String} [options.errorMessages.notFoundWithRef]
+     * @param {String} [options.errorMessages.cannotRead]
+     */
+    constructor({storagePath, staticFileURLPrefix, errorMessages}) {
         super();
 
-        this.storagePath = config.getContentPath('images');
+        this.storagePath = storagePath;
+        this.staticFileURLPrefix = staticFileURLPrefix;
+        this.errorMessages = errorMessages || messages;
     }
 
     /**
-     * Saves a buffer in the targetPath
-     * @param {Buffer} buffer is an instance of Buffer
-     * @param {String} targetPath path to which the buffer should be written
-     * @returns {Promise<String>} a URL to retrieve the data
-     */
-    async saveRaw(buffer, targetPath) {
-        const storagePath = path.join(this.storagePath, targetPath);
-        const targetDir = path.dirname(storagePath);
-
-        await fs.mkdirs(targetDir);
-        await fs.writeFile(storagePath, buffer);
-
-        // For local file system storage can use relative path so add a slash
-        const fullUrl = (
-            urlUtils.urlJoin('/', urlUtils.getSubdir(),
-                urlUtils.STATIC_IMAGE_URL_PREFIX,
-                targetPath)
-        ).replace(new RegExp(`\\${path.sep}`, 'g'), '/');
-
-        return fullUrl;
-    }
-
-    /**
-     * Saves the image to storage (the file system)
-     * - image is the express image object
-     * - returns a promise which ultimately returns the full url to the uploaded image
+     * Saves the file to storage (the file system)
+     * - returns a promise which ultimately returns the full url to the uploaded file
      *
-     * @param {StorageBase.Image} image
+     * @param {StorageBase.Image} file
      * @param {String} targetDir
      * @returns {Promise<String>}
      */
-    async save(image, targetDir) {
+    async save(file, targetDir) {
         let targetFilename;
 
         // NOTE: the base implementation of `getTargetDir` returns the format this.storagePath/YYYY/MM
         targetDir = targetDir || this.getTargetDir(this.storagePath);
 
-        const filename = await this.getUniqueFileName(image, targetDir);
+        const filename = await this.getUniqueFileName(file, targetDir);
 
         targetFilename = filename;
         await fs.mkdirs(targetDir);
 
-        await fs.copy(image.path, targetFilename);
+        await fs.copy(file.path, targetFilename);
 
         // The src for the image must be in URI format, not a file system path, which in Windows uses \
         // For local file system storage can use relative path so add a slash
         const fullUrl = (
-            urlUtils.urlJoin('/', urlUtils.getSubdir(),
-                urlUtils.STATIC_IMAGE_URL_PREFIX,
+            urlUtils.urlJoin('/',
+                urlUtils.getSubdir(),
+                this.staticFileURLPrefix,
                 path.relative(this.storagePath, targetFilename))
         ).replace(new RegExp(`\\${path.sep}`, 'g'), '/');
 
@@ -103,7 +91,7 @@ class LocalFileStore extends StorageBase {
      * @returns {serveStaticContent}
      */
     serve() {
-        const {storagePath} = this;
+        const {storagePath, errorMessages} = this;
 
         return function serveStaticContent(req, res, next) {
             const startedAtMoment = moment();
@@ -114,14 +102,14 @@ class LocalFileStore extends StorageBase {
                     maxAge: constants.ONE_YEAR_MS,
                     fallthrough: false,
                     onEnd: () => {
-                        logging.info('LocalFileStorage.serve', req.path, moment().diff(startedAtMoment, 'ms') + 'ms');
+                        logging.info('LocalStorageBase.serve', req.path, moment().diff(startedAtMoment, 'ms') + 'ms');
                     }
                 }
             )(req, res, (err) => {
                 if (err) {
                     if (err.statusCode === 404) {
                         return next(new errors.NotFoundError({
-                            message: tpl(messages.imageNotFound),
+                            message: tpl(errorMessages.notFound),
                             code: 'STATIC_FILE_NOT_FOUND',
                             property: err.path
                         }));
@@ -152,8 +140,8 @@ class LocalFileStore extends StorageBase {
     }
 
     /**
-     * Reads bytes from disk for a target image
-     * - path of target image (without content path!)
+     * Reads bytes from disk for a target file
+     * - path of target file (without content path!)
      *
      * @param options
      */
@@ -171,7 +159,7 @@ class LocalFileStore extends StorageBase {
                     if (err.code === 'ENOENT' || err.code === 'ENOTDIR') {
                         return reject(new errors.NotFoundError({
                             err: err,
-                            message: tpl(messages.imageNotFoundWithRef, {img: options.path})
+                            message: tpl(this.errorMessages.notFoundWithRef, {file: options.path})
                         }));
                     }
 
@@ -185,7 +173,7 @@ class LocalFileStore extends StorageBase {
 
                     return reject(new errors.GhostError({
                         err: err,
-                        message: tpl(messages.cannotReadImage, {img: options.path})
+                        message: tpl(this.errorMessages.cannotRead, {file: options.path})
                     }));
                 }
 
@@ -195,4 +183,4 @@ class LocalFileStore extends StorageBase {
     }
 }
 
-module.exports = LocalFileStore;
+module.exports = LocalStorageBase;

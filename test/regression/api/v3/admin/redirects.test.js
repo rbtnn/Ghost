@@ -3,30 +3,16 @@ const supertest = require('supertest');
 const fs = require('fs-extra');
 const Promise = require('bluebird');
 const path = require('path');
+const os = require('os');
+const uuid = require('uuid');
 const testUtils = require('../../../../utils');
 const localUtils = require('./utils');
-const configUtils = require('../../../../utils/configUtils');
 const config = require('../../../../../core/shared/config');
 
 const ghost = testUtils.startGhost;
 let request;
 
 describe('Redirects API', function () {
-    let originalContentPath;
-
-    before(function () {
-        return ghost({redirectsFile: true})
-            .then(() => {
-                request = supertest.agent(config.get('url'));
-            })
-            .then(() => {
-                return localUtils.doAuth(request);
-            })
-            .then(() => {
-                originalContentPath = configUtils.config.get('paths:contentPath');
-            });
-    });
-
     const startGhost = (options) => {
         return ghost(options)
             .then(() => {
@@ -37,114 +23,23 @@ describe('Redirects API', function () {
             });
     };
 
-    describe('Download', function () {
-        afterEach(function () {
-            configUtils.config.set('paths:contentPath', originalContentPath);
-        });
-
-        it('file does not exist', function () {
-            // Just set any content folder, which does not contain a redirects file.
-            configUtils.set('paths:contentPath', path.join(__dirname, '../../../utils/fixtures/data'));
-
-            return request
-                .get(localUtils.API.getApiQuery('redirects/json/'))
-                .set('Origin', config.get('url'))
-                .expect(200)
-                .then((res) => {
-                    res.headers['content-disposition'].should.eql('Attachment; filename="redirects.json"');
-                    res.headers['content-type'].should.eql('application/json; charset=utf-8');
-                    should.not.exist(res.headers['x-cache-invalidate']);
-
-                    should.deepEqual(res.body, []);
-                });
-        });
-
-        it('file exists', function () {
-            return request
-                .get(localUtils.API.getApiQuery('redirects/json/'))
-                .set('Origin', config.get('url'))
-                .expect('Content-Type', /application\/json/)
-                .expect('Content-Disposition', 'Attachment; filename="redirects.json"')
-                .expect(200)
-                .then((res) => {
-                    res.headers['content-disposition'].should.eql('Attachment; filename="redirects.json"');
-                    res.headers['content-type'].should.eql('application/json; charset=utf-8');
-
-                    should.deepEqual(res.body, require('../../../../utils/fixtures/data/redirects.json'));
-                });
-        });
-    });
-
-    describe('Download yaml', function () {
-        beforeEach(function () {
-            testUtils.setupRedirectsFile(config.get('paths:contentPath'), '.yaml');
-        });
-
-        afterEach(function () {
-            testUtils.setupRedirectsFile(config.get('paths:contentPath'), '.json');
-        });
-
-        // 'file does not exist' doesn't have to be tested because it always returns .json file.
-        // TODO: But it should be written when the default redirects file type is changed to yaml.
-
-        it('file exists', function () {
-            return request
-                .get(localUtils.API.getApiQuery('redirects/json/'))
-                .set('Origin', config.get('url'))
-                .expect('Content-Type', /text\/html/)
-                .expect('Content-Disposition', 'Attachment; filename="redirects.yaml"')
-                .expect(200)
-                .then((res) => {
-                    res.headers['content-disposition'].should.eql('Attachment; filename="redirects.yaml"');
-                    res.headers['content-type'].should.eql('text/html; charset=utf-8');
-
-                    should.deepEqual(res.text, fs.readFileSync(path.join(__dirname, '../../../../utils/fixtures/data/redirects.yaml')).toString());
-                });
-        });
-    });
-
     describe('Upload', function () {
-        describe('Error cases', function () {
-            it('syntax error', function () {
-                fs.writeFileSync(path.join(config.get('paths:contentPath'), 'redirects.json'), 'something');
-
-                return request
-                    .post(localUtils.API.getApiQuery('redirects/json/'))
-                    .set('Origin', config.get('url'))
-                    .attach('redirects', path.join(config.get('paths:contentPath'), 'redirects.json'))
-                    .expect('Content-Type', /application\/json/)
-                    .expect(400);
-            });
-
-            it('wrong format: no array', function () {
-                fs.writeFileSync(path.join(config.get('paths:contentPath'), 'redirects.json'), JSON.stringify({
-                    from: 'c',
-                    to: 'd'
-                }));
-
-                return request
-                    .post(localUtils.API.getApiQuery('redirects/json/'))
-                    .set('Origin', config.get('url'))
-                    .attach('redirects', path.join(config.get('paths:contentPath'), 'redirects.json'))
-                    .expect('Content-Type', /application\/json/)
-                    .expect(422);
-            });
-
-            it('wrong format: no from/to', function () {
-                fs.writeFileSync(path.join(config.get('paths:contentPath'), 'redirects.json'), JSON.stringify([{to: 'd'}]));
-
-                return request
-                    .post(localUtils.API.getApiQuery('redirects/json/'))
-                    .set('Origin', config.get('url'))
-                    .attach('redirects', path.join(config.get('paths:contentPath'), 'redirects.json'))
-                    .expect('Content-Type', /application\/json/)
-                    .expect(422);
-            });
-        });
-
         describe('Ensure re-registering redirects works', function () {
             it('no redirects file exists', function () {
-                return startGhost({redirectsFile: false, forceStart: true})
+                // NOTE: this dance with content folder is here because we need to test a clean state
+                //       which is currently impossible with available test utils.
+                //       The test itself should be broken down into a unit test for the
+                //       Redirects service class.
+                const contentFolder = path.join(os.tmpdir(), uuid.v4(), 'ghost-test');
+                fs.ensureDirSync(contentFolder);
+                fs.ensureDirSync(path.join(contentFolder, 'data'));
+                fs.writeFileSync(path.join(contentFolder, 'data', 'redirects.json'), JSON.stringify([]));
+
+                return startGhost({
+                    redirectsFile: false,
+                    contentFolder: contentFolder,
+                    forceStart: true
+                })
                     .then(() => {
                         return request
                             .get('/my-old-blog-post/')
@@ -176,7 +71,7 @@ describe('Redirects API', function () {
                         response.headers.location.should.eql('/l');
 
                         const dataFiles = fs.readdirSync(config.getContentPath('data'));
-                        dataFiles.join(',').match(/(redirects)/g).length.should.eql(1);
+                        dataFiles.join(',').match(/(redirects)/g).length.should.eql(2);
                     });
             });
 
@@ -255,19 +150,6 @@ describe('Redirects API', function () {
     });
 
     describe('Upload yaml', function () {
-        describe('Error cases', function () {
-            it('syntax error', function () {
-                fs.writeFileSync(path.join(config.get('paths:contentPath'), 'redirects.yaml'), 'x');
-
-                return request
-                    .post(localUtils.API.getApiQuery('redirects/json/'))
-                    .set('Origin', config.get('url'))
-                    .attach('redirects', path.join(config.get('paths:contentPath'), 'redirects.yaml'))
-                    .expect('Content-Type', /application\/json/)
-                    .expect(400);
-            });
-        });
-
         describe('Ensure re-registering redirects works', function () {
             it('no redirects file exists', function () {
                 return startGhost({redirectsFile: false, forceStart: true})
