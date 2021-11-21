@@ -16,7 +16,8 @@ module.exports = function getConfigProperties() {
         stripeDirect: config.get('stripeDirect'),
         mailgunIsConfigured: config.get('bulkEmail') && config.get('bulkEmail').mailgun,
         emailAnalytics: config.get('emailAnalytics'),
-        hostSettings: config.get('hostSettings')
+        hostSettings: config.get('hostSettings'),
+        tenor: config.get('tenor')
     };
 
     const billingUrl = config.get('hostSettings:billing:enabled') ? config.get('hostSettings:billing:url') : '';

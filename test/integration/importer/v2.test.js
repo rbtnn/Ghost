@@ -24,7 +24,7 @@ const knex = db.knex;
 const {exportedBodyV2} = require('../../utils/fixtures/export/body-generator');
 
 // Tests in here do an import for each test
-describe('Integration: Importer', function () {
+describe('Importer', function () {
     before(testUtils.teardownDb);
 
     beforeEach(function () {
@@ -37,7 +37,7 @@ describe('Integration: Importer', function () {
     });
 
     describe('Empty database (except of owner user), general tests', function () {
-        beforeEach(testUtils.setup('roles', 'owner', 'settings'));
+        beforeEach(testUtils.setup('roles', 'owner'));
 
         it('ensure return structure', function () {
             let exportData;
@@ -898,6 +898,10 @@ describe('Integration: Importer', function () {
         });
 
         it('imports settings fields deprecated in v2 and removed in v3: slack hook, permalinks', function () {
+            // Prevent events from being fired to avoid side-effects
+            const EventRegistry = require('../../../core/server/lib/common/events');
+            sinon.stub(EventRegistry, 'emit').callsFake(() => {});
+
             const exportData = exportedBodyV2().db[0];
 
             exportData.data.settings[0] = testUtils.DataGenerator.forKnex.createSetting({
@@ -1222,7 +1226,7 @@ describe('Integration: Importer', function () {
 
     describe('Existing database', function () {
         beforeEach(testUtils.teardownDb);
-        beforeEach(testUtils.setup('users:roles', 'posts', 'settings'));
+        beforeEach(testUtils.setup('users:roles', 'posts'));
 
         it('import multiple users, tags, posts', function () {
             const exportData = exportedBodyV2().db[0];

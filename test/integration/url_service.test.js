@@ -30,90 +30,13 @@ describe('Integration: services/url/UrlService', function () {
     });
 
     describe('functional: default routing set', function () {
-        let router1;
-        let router2;
-        let router3;
-        let router4;
-
         before(function (done) {
             urlService = new UrlService();
 
-            router1 = {
-                getFilter: sinon.stub(),
-                addListener: sinon.stub(),
-                getResourceType: sinon.stub(),
-                getPermalinks: sinon.stub(),
-                toString: function () {
-                    return 'post collection';
-                }
-            };
-
-            router2 = {
-                getFilter: sinon.stub(),
-                addListener: sinon.stub(),
-                getResourceType: sinon.stub(),
-                getPermalinks: sinon.stub(),
-                toString: function () {
-                    return 'authors';
-                }
-            };
-
-            router3 = {
-                getFilter: sinon.stub(),
-                addListener: sinon.stub(),
-                getResourceType: sinon.stub(),
-                getPermalinks: sinon.stub(),
-                toString: function () {
-                    return 'tags';
-                }
-            };
-
-            router4 = {
-                getFilter: sinon.stub(),
-                addListener: sinon.stub(),
-                getResourceType: sinon.stub(),
-                getPermalinks: sinon.stub(),
-                toString: function () {
-                    return 'static pages';
-                }
-            };
-
-            router1.getFilter.returns('featured:false');
-            router1.getResourceType.returns('posts');
-            router1.getPermalinks.returns({
-                getValue: function () {
-                    return '/:slug/';
-                }
-            });
-
-            router2.getFilter.returns(false);
-            router2.getResourceType.returns('authors');
-            router2.getPermalinks.returns({
-                getValue: function () {
-                    return '/author/:slug/';
-                }
-            });
-
-            router3.getFilter.returns(false);
-            router3.getResourceType.returns('tags');
-            router3.getPermalinks.returns({
-                getValue: function () {
-                    return '/tag/:slug/';
-                }
-            });
-
-            router4.getFilter.returns(false);
-            router4.getResourceType.returns('pages');
-            router4.getPermalinks.returns({
-                getValue: function () {
-                    return '/:slug/';
-                }
-            });
-
-            urlService.onRouterAddedType(router1);
-            urlService.onRouterAddedType(router2);
-            urlService.onRouterAddedType(router3);
-            urlService.onRouterAddedType(router4);
+            urlService.onRouterAddedType('unique-id-1', 'featured:false', 'posts', '/:slug/');
+            urlService.onRouterAddedType('unique-id-2', null, 'authors', '/author/:slug/');
+            urlService.onRouterAddedType('unique-id-3', null, 'tags', '/tag/:slug/');
+            urlService.onRouterAddedType('unique-id-4', null, 'pages', '/:slug/');
 
             // We can't use our url service utils here, because this is a local copy of the urlService, not the singletone
             urlService.init();
@@ -134,29 +57,21 @@ describe('Integration: services/url/UrlService', function () {
             urlService.reset();
         });
 
-        it('check url generators', function () {
-            urlService.urlGenerators.length.should.eql(4);
-            urlService.urlGenerators[0].router.should.eql(router1);
-            urlService.urlGenerators[1].router.should.eql(router2);
-            urlService.urlGenerators[2].router.should.eql(router3);
-            urlService.urlGenerators[3].router.should.eql(router4);
-        });
-
         it('getUrl', function () {
             urlService.urlGenerators.forEach(function (generator) {
-                if (generator.router.getResourceType() === 'posts') {
+                if (generator.resourceType === 'posts') {
                     generator.getUrls().length.should.eql(2);
                 }
 
-                if (generator.router.getResourceType() === 'pages') {
+                if (generator.resourceType === 'pages') {
                     generator.getUrls().length.should.eql(1);
                 }
 
-                if (generator.router.getResourceType() === 'tags') {
+                if (generator.resourceType === 'tags') {
                     generator.getUrls().length.should.eql(3);
                 }
 
-                if (generator.router.getResourceType() === 'authors') {
+                if (generator.resourceType === 'authors') {
                     generator.getUrls().length.should.eql(2);
                 }
             });
@@ -208,12 +123,6 @@ describe('Integration: services/url/UrlService', function () {
     });
 
     describe('functional: extended/modified routing set', function () {
-        let router1;
-        let router2;
-        let router3;
-        let router4;
-        let router5;
-
         before(testUtils.teardownDb);
         before(testUtils.setup('users:roles', 'posts'));
 
@@ -224,101 +133,11 @@ describe('Integration: services/url/UrlService', function () {
         before(function (done) {
             urlService = new UrlService();
 
-            router1 = {
-                getFilter: sinon.stub(),
-                addListener: sinon.stub(),
-                getResourceType: sinon.stub(),
-                getPermalinks: sinon.stub(),
-                toString: function () {
-                    return 'post collection 1';
-                }
-            };
-
-            router2 = {
-                getFilter: sinon.stub(),
-                addListener: sinon.stub(),
-                getResourceType: sinon.stub(),
-                getPermalinks: sinon.stub(),
-                toString: function () {
-                    return 'post collection 2';
-                }
-            };
-
-            router3 = {
-                getFilter: sinon.stub(),
-                addListener: sinon.stub(),
-                getResourceType: sinon.stub(),
-                getPermalinks: sinon.stub(),
-                toString: function () {
-                    return 'authors';
-                }
-            };
-
-            router4 = {
-                getFilter: sinon.stub(),
-                addListener: sinon.stub(),
-                getResourceType: sinon.stub(),
-                getPermalinks: sinon.stub(),
-                toString: function () {
-                    return 'tags';
-                }
-            };
-
-            router5 = {
-                getFilter: sinon.stub(),
-                addListener: sinon.stub(),
-                getResourceType: sinon.stub(),
-                getPermalinks: sinon.stub(),
-                toString: function () {
-                    return 'static pages';
-                }
-            };
-
-            router1.getFilter.returns('featured:true');
-            router1.getResourceType.returns('posts');
-            router1.getPermalinks.returns({
-                getValue: function () {
-                    return '/podcast/:slug/';
-                }
-            });
-
-            router2.getFilter.returns('page:false');
-            router2.getResourceType.returns('posts');
-            router2.getPermalinks.returns({
-                getValue: function () {
-                    return '/collection/:year/:slug/';
-                }
-            });
-
-            router3.getFilter.returns(false);
-            router3.getResourceType.returns('authors');
-            router3.getPermalinks.returns({
-                getValue: function () {
-                    return '/persons/:slug/';
-                }
-            });
-
-            router4.getFilter.returns(false);
-            router4.getResourceType.returns('tags');
-            router4.getPermalinks.returns({
-                getValue: function () {
-                    return '/category/:slug/';
-                }
-            });
-
-            router5.getFilter.returns(false);
-            router5.getResourceType.returns('pages');
-            router5.getPermalinks.returns({
-                getValue: function () {
-                    return '/:slug/';
-                }
-            });
-
-            urlService.onRouterAddedType(router1);
-            urlService.onRouterAddedType(router2);
-            urlService.onRouterAddedType(router3);
-            urlService.onRouterAddedType(router4);
-            urlService.onRouterAddedType(router5);
+            urlService.onRouterAddedType('unique-id-1', 'featured:true', 'posts', '/podcast/:slug/');
+            urlService.onRouterAddedType('unique-id-2', 'page:false', 'posts', '/collection/:year/:slug/');
+            urlService.onRouterAddedType('unique-id-3', null, 'authors', '/persons/:slug/');
+            urlService.onRouterAddedType('unique-id-4', null, 'tags', '/category/:slug/');
+            urlService.onRouterAddedType('unique-id-5', null, 'pages', '/:slug/');
 
             // We can't use our url service utils here, because this is a local copy of the urlService, not the singletone
             urlService.init();
@@ -339,34 +158,25 @@ describe('Integration: services/url/UrlService', function () {
             urlService.resetGenerators();
         });
 
-        it('check url generators', function () {
-            urlService.urlGenerators.length.should.eql(5);
-            urlService.urlGenerators[0].router.should.eql(router1);
-            urlService.urlGenerators[1].router.should.eql(router2);
-            urlService.urlGenerators[2].router.should.eql(router3);
-            urlService.urlGenerators[3].router.should.eql(router4);
-            urlService.urlGenerators[4].router.should.eql(router5);
-        });
-
         it('getUrl', function () {
             urlService.urlGenerators.forEach(function (generator) {
-                if (generator.router.getResourceType() === 'posts' && generator.router.getFilter() === 'page:false') {
+                if (generator.resourceType === 'posts' && generator.filter === 'page:false') {
                     generator.getUrls().length.should.eql(2);
                 }
 
-                if (generator.router.getResourceType() === 'posts' && generator.router.getFilter() === 'featured:true') {
+                if (generator.resourceType === 'posts' && generator.filter === 'featured:true') {
                     generator.getUrls().length.should.eql(2);
                 }
 
-                if (generator.router.getResourceType() === 'pages') {
+                if (generator.resourceType === 'pages') {
                     generator.getUrls().length.should.eql(1);
                 }
 
-                if (generator.router.getResourceType() === 'tags') {
+                if (generator.resourceType === 'tags') {
                     generator.getUrls().length.should.eql(3);
                 }
 
-                if (generator.router.getResourceType() === 'authors') {
+                if (generator.resourceType === 'authors') {
                     generator.getUrls().length.should.eql(2);
                 }
             });
@@ -411,112 +221,16 @@ describe('Integration: services/url/UrlService', function () {
     });
 
     describe('functional: subdirectory', function () {
-        let router1;
-        let router2;
-        let router3;
-        let router4;
-        let router5;
-
         beforeEach(function (done) {
             configUtils.set('url', 'http://localhost:2388/blog/');
 
             urlService = new UrlService();
 
-            router1 = {
-                getFilter: sinon.stub(),
-                addListener: sinon.stub(),
-                getResourceType: sinon.stub(),
-                getPermalinks: sinon.stub(),
-                toString: function () {
-                    return 'post collection 1';
-                }
-            };
-
-            router2 = {
-                getFilter: sinon.stub(),
-                addListener: sinon.stub(),
-                getResourceType: sinon.stub(),
-                getPermalinks: sinon.stub(),
-                toString: function () {
-                    return 'post collection 2';
-                }
-            };
-
-            router3 = {
-                getFilter: sinon.stub(),
-                addListener: sinon.stub(),
-                getResourceType: sinon.stub(),
-                getPermalinks: sinon.stub(),
-                toString: function () {
-                    return 'authors';
-                }
-            };
-
-            router4 = {
-                getFilter: sinon.stub(),
-                addListener: sinon.stub(),
-                getResourceType: sinon.stub(),
-                getPermalinks: sinon.stub(),
-                toString: function () {
-                    return 'tags';
-                }
-            };
-
-            router5 = {
-                getFilter: sinon.stub(),
-                addListener: sinon.stub(),
-                getResourceType: sinon.stub(),
-                getPermalinks: sinon.stub(),
-                toString: function () {
-                    return 'static pages';
-                }
-            };
-
-            router1.getFilter.returns('featured:false');
-            router1.getResourceType.returns('posts');
-            router1.getPermalinks.returns({
-                getValue: function () {
-                    return '/collection/:year/:slug/';
-                }
-            });
-
-            router2.getFilter.returns('featured:true');
-            router2.getResourceType.returns('posts');
-            router2.getPermalinks.returns({
-                getValue: function () {
-                    return '/podcast/:slug/';
-                }
-            });
-
-            router3.getFilter.returns(false);
-            router3.getResourceType.returns('authors');
-            router3.getPermalinks.returns({
-                getValue: function () {
-                    return '/persons/:slug/';
-                }
-            });
-
-            router4.getFilter.returns(false);
-            router4.getResourceType.returns('tags');
-            router4.getPermalinks.returns({
-                getValue: function () {
-                    return '/category/:slug/';
-                }
-            });
-
-            router5.getFilter.returns(false);
-            router5.getResourceType.returns('pages');
-            router5.getPermalinks.returns({
-                getValue: function () {
-                    return '/:slug/';
-                }
-            });
-
-            urlService.onRouterAddedType(router1);
-            urlService.onRouterAddedType(router2);
-            urlService.onRouterAddedType(router3);
-            urlService.onRouterAddedType(router4);
-            urlService.onRouterAddedType(router5);
+            urlService.onRouterAddedType('unique-id-1', 'featured:false', 'posts', '/collection/:year/:slug/');
+            urlService.onRouterAddedType('unique-id-2', 'featured:true', 'posts', '/podcast/:slug/');
+            urlService.onRouterAddedType('unique-id-3', null, 'authors', '/persons/:slug/');
+            urlService.onRouterAddedType('unique-id-4', null, 'tags', '/category/:slug/');
+            urlService.onRouterAddedType('unique-id-5', null, 'pages', '/:slug/');
 
             // We can't use our url service utils here, because this is a local copy of the urlService, not the singletone
             urlService.init();
@@ -538,34 +252,25 @@ describe('Integration: services/url/UrlService', function () {
             configUtils.restore();
         });
 
-        it('check url generators', function () {
-            urlService.urlGenerators.length.should.eql(5);
-            urlService.urlGenerators[0].router.should.eql(router1);
-            urlService.urlGenerators[1].router.should.eql(router2);
-            urlService.urlGenerators[2].router.should.eql(router3);
-            urlService.urlGenerators[3].router.should.eql(router4);
-            urlService.urlGenerators[4].router.should.eql(router5);
-        });
-
         it('getUrl', function () {
             urlService.urlGenerators.forEach(function (generator) {
-                if (generator.router.getResourceType() === 'posts' && generator.router.getFilter() === 'featured:false') {
+                if (generator.resourceType === 'posts' && generator.filter === 'featured:false') {
                     generator.getUrls().length.should.eql(2);
                 }
 
-                if (generator.router.getResourceType() === 'posts' && generator.router.getFilter() === 'featured:true') {
+                if (generator.resourceType === 'posts' && generator.filter === 'featured:true') {
                     generator.getUrls().length.should.eql(2);
                 }
 
-                if (generator.router.getResourceType() === 'pages') {
+                if (generator.resourceType === 'pages') {
                     generator.getUrls().length.should.eql(1);
                 }
 
-                if (generator.router.getResourceType() === 'tags') {
+                if (generator.resourceType === 'tags') {
                     generator.getUrls().length.should.eql(3);
                 }
 
-                if (generator.router.getResourceType() === 'authors') {
+                if (generator.resourceType === 'authors') {
                     generator.getUrls().length.should.eql(2);
                 }
             });

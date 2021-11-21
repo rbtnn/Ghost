@@ -17,10 +17,16 @@ const events = require('../../lib/common/events');
  * Each entry in the database will be represented by a "Resource" (see /Resource.js).
  */
 class Resources {
-    constructor(queue) {
+    /**
+     *
+     * @param {Object} options
+     * @param {Object} [options.resources] - resources to initialize with instead of fetching them from the database
+     * @param {Object} [options.queue] - instance of the Queue class
+     */
+    constructor({resources = {}, queue} = {}) {
         this.queue = queue;
         this.resourcesConfig = [];
-        this.data = {};
+        this.data = resources;
 
         this.listeners = [];
     }
@@ -43,31 +49,27 @@ class Resources {
     }
 
     /**
-     * @description Initialise the resource config. We currently fetch the data straight via the the model layer,
+     * @description Initialize the resource config. We currently fetch the data straight via the the model layer,
      *              but because Ghost supports multiple API versions, we have to ensure we load the correct data.
      *
      * @TODO: https://github.com/TryGhost/Ghost/issues/10360
-     * @private
      */
-    _initResourceConfig() {
+    initResourceConfig() {
         if (!_.isEmpty(this.resourcesConfig)) {
             return;
         }
 
         const bridge = require('../../../bridge');
-        this.resourcesAPIVersion = bridge.getFrontendApiVersion();
-        this.resourcesConfig = require(`./configs/${this.resourcesAPIVersion}`);
+        const resourcesAPIVersion = bridge.getFrontendApiVersion();
+        this.resourcesConfig = require(`./configs/${resourcesAPIVersion}`);
     }
 
     /**
-     * @description Helper function to initialise data fetching. Each resource type needs to register resource/model
-     *              events to get notified about updates/deletions/inserts.
+     * @description Helper function to initialize data fetching.
      */
     fetchResources() {
         const ops = [];
         debug('fetchResources');
-
-        this._initResourceConfig();
 
         // NOTE: Iterate over all resource types (posts, users etc..) and call `_fetch`.
         _.each(this.resourcesConfig, (resourceConfig) => {
@@ -75,6 +77,29 @@ class Resources {
 
             // NOTE: We are querying knex directly, because the Bookshelf ORM overhead is too slow.
             ops.push(this._fetch(resourceConfig));
+        });
+
+        return Promise.all(ops);
+    }
+
+    /**
+     * @description Each resource type needs to register resource/model events to get notified
+     * about updates/deletions/inserts.
+     *
+     * For example for a "tag" resource type with following configuration:
+     *  events: {
+     *     add: 'tag.added',
+     *     update: ['tag.edited', 'tag.attached', 'tag.detached'],
+     *     remove: 'tag.deleted'
+     *  }
+     * there would be:
+     * 1 event listener connected to  "_onResourceAdded"   handler and it's 'tag.added' event
+     * 3 event listeners connected to "_onResourceUpdated" handler and it's 'tag.edited', 'tag.attached', 'tag.detached' events
+     * 1 event listener connected to  "_onResourceRemoved" handler and it's 'tag.deleted' event
+     */
+    initEvenListeners() {
+        _.each(this.resourcesConfig, (resourceConfig) => {
+            this.data[resourceConfig.type] = [];
 
             this._listenOn(resourceConfig.events.add, (model) => {
                 return this._onResourceAdded.bind(this)(resourceConfig.type, model);
@@ -96,16 +121,6 @@ class Resources {
                 return this._onResourceRemoved.bind(this)(resourceConfig.type, model);
             });
         });
-
-        Promise.all(ops)
-            .then(() => {
-                // CASE: all resources are fetched, start the queue
-                this.queue.start({
-                    event: 'init',
-                    tolerance: 100,
-                    requiredSubscriberCount: 1
-                });
-            });
     }
 
     /**
@@ -430,8 +445,6 @@ class Resources {
      * @description Reset this class instance.
      *
      * Is triggered if you switch API versions.
-     *
-     * @param {Object} options
      */
     reset() {
         _.each(this.listeners, (obj) => {
