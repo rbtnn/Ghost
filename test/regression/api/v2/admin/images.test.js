@@ -6,20 +6,14 @@ const localUtils = require('./utils');
 const testUtils = require('../../../../utils');
 const config = require('../../../../../core/shared/config');
 
-const ghost = testUtils.startGhost;
-
 describe('Images API', function () {
     const images = [];
     let request;
 
-    before(function () {
-        return ghost()
-            .then(function () {
-                request = supertest.agent(config.get('url'));
-            })
-            .then(function () {
-                return localUtils.doAuth(request);
-            });
+    before(async function () {
+        await localUtils.startGhost();
+        request = supertest.agent(config.get('url'));
+        await localUtils.doAuth(request);
     });
 
     after(function () {

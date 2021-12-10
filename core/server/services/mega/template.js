@@ -148,13 +148,22 @@ dd {
 }
 
 blockquote {
-    margin: 2em 0;
+    margin: 2em 0 2em 0;
     padding: 0 25px 0 25px;
     border-left: ${templateSettings.accentColor || '#15212A'} 2px solid;
     font-size: 17px;
     font-weight: 500;
     line-height: 1.6em;
     letter-spacing: -0.2px;
+}
+
+blockquote.kg-blockquote-alt {
+    border-left: 0 none;
+    padding: 0 50px 0 50px;
+    text-align: center;
+    font-size: 1.2em;
+    font-style: italic;
+    color: #999999;
 }
 
 blockquote p {
@@ -557,52 +566,66 @@ figure blockquote p {
     padding-bottom: 4px;
 }
 
-.kg-card-callout {
+.kg-twitter-link {
+    display: block; 
+    text-decoration: none !important; 
+    color: #15212A !important; 
+    font-family: inherit !important;
+    font-size: 15px;
+    padding: 8px;
+    line-height: 1.3em;
+}
+
+.kg-callout-card {
     display: flex;
     margin: 0 0 1.5em 0;
     padding: 20px 28px;
     border-radius: 3px;
 }
 
-.kg-card-callout p {
+.kg-callout-card p {
     margin: 0
 }
 
-.kg-card-callout-grey {
+.kg-callout-card-grey {
     background: #eef0f2;
 }
 
-.kg-card-callout-white {
+.kg-callout-card-white {
     background: #fff;
     box-shadow: inset 0 0 0 1px #dddedf;
 }
 
-.kg-card-callout-blue {
+.kg-callout-card-blue {
     background: #E9F6FB;
 }
 
-.kg-card-callout-green {
+.kg-callout-card-green {
     background: #E8F8EA;
 }
 
-.kg-card-callout-yellow {
+.kg-callout-card-yellow {
     background: #FCF4E3;
 }
 
-.kg-card-callout-red {
+.kg-callout-card-red {
     background: #FBE9E9;
 }
 
-.kg-card-callout-pink {
+.kg-callout-card-pink {
     background: #FCEEF8;
 }
 
-.kg-card-callout-purple {
+.kg-callout-card-purple {
     background: #F2EDFC;
 }
 
-.kg-card-callout-accent {
-    background: var(--ghost-accent-color);
+.kg-callout-card-accent {
+    background: ${templateSettings.accentColor || '#15212A'};
+    color: #fff;
+}
+
+.kg-callout-card-accent a {
     color: #fff;
 }
 
@@ -884,10 +907,17 @@ figure blockquote p {
     }
 
     table.body blockquote {
-        font-size: 17px !important;
-        line-height: 1.6em !important;
-        margin-bottom: 0 !important;
-        padding-left: 15px !important;
+        font-size: 17px;
+        line-height: 1.6em;
+        margin-bottom: 0;
+        padding-left: 15px;
+    }
+
+    table.body blockquote.kg-blockquote-alt {
+        border-left: 0 none !important;
+        margin: 0 0 2.5em 0 !important;
+        padding: 0 50px 0 50px !important;
+        font-size: 1.2em;
     }
 
     table.body blockquote + * {

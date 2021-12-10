@@ -6,20 +6,15 @@ const testUtils = require('../../../../utils');
 const configUtils = require('../../../../utils/configUtils');
 const config = require('../../../../../core/shared/config');
 
-const ghost = testUtils.startGhost;
 let request;
 
 describe('api/v3/content/tags', function () {
     const validKey = localUtils.getValidKey();
 
-    before(function () {
-        return ghost()
-            .then(function () {
-                request = supertest.agent(config.get('url'));
-            })
-            .then(function () {
-                return testUtils.initFixtures('users:no-owner', 'user:inactive', 'posts', 'tags:extra', 'api_keys');
-            });
+    before(async function () {
+        await localUtils.startGhost();
+        request = supertest.agent(config.get('url'));
+        await testUtils.initFixtures('users:no-owner', 'user:inactive', 'posts', 'tags:extra', 'api_keys');
     });
 
     afterEach(function () {

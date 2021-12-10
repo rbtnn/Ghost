@@ -35,13 +35,18 @@ class NFTOEmbedProvider {
         if (!match) {
             return null;
         }
+        const headers = {};
+        if (this.dependencies.config.apiKey) {
+            headers['X-API-KEY'] = this.dependencies.config.apiKey;
+        }
         const result = await externalRequest(`https://api.opensea.io/api/v1/asset/${transaction}/${asset}/?format=json`, {
-            json: true
+            json: true,
+            headers
         });
         return {
             version: '1.0',
             type: 'nft',
-            title: result.body.name,
+            title: result.body.name ? result.body.name : `#${result.body.token_id}`,
             author_name: result.body.creator.user.username,
             author_url: `https://opensea.io/${result.body.creator.user.username}`,
             provider_name: 'OpenSea',

@@ -6,25 +6,15 @@ const testUtils = require('../../../../utils');
 const config = require('../../../../../core/shared/config');
 const models = require('../../../../../core/server/models');
 const localUtils = require('./utils');
-const ghost = testUtils.startGhost;
-let request;
 
 describe('Posts API (v2)', function () {
-    let ghostServer;
+    let request;
     let ownerCookie;
 
-    before(function () {
-        return ghost()
-            .then(function (_ghostServer) {
-                ghostServer = _ghostServer;
-                request = supertest.agent(config.get('url'));
-            })
-            .then(function () {
-                return localUtils.doAuth(request, 'users:extra', 'posts');
-            })
-            .then(function (cookie) {
-                ownerCookie = cookie;
-            });
+    before(async function () {
+        await localUtils.startGhost();
+        request = supertest.agent(config.get('url'));
+        ownerCookie = await localUtils.doAuth(request, 'users:extra', 'posts');
     });
 
     describe('Browse', function () {

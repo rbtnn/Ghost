@@ -11,7 +11,6 @@ const events = require('../../../../../core/server/lib/common/events');
 const testUtils = require('../../../../utils');
 const localUtils = require('./utils');
 
-let ghost = testUtils.startGhost;
 let request;
 let eventsTriggered;
 
@@ -19,18 +18,12 @@ describe('DB API (canary)', function () {
     let backupKey;
     let schedulerKey;
 
-    before(function () {
-        return ghost()
-            .then(() => {
-                request = supertest.agent(config.get('url'));
-            })
-            .then(() => {
-                return localUtils.doAuth(request);
-            })
-            .then(() => {
-                backupKey = _.find(testUtils.getExistingData().apiKeys, {integration: {slug: 'ghost-backup'}});
-                schedulerKey = _.find(testUtils.getExistingData().apiKeys, {integration: {slug: 'ghost-scheduler'}});
-            });
+    before(async function () {
+        await localUtils.startGhost();
+        request = supertest.agent(config.get('url'));
+        await localUtils.doAuth(request);
+        backupKey = _.find(testUtils.getExistingData().apiKeys, {integration: {slug: 'ghost-backup'}});
+        schedulerKey = _.find(testUtils.getExistingData().apiKeys, {integration: {slug: 'ghost-scheduler'}});
     });
 
     beforeEach(function () {

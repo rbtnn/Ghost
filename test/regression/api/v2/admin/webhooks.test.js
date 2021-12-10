@@ -4,14 +4,12 @@ const testUtils = require('../../../../utils');
 const config = require('../../../../../core/shared/config');
 const localUtils = require('./utils');
 
-const ghost = testUtils.startGhost;
-
 describe('Webhooks API (v2)', function () {
     let request;
     const API_VERSION = 'v2';
 
     before(async function () {
-        await ghost();
+        await localUtils.startGhost();
 
         request = supertest.agent(config.get('url'));
 

@@ -18,8 +18,11 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-node@v2
+        env:
+          FORCE_COLOR: 0
         with:
           node-version: '14.17.0'
+          cache: yarn
       - run: yarn
       - run: yarn lint
       - uses: daniellockyer/action-slack-build@master
@@ -49,8 +52,11 @@ jobs:
           fetch-depth: 0
           submodules: true
       - uses: actions/setup-node@v2
+        env:
+          FORCE_COLOR: 0
         with:
           node-version: '14.17.0'
+          cache: yarn
 
       - name: Shutdown MySQL
         run: sudo service mysql stop
@@ -90,8 +96,11 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-node@v2
+        env:
+          FORCE_COLOR: 0
         with:
           node-version: ${{ matrix.node }}
+          cache: yarn
 
       - name: Shutdown MySQL
         run: sudo service mysql stop
@@ -126,14 +135,14 @@ jobs:
           echo "test_time=$(($endTime-$startTime))" >> $GITHUB_ENV
 
       - name: Tailscale Action
-        if: github.event_name == 'push' || startsWith(github.head_ref, 'TryGhost/')
+        if: (github.event_name == 'push' && github.repository_owner == 'TryGhost') || (github.event_name == 'pull_request' && startsWith(github.head_ref, 'TryGhost/'))
         uses: tailscale/github-action@v1
         with:
           authkey: ${{ secrets.TAILSCALE_AUTHKEY }}
 
       # Report time taken to metrics service
       - uses: sam-lord/action-trigger-metric@main
-        if: github.event_name == 'push' || startsWith(github.head_ref, 'TryGhost/')
+        if: (github.event_name == 'push' && github.repository_owner == 'TryGhost') || (github.event_name == 'pull_request' && startsWith(github.head_ref, 'TryGhost/'))
         with:
           metricName: 'test-time'
           metricValue: ${{ env.test_time }}
@@ -174,8 +183,11 @@ jobs:
           fetch-depth: 0
           submodules: true
       - uses: actions/setup-node@v2
+        env:
+          FORCE_COLOR: 0
         with:
           node-version: '12.22.1'
+          cache: yarn
       - run: npm install -g ghost-cli@latest
       - run: npm --no-git-tag-version version minor # We need to artificially bump the minor version to get migrations to run
 

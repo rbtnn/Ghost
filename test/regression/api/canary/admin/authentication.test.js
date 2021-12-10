@@ -9,19 +9,13 @@ const settingsCache = require('../../../../../core/shared/settings-cache');
 const config = require('../../../../../core/shared/config/index');
 const mailService = require('../../../../../core/server/services/mail/index');
 
-let ghost = testUtils.startGhost;
 let request;
 
 describe('Authentication API v3', function () {
-    let ghostServer;
-
     describe('Blog setup', function () {
-        before(function () {
-            return ghost({forceStart: true})
-                .then(function (_ghostServer) {
-                    ghostServer = _ghostServer;
-                    request = supertest.agent(config.get('url'));
-                });
+        before(async function () {
+            await localUtils.startGhost({forceStart: true});
+            request = supertest.agent(config.get('url'));
         });
 
         beforeEach(function () {
@@ -139,9 +133,8 @@ describe('Authentication API v3', function () {
 
     describe('Invitation', function () {
         before(function () {
-            return ghost()
-                .then(function (_ghostServer) {
-                    ghostServer = _ghostServer;
+            return localUtils.startGhost()
+                .then(function () {
                     request = supertest.agent(config.get('url'));
 
                     // simulates blog setup (initialises the owner)
@@ -235,7 +228,7 @@ describe('Authentication API v3', function () {
         const user = testUtils.DataGenerator.forModel.users[0];
 
         before(function () {
-            return ghost({forceStart: true})
+            return localUtils.startGhost({forceStart: true})
                 .then(() => {
                     request = supertest.agent(config.get('url'));
                 })
@@ -401,7 +394,7 @@ describe('Authentication API v3', function () {
     describe('Reset all passwords', function () {
         let sendEmail;
         before(function () {
-            return ghost({forceStart: true})
+            return localUtils.startGhost({forceStart: true})
                 .then(() => {
                     request = supertest.agent(config.get('url'));
                 })

@@ -112,7 +112,7 @@ module.exports = function setupSiteApp(options = {}) {
 
     // Card assets
     siteApp.use(mw.servePublicFile('built', 'public/cards.min.css', 'text/css', constants.ONE_YEAR_S));
-    siteApp.use(mw.servePublicFile('built', 'public/cards.min.js', 'text/js', constants.ONE_YEAR_S));
+    siteApp.use(mw.servePublicFile('built', 'public/cards.min.js', 'application/javascript', constants.ONE_YEAR_S));
 
     // Serve blog images using the storage adapter
     siteApp.use(STATIC_IMAGE_URL_PREFIX, mw.handleImageSizes, storage.getStorage('images').serve());
@@ -153,9 +153,6 @@ module.exports = function setupSiteApp(options = {}) {
     sitemapHandler(siteApp);
     debug('Internal apps done');
 
-    // send 503 error page in case of maintenance
-    siteApp.use(shared.middleware.maintenance);
-
     // Add in all trailing slashes & remove uppercase
     // must happen AFTER asset loading and BEFORE routing
     siteApp.use(shared.middleware.prettyUrls);
@@ -187,7 +184,7 @@ module.exports = function setupSiteApp(options = {}) {
             app.setupErrorHandling(siteApp);
         }
     });
-    siteApp.use(shared.middleware.errorHandler.handleThemeResponse);
+    siteApp.use(mw.errorHandler.handleThemeResponse);
 
     debug('Site setup end');
 

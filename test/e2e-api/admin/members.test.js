@@ -16,7 +16,7 @@ describe('Members API', function () {
     });
 
     before(async function () {
-        await testUtils.startGhost();
+        await localUtils.startGhost();
         request = supertest.agent(config.get('url'));
         await localUtils.doAuth(request, 'members', 'members:emails');
         sinon.stub(labs, 'isSet').withArgs('members').returns(true);
@@ -365,7 +365,7 @@ describe('Members API', function () {
         should.exist(importedMember2);
         importedMember2.name.should.equal('test');
         should(importedMember2.note).equal('test note');
-        importedMember2.subscribed.should.equal(false);
+        importedMember2.subscribed.should.equal(true);
         importedMember2.labels.length.should.equal(2);
         testUtils.API.isISO8601(importedMember2.created_at).should.be.true();
         importedMember2.created_at.should.equal('1991-10-02T20:30:31.000Z');

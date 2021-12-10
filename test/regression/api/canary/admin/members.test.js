@@ -9,8 +9,6 @@ const config = require('../../../../../core/shared/config');
 const labs = require('../../../../../core/shared/labs');
 const mailService = require('../../../../../core/server/services/mail');
 
-const ghost = testUtils.startGhost;
-
 let request;
 
 describe('Members API (canary)', function () {
@@ -22,14 +20,10 @@ describe('Members API (canary)', function () {
         sinon.restore();
     });
 
-    before(function () {
-        return ghost()
-            .then(function () {
-                request = supertest.agent(config.get('url'));
-            })
-            .then(function () {
-                return localUtils.doAuth(request, 'members');
-            });
+    before(async function () {
+        await localUtils.startGhost();
+        request = supertest.agent(config.get('url'));
+        await localUtils.doAuth(request, 'members');
     });
 
     beforeEach(function () {

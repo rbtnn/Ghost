@@ -1,6 +1,7 @@
 const errors = require('@tryghost/errors');
 const tpl = require('@tryghost/tpl');
 const logging = require('@tryghost/logging');
+const sentry = require('../../shared/sentry');
 const {extract, hasProvider} = require('oembed-parser');
 const cheerio = require('cheerio');
 const _ = require('lodash');
@@ -128,7 +129,14 @@ class OEmbed {
         const response = await this.externalRequest(url, {cookieJar});
 
         const html = response.body;
-        scraperResponse = await metascraper({html, url});
+        try {
+            scraperResponse = await metascraper({html, url});
+        } catch (err) {
+            // Log to avoid being blind to errors happenning in metascraper
+            sentry.captureException(err);
+            logging.error(err);
+            return this.unknownProvider(url);
+        }
 
         const metadata = Object.assign({}, scraperResponse, {
             thumbnail: scraperResponse.image,
@@ -284,6 +292,10 @@ class OEmbed {
         try {
             const urlObject = new URL(url);
 
+            // Trimming solves the difference of url validation between `new URL(url)`
+            // and metascraper.
+            url = url.trim();
+
             for (const provider of this.customProviders) {
                 if (await provider.canSupportRequest(urlObject)) {
                     const result = await provider.getOEmbedData(urlObject, this.externalRequest);
@@ -314,12 +326,12 @@ class OEmbed {
             return data;
         } catch (err) {
             // allow specific validation errors through for better error messages
-            if (errors.utils.isIgnitionError(err) && err.errorType === 'ValidationError') {
+            if (errors.utils.isGhostError(err) && err.errorType === 'ValidationError') {
                 throw err;
             }
 
             // log the real error because we're going to throw a generic "Unknown provider" error
-            logging.error(new errors.GhostError({
+            logging.error(new errors.InternalServerError({
                 message: 'Encountered error when fetching oembed',
                 err
             }));

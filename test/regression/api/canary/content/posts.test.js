@@ -10,18 +10,13 @@ const configUtils = require('../../../../utils/configUtils');
 const urlUtils = require('../../../../utils/urlUtils');
 const config = require('../../../../../core/shared/config');
 
-const ghost = testUtils.startGhost;
-let request;
-
 describe('api/canary/content/posts', function () {
-    before(function () {
-        return ghost()
-            .then(function () {
-                request = supertest.agent(config.get('url'));
-            })
-            .then(function () {
-                return testUtils.initFixtures('users:no-owner', 'user:inactive', 'posts', 'tags:extra', 'api_keys');
-            });
+    let request;
+
+    before(async function () {
+        await localUtils.startGhost();
+        request = supertest.agent(config.get('url'));
+        await testUtils.initFixtures('users:no-owner', 'user:inactive', 'posts', 'tags:extra', 'api_keys');
     });
 
     afterEach(function () {

@@ -5,22 +5,14 @@ const testUtils = require('../../../../utils');
 const localUtils = require('./utils');
 const config = require('../../../../../core/shared/config');
 const events = require('../../../../../core/server/lib/common/events');
-const ghost = testUtils.startGhost;
 
 let request;
 
 describe('Slack API', function () {
-    let ghostServer;
-
-    before(function () {
-        return ghost()
-            .then(function (_ghostServer) {
-                ghostServer = _ghostServer;
-                request = supertest.agent(config.get('url'));
-            })
-            .then(function () {
-                return localUtils.doAuth(request);
-            });
+    before(async function () {
+        await localUtils.startGhost();
+        request = supertest.agent(config.get('url'));
+        await localUtils.doAuth(request);
     });
     after(function () {
         sinon.restore();

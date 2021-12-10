@@ -31,6 +31,7 @@ const context = require('./fixtures/context');
 let ghostServer;
 let existingData = {};
 let totalStartTime = 0;
+let totalBoots = 0;
 
 /**
  * Because we use ObjectID we don't know the ID of fixtures ahead of time
@@ -86,7 +87,9 @@ const prepareContentFolder = (options) => {
         redirects.setupFile(contentFolderForTests, options.redirectsFileExt);
     }
 
-    if (options.copySettings) {
+    if (options.routesFilePath) {
+        fs.copySync(options.routesFilePath, path.join(contentFolderForTests, 'settings', 'routes.yaml'));
+    } else if (options.copySettings) {
         fs.copySync(path.join(__dirname, 'fixtures', 'settings', 'routes.yaml'), path.join(contentFolderForTests, 'settings', 'routes.yaml'));
     }
 };
@@ -96,29 +99,36 @@ const prepareContentFolder = (options) => {
 // - truncate database
 // - re-run default fixtures
 // - reload affected services
-const restartModeGhostStart = async () => {
+const restartModeGhostStart = async ({frontend}) => {
     debug('Reload Mode');
-    // Teardown truncates all tables and also calls urlServiceUtils.reset();
-    await dbUtils.teardown();
 
-    // The tables have been truncated, this runs the fixture init task (init file 2) to re-add our default fixtures
-    await knexMigrator.init({only: 2});
+    // TODO: figure out why we need this if we reset again later?
+    urlServiceUtils.reset();
+
+    await dbUtils.reset();
+
     debug('init done');
 
     // Reset the settings cache
     await settingsService.init();
     debug('settings done');
 
-    // Load the frontend-related components
-    await routeSettingsService.init();
-    await themeService.init();
-    debug('frontend done');
+    if (frontend) {
+        // Load the frontend-related components
+        await routeSettingsService.init();
+        await themeService.init();
+        debug('frontend done');
+    }
 
     // Reload the URL service & wait for it to be ready again
     // @TODO: why/how is this different to urlService.resetGenerators?
     urlServiceUtils.reset();
-    urlServiceUtils.init();
-    await urlServiceUtils.isFinished();
+    urlServiceUtils.init({urlCache: !frontend});
+
+    if (frontend) {
+        await urlServiceUtils.isFinished();
+    }
+
     debug('routes done');
 
     await customRedirectsService.init();
@@ -127,8 +137,8 @@ const restartModeGhostStart = async () => {
     limits.init();
 };
 
-const bootGhost = async () => {
-    ghostServer = await boot();
+const bootGhost = async ({backend, frontend}) => {
+    ghostServer = await boot({backend, frontend});
 };
 
 // CASE: Ghost Server needs Starting
@@ -145,36 +155,46 @@ const freshModeGhostStart = async (options) => {
         debug('Fresh Start Mode');
     }
 
-    // Reset the DB
-    await knexMigrator.reset({force: true});
-
     // Stop the server (forceStart Mode)
     await stopGhost();
 
     // Reset the settings cache and disable listeners so they don't get triggered further
     settingsService.shutdown();
 
-    // Do a full database initialisation
-    await knexMigrator.init();
+    await dbUtils.reset();
 
     await settingsService.init();
-
-    // Reset the URL service generators
-    // @TODO: Prob B: why/how is this different to urlService.reset?
-    // @TODO: why would we do this on a fresh boot?!
-    urlService.resetGenerators();
 
     // Actually boot Ghost
     await bootGhost(options);
 
-    // Wait for the URL service to be ready, which happens after bootYou
-    await urlServiceUtils.isFinished();
+    // Wait for the URL service to be ready, which happens after boot
+    if (options.frontend) {
+        await urlServiceUtils.isFinished();
+    }
 };
 
+/**
+ *
+ * @param {Object} [options]
+ * @param {boolean} [options.backend]
+ * @param {boolean} [options.frontend]
+ * @param {boolean} [options.redirectsFile]
+ * @param {String} [options.redirectsFileExt]
+ * @param {boolean} [options.forceStart]
+ * @param {boolean} [options.copyThemes]
+ * @param {boolean} [options.copySettings]
+ * @param {String} [options.routesFilePath] - path to a routes configuration file to start the instance with
+ * @param {String} [options.contentFolder]
+ * @param {boolean} [options.subdir]
+ * @returns {Promise<GhostServer>}
+ */
 const startGhost = async (options) => {
     const startTime = Date.now();
     debug('Start Ghost');
     options = _.merge({
+        backend: true,
+        frontend: true,
         redirectsFile: true,
         redirectsFileExt: '.json',
         forceStart: false,
@@ -200,8 +220,10 @@ const startGhost = async (options) => {
     // Reporting
     const totalTime = Date.now() - startTime;
     totalStartTime += totalTime;
+    totalBoots += 1;
+    const averageBootTime = Math.round(totalStartTime / totalBoots);
     debug(`Started Ghost in ${totalTime / 1000}s`);
-    debug(`Accumulated start time is ${totalStartTime / 1000}s`);
+    debug(`Accumulated start time across ${totalBoots} boots is ${totalStartTime / 1000}s (average = ${averageBootTime}ms)`);
     return ghostServer;
 };
 
@@ -209,6 +231,9 @@ const stopGhost = async () => {
     if (ghostServer && ghostServer.httpServer) {
         await ghostServer.stop();
         delete require.cache[require.resolve('../../core/app')];
+        // NOTE: similarly to urlService.reset() there doesn't seem to be a need for this call
+        //       probable best location for this type of cleanup if it's needed is registering
+        //       a hood during the "server cleanup" phase of the server stop
         urlService.resetGenerators();
     }
 };

@@ -7,8 +7,6 @@ const localUtils = require('./utils');
 const config = require('../../../../../core/shared/config');
 const labs = require('../../../../../core/shared/labs');
 
-const ghost = testUtils.startGhost;
-
 let request;
 
 describe('Members Sigin URL API', function () {
@@ -21,14 +19,10 @@ describe('Members Sigin URL API', function () {
     });
 
     describe('As Owner', function () {
-        before(function () {
-            return ghost()
-                .then(function () {
-                    request = supertest.agent(config.get('url'));
-                })
-                .then(function () {
-                    return localUtils.doAuth(request, 'member');
-                });
+        before(async function () {
+            await localUtils.startGhost();
+            request = supertest.agent(config.get('url'));
+            await localUtils.doAuth(request, 'member');
         });
 
         it('Can read', function () {
@@ -50,22 +44,16 @@ describe('Members Sigin URL API', function () {
     });
 
     describe('As Admin', function () {
-        before(function () {
-            return ghost()
-                .then(function () {
-                    request = supertest.agent(config.get('url'));
-                })
-                .then(function () {
-                    return testUtils.createUser({
-                        user: testUtils.DataGenerator.forKnex.createUser({email: 'admin+1@ghost.org'}),
-                        role: testUtils.DataGenerator.Content.roles[0].name
-                    });
-                })
-                .then(function (admin) {
-                    request.user = admin;
+        before(async function () {
+            await localUtils.startGhost();
+            request = supertest.agent(config.get('url'));
+            const admin = await testUtils.createUser({
+                user: testUtils.DataGenerator.forKnex.createUser({email: 'admin+1@ghost.org'}),
+                role: testUtils.DataGenerator.Content.roles[0].name
+            });
 
-                    return localUtils.doAuth(request, 'member');
-                });
+            request.user = admin;
+            await localUtils.doAuth(request, 'member');
         });
 
         it('Can read', function () {
@@ -88,8 +76,8 @@ describe('Members Sigin URL API', function () {
 
     describe('As non-Owner and non-Admin', function () {
         before(function () {
-            return ghost()
-                .then(function (_ghostServer) {
+            return localUtils.startGhost()
+                .then(function () {
                     request = supertest.agent(config.get('url'));
                 })
                 .then(function () {

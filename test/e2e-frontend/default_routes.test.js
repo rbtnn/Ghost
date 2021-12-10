@@ -48,7 +48,7 @@ describe('Default Frontend routing', function () {
             await request.get('/content/images/some/file/that/doesnt-exist.jpg')
                 .expect('Cache-Control', testUtils.cacheRules.private)
                 .expect(404)
-                .expect(/404 Image not found/)
+                .expect(/Image not found/)
                 .expect(assertCorrectFrontendHeaders);
         });
     });
@@ -245,6 +245,22 @@ describe('Default Frontend routing', function () {
     });
 
     describe('RSS', function () {
+        it('should 301 redirect with CC=1year without slash', function () {
+            request.get('/rss')
+                .expect('Location', '/rss/')
+                .expect('Cache-Control', testUtils.cacheRules.year)
+                .expect(301)
+                .expect(assertCorrectFrontendHeaders);
+        });
+
+        it('should get 301 redirect with CC=1year to /rss/ from /feed/', function () {
+            request.get('/feed/')
+                .expect('Location', '/rss/')
+                .expect('Cache-Control', testUtils.cacheRules.year)
+                .expect(301)
+                .expect(assertCorrectFrontendHeaders);
+        });
+
         it('/rss/ should serve an RSS feed', async function () {
             await request.get('/rss/')
                 .expect(200)

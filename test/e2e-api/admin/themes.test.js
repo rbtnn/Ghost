@@ -26,7 +26,10 @@ describe('Themes API', function () {
     };
 
     before(async function () {
-        await testUtils.startGhost();
+        // NOTE: this flag should not be here! the URL service re-initialization should be fixed instead
+        //       The reason why this init doesn't work without "forceStart" is because during the "restartModeGhostStart"
+        //       the routing.routerManager is never called with "start". That's why a full boot is needed
+        await localUtils.startGhost();
         ownerRequest = supertest.agent(config.get('url'));
         await localUtils.doAuth(ownerRequest);
     });
@@ -44,7 +47,7 @@ describe('Themes API', function () {
         const jsonResponse = res.body;
         should.exist(jsonResponse.themes);
         localUtils.API.checkResponse(jsonResponse, 'themes');
-        jsonResponse.themes.length.should.eql(6);
+        jsonResponse.themes.length.should.eql(7);
 
         localUtils.API.checkResponse(jsonResponse.themes[0], 'theme');
         jsonResponse.themes[0].name.should.eql('broken-theme');
@@ -62,19 +65,24 @@ describe('Themes API', function () {
         jsonResponse.themes[2].active.should.be.false();
 
         localUtils.API.checkResponse(jsonResponse.themes[3], 'theme');
-        jsonResponse.themes[3].name.should.eql('price-data-test-theme');
+        jsonResponse.themes[3].name.should.eql('locale-theme');
         jsonResponse.themes[3].package.should.be.an.Object().with.properties('name', 'version');
         jsonResponse.themes[3].active.should.be.false();
 
         localUtils.API.checkResponse(jsonResponse.themes[4], 'theme');
-        jsonResponse.themes[4].name.should.eql('test-theme');
+        jsonResponse.themes[4].name.should.eql('price-data-test-theme');
         jsonResponse.themes[4].package.should.be.an.Object().with.properties('name', 'version');
         jsonResponse.themes[4].active.should.be.false();
 
         localUtils.API.checkResponse(jsonResponse.themes[5], 'theme');
-        jsonResponse.themes[5].name.should.eql('test-theme-channels');
-        jsonResponse.themes[5].package.should.be.false();
+        jsonResponse.themes[5].name.should.eql('test-theme');
+        jsonResponse.themes[5].package.should.be.an.Object().with.properties('name', 'version');
         jsonResponse.themes[5].active.should.be.false();
+
+        localUtils.API.checkResponse(jsonResponse.themes[6], 'theme');
+        jsonResponse.themes[6].name.should.eql('test-theme-channels');
+        jsonResponse.themes[6].package.should.be.false();
+        jsonResponse.themes[6].active.should.be.false();
     });
 
     it('Can download a theme', async function () {
@@ -121,7 +129,7 @@ describe('Themes API', function () {
 
         should.exist(jsonResponse3.themes);
         localUtils.API.checkResponse(jsonResponse3, 'themes');
-        jsonResponse3.themes.length.should.eql(7);
+        jsonResponse3.themes.length.should.eql(8);
 
         // Casper should be present and still active
         const casperTheme = _.find(jsonResponse3.themes, {name: 'casper'});
@@ -140,6 +148,7 @@ describe('Themes API', function () {
             'broken-theme',
             'casper',
             'casper-1.4',
+            'locale-theme',
             'price-data-test-theme',
             'test-theme',
             'test-theme-channels',
@@ -159,12 +168,12 @@ describe('Themes API', function () {
 
         // ensure tmp theme folder contains one theme again now
         const tmpFolderContents = fs.readdirSync(config.getContentPath('themes'));
-        tmpFolderContents.forEach((theme, index) => {
-            if (theme.match(/^\./) || theme === 'README.md') {
-                tmpFolderContents.splice(index, 1);
+        for (let i = 0; i < tmpFolderContents.length; i++) {
+            while (tmpFolderContents[i].match(/^\./) || tmpFolderContents[i] === 'README.md') {
+                tmpFolderContents.splice(i, 1);
             }
-        });
-        tmpFolderContents.should.be.an.Array().with.lengthOf(10);
+        }
+        tmpFolderContents.should.be.an.Array().with.lengthOf(11);
 
         tmpFolderContents.should.eql([
             'broken-theme',
@@ -172,6 +181,7 @@ describe('Themes API', function () {
             'casper-1.4',
             'casper.zip',
             'invalid.zip',
+            'locale-theme',
             'price-data-test-theme',
             'test-theme',
             'test-theme-channels',
@@ -189,7 +199,7 @@ describe('Themes API', function () {
 
         should.exist(jsonResponse2.themes);
         localUtils.API.checkResponse(jsonResponse2, 'themes');
-        jsonResponse2.themes.length.should.eql(6);
+        jsonResponse2.themes.length.should.eql(7);
 
         // Casper should be present and still active
         const casperTheme = _.find(jsonResponse2.themes, {name: 'casper'});
@@ -231,7 +241,7 @@ describe('Themes API', function () {
 
         should.exist(jsonResponse.themes);
         localUtils.API.checkResponse(jsonResponse, 'themes');
-        jsonResponse.themes.length.should.eql(6);
+        jsonResponse.themes.length.should.eql(7);
 
         const casperTheme = _.find(jsonResponse.themes, {name: 'casper'});
         should.exist(casperTheme);

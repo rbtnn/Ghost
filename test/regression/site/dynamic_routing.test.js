@@ -6,21 +6,15 @@ const should = require('should');
 const supertest = require('supertest');
 const sinon = require('sinon');
 const moment = require('moment');
-const path = require('path');
 const testUtils = require('../../utils');
 const configUtils = require('../../utils/configUtils');
-const urlServiceUtils = require('../../utils/url-service-utils');
 const cheerio = require('cheerio');
 const config = require('../../../core/shared/config');
-const api = require('../../../core/server/api');
 const settingsCache = require('../../../core/shared/settings-cache');
-const ghost = testUtils.startGhost;
 
 let request;
 
 describe('Dynamic Routing', function () {
-    let ghostServer;
-
     function doEnd(done) {
         return function (err, res) {
             if (err) {
@@ -47,9 +41,8 @@ describe('Dynamic Routing', function () {
             return originalSettingsCacheGetFn(key, options);
         });
 
-        return ghost()
-            .then(function (_ghostServer) {
-                ghostServer = _ghostServer;
+        return testUtils.startGhost()
+            .then(function () {
                 request = supertest.agent(config.get('url'));
             });
     });
@@ -93,57 +86,6 @@ describe('Dynamic Routing', function () {
                 .expect(404)
                 .expect(/Page not found/)
                 .end(doEnd(done));
-        });
-
-        describe('RSS', function () {
-            before(testUtils.teardownDb);
-
-            before(function (done) {
-                testUtils.initData().then(function () {
-                    return testUtils.fixtures.overrideOwnerUser();
-                }).then(function () {
-                    done();
-                });
-            });
-
-            after(testUtils.teardownDb);
-
-            it('should 301 redirect with CC=1year without slash', function (done) {
-                request.get('/rss')
-                    .expect('Location', '/rss/')
-                    .expect('Cache-Control', testUtils.cacheRules.year)
-                    .expect(301)
-                    .end(doEnd(done));
-            });
-
-            it('should respond with 200 & CC=public', function (done) {
-                request.get('/rss/')
-                    .expect('Content-Type', 'text/xml; charset=utf-8')
-                    .expect('Cache-Control', testUtils.cacheRules.public)
-                    .expect(200)
-                    .end(function (err, res) {
-                        if (err) {
-                            return done(err);
-                        }
-
-                        should.not.exist(res.headers['x-cache-invalidate']);
-                        should.not.exist(res.headers['X-CSRF-Token']);
-                        should.not.exist(res.headers['set-cookie']);
-                        should.exist(res.headers.date);
-                        // The remainder of the XML is tested in the unit/xml_spec.js
-                        res.text.should.match(/^<\?xml version="1.0" encoding="UTF-8"\?><rss/);
-
-                        done();
-                    });
-            });
-
-            it('should get 301 redirect with CC=1year to /rss/ from /feed/', function (done) {
-                request.get('/feed/')
-                    .expect('Location', '/rss/')
-                    .expect('Cache-Control', testUtils.cacheRules.year)
-                    .expect(301)
-                    .end(doEnd(done));
-            });
         });
     });
 
@@ -290,9 +232,8 @@ describe('Dynamic Routing', function () {
             before(function () {
                 configUtils.set('admin:redirects', false);
 
-                return ghost({forceStart: true})
-                    .then(function (_ghostServer) {
-                        ghostServer = _ghostServer;
+                return testUtils.startGhost({forceStart: true})
+                    .then(function () {
                         request = supertest.agent(config.get('url'));
                     });
             });
@@ -300,9 +241,8 @@ describe('Dynamic Routing', function () {
             after(function () {
                 configUtils.restore();
 
-                return ghost({forceStart: true})
-                    .then(function (_ghostServer) {
-                        ghostServer = _ghostServer;
+                return testUtils.startGhost({forceStart: true})
+                    .then(function () {
                         request = supertest.agent(config.get('url'));
                     });
             });
@@ -486,9 +426,8 @@ describe('Dynamic Routing', function () {
             before(function () {
                 configUtils.set('admin:redirects', false);
 
-                return ghost({forceStart: true})
-                    .then(function (_ghostServer) {
-                        ghostServer = _ghostServer;
+                return testUtils.startGhost({forceStart: true})
+                    .then(function () {
                         request = supertest.agent(config.get('url'));
                     });
             });
@@ -496,9 +435,8 @@ describe('Dynamic Routing', function () {
             after(function () {
                 configUtils.restore();
 
-                return ghost({forceStart: true})
-                    .then(function (_ghostServer) {
-                        ghostServer = _ghostServer;
+                return testUtils.startGhost({forceStart: true})
+                    .then(function () {
                         request = supertest.agent(config.get('url'));
                     });
             });
@@ -523,7 +461,7 @@ describe('Dynamic Routing', function () {
             // Add enough posts to trigger pages
             before(function (done) {
                 testUtils.clearData().then(function () {
-                    // we initialise data, but not a user. No user should be required for navigating the frontend
+                    // we initialize data, but not a user. No user should be required for navigating the frontend
                     return testUtils.initData();
                 }).then(function () {
                     return testUtils.fixtures.insertPostsAndTags();
@@ -603,129 +541,6 @@ describe('Dynamic Routing', function () {
                         .end(doEnd(done));
                 });
             });
-        });
-    });
-
-    describe('Reload routes.yaml', function () {
-        before(function (done) {
-            testUtils.clearData().then(function () {
-                // we initialise data, but not a user. No user should be required for navigating the frontend
-                return testUtils.initData();
-            }).then(function () {
-                return testUtils.fixtures.overrideOwnerUser('ghost-owner');
-            }).then(function () {
-                return testUtils.initFixtures('settings');
-            }).then(function () {
-                done();
-            }).catch(done);
-        });
-
-        after(testUtils.teardownDb);
-        after(function () {
-            return ghostServer.stop();
-        });
-
-        it('confirm current routing pattern', function (done) {
-            request.get('/welcome/')
-                .expect(200)
-                .end(function (err, res) {
-                    if (err) {
-                        return done(err);
-                    }
-
-                    done();
-                });
-        });
-
-        it('simulate upload of routes.yaml', function () {
-            return api.settings.upload.query({
-                context: testUtils.context.internal.context,
-                file: {
-                    path: path.join(config.get('paths:appRoot'), 'test', 'utils', 'fixtures', 'settings', 'newroutes.yaml')
-                }
-            }).then(() => {
-                return urlServiceUtils.isFinished({disableDbReadyEvent: true});
-            });
-        });
-
-        it('serve welcome post with old permalink structure', function (done) {
-            request.get('/welcome/')
-                .expect(404)
-                .end(function (err) {
-                    if (err) {
-                        return done(err);
-                    }
-
-                    done();
-                });
-        });
-
-        it('serve welcome post with new permalink structure', function (done) {
-            const year = moment().year();
-            request.get(`/blog/${year}/welcome/`)
-                .expect(200)
-                .end(function (err) {
-                    if (err) {
-                        return done(err);
-                    }
-
-                    done();
-                });
-        });
-
-        it('serve welcome post with new permalink structure and old date', function (done) {
-            request.get('/blog/2016/welcome/')
-                .expect(301)
-                .end(function (err) {
-                    if (err) {
-                        return done(err);
-                    }
-
-                    done();
-                });
-        });
-
-        it('serve serve rss', function (done) {
-            request.get('/blog/rss/')
-                .expect(200)
-                .end(function (err, res) {
-                    if (err) {
-                        return done(err);
-                    }
-
-                    const content = res.text;
-                    const todayMoment = moment();
-                    const year = todayMoment.format('YYYY');
-                    const postLink = `/blog/${year}/welcome/`;
-
-                    content.indexOf(postLink).should.be.above(0);
-
-                    done();
-                });
-        });
-
-        it('serve collection index', function (done) {
-            request.get('/blog/')
-                .expect(200)
-                .end(function (err, res) {
-                    if (err) {
-                        return done(err);
-                    }
-
-                    done();
-                });
-        });
-
-        it('serve tag', function (done) {
-            request.get('/category/getting-started/')
-                .expect(200)
-                .end(function (err, res) {
-                    if (err) {
-                        return done(err);
-                    }
-
-                    done();
-                });
         });
     });
 });

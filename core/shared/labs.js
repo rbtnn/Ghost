@@ -15,7 +15,11 @@ const messages = {
 
 // flags in this list always return `true`, allows quick global enable prior to full flag removal
 const GA_FEATURES = [
-    'customThemeSettings'
+    'customThemeSettings',
+    'nftCard',
+    'calloutCard',
+    'accordionCard',
+    'richTwitterNewsletters'
 ];
 
 // NOTE: this allowlist is meant to be used to filter out any unexpected
@@ -33,11 +37,12 @@ const ALPHA_FEATURES = [
     'mediaAPI',
     'filesAPI',
     'membersAutoLogin',
-    'buttonCard',
-    'calloutCard',
-    'nftCard',
-    'accordionCard',
-    'gifsCard'
+    'fileCard',
+    'audioCard',
+    'videoCard',
+    'productCard',
+    'beforeAfterCard',
+    'tweetGridCard'
 ];
 
 module.exports.GA_KEYS = [...GA_FEATURES];
@@ -47,7 +52,7 @@ module.exports.getAll = () => {
     const labs = _.cloneDeep(settingsCache.get('labs')) || {};
 
     ALPHA_FEATURES.forEach((alphaKey) => {
-        if (labs[alphaKey] && !(config.get('enableDeveloperExperiments') || process.env.NODE_ENV.match(/^testing/))) {
+        if (labs[alphaKey] && !(config.get('enableDeveloperExperiments') || process.env.NODE_ENV.startsWith('test'))) {
             delete labs[alphaKey];
         }
     });
@@ -102,6 +107,7 @@ module.exports.enabledHelper = function enabledHelper(options, callback) {
     });
     errDetails.help = tpl(options.errorHelp || messages.errorHelp, {url: options.helpUrl});
 
+    // eslint-disable-next-line no-restricted-syntax
     logging.error(new errors.DisabledFeatureError(errDetails));
 
     const {SafeString} = require('express-hbs');

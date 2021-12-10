@@ -9,18 +9,18 @@ describe('Config API', function () {
     let request;
 
     before(async function () {
-        await testUtils.startGhost();
+        await localUtils.startGhost();
         request = supertest.agent(config.get('url'));
         await localUtils.doAuth(request);
     });
 
     afterEach(function () {
-        configUtils.set('tenor:apiKey', undefined);
+        configUtils.set('tenor:publicReadOnlyApiKey', undefined);
     });
 
     it('can retrieve config and all expected properties', async function () {
         // set any non-default keys so we can be sure they're exposed
-        configUtils.set('tenor:apiKey', 'TENOR_KEY');
+        configUtils.set('tenor:publicReadOnlyApiKey', 'TENOR_KEY');
 
         const res = await request
             .get(localUtils.API.getApiQuery('config/'))

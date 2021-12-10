@@ -3,18 +3,13 @@ const supertest = require('supertest');
 const testUtils = require('../../../../utils');
 const config = require('../../../../../core/shared/config');
 const localUtils = require('./utils');
-const ghost = testUtils.startGhost;
 let request;
 
 describe('Pages API', function () {
-    before(function () {
-        return ghost()
-            .then(function (_ghostServer) {
-                request = supertest.agent(config.get('url'));
-            })
-            .then(function () {
-                return localUtils.doAuth(request, 'posts');
-            });
+    before(async function () {
+        await localUtils.startGhost();
+        request = supertest.agent(config.get('url'));
+        await localUtils.doAuth(request, 'posts');
     });
 
     describe('Edit', function () {

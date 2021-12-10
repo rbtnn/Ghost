@@ -4,29 +4,34 @@ const path = require('path');
 const fs = require('fs-extra');
 
 const logging = require('@tryghost/logging');
-const DynamicRedirectManager = require('@tryghost/express-dynamic-redirects');
 const CustomRedirectsAPI = require('../../../../../core/server/services/redirects/api');
 
 describe('UNIT: redirects CustomRedirectsAPI class', function () {
     let customRedirectsAPI;
+    let redirectManager;
     const basePath = path.join(__dirname, '../../../../utils/fixtures/data/');
 
     before(function () {
-        const redirectManager = new DynamicRedirectManager({
-            permanentMaxAge: 100,
-            getSubdirectoryURL: (pathname) => {
-                return `/ghost/${pathname}`;
-            }
-        });
-
         customRedirectsAPI = new CustomRedirectsAPI({
-            basePath
-        }, redirectManager);
+            basePath,
+            redirectManager,
+            getBackupFilePath: () => path.join(basePath, 'backup.json'),
+            validate: () => {}
+        });
     });
 
     beforeEach(function () {
+        redirectManager = {
+            removeAllRedirects: sinon.stub(),
+            addRedirect: sinon.stub()
+        };
+
         sinon.stub(fs, 'pathExists');
+        sinon.stub(fs, 'writeFile');
         sinon.stub(fs, 'readFile');
+        sinon.stub(fs, 'unlink');
+        sinon.stub(fs, 'move');
+        sinon.stub(fs, 'copy');
         sinon.spy(logging, 'error');
     });
 
@@ -36,16 +41,12 @@ describe('UNIT: redirects CustomRedirectsAPI class', function () {
 
     describe('init', function () {
         it('initializes without errors when redirects file is not present', async function () {
-            const redirectManager = new DynamicRedirectManager({
-                permanentMaxAge: 100,
-                getSubdirectoryURL: (pathname) => {
-                    return `/ghost/${pathname}`;
-                }
-            });
-
             customRedirectsAPI = new CustomRedirectsAPI({
-                basePath
-            }, redirectManager);
+                basePath,
+                redirectManager,
+                getBackupFilePath: {},
+                validate: () => {}
+            });
 
             await customRedirectsAPI.init();
             logging.error.called.should.be.false();
@@ -136,6 +137,100 @@ describe('UNIT: redirects CustomRedirectsAPI class', function () {
                 err.errorType.should.eql('BadRequestError');
                 err.message.should.match(/Could not parse YAML: can not read an implicit mapping pair/);
             }
+        });
+
+        it('creates a backup file from existing redirects.json file', async function () {
+            const incomingFilePath = path.join(__dirname, '/valid/path/redirects_incoming.json');
+            const existingRedirectsFilePath = `${basePath}redirects.json`;
+            const backupFilePath = path.join(basePath, 'backup.json');
+
+            const redirectsJSONConfig = JSON.stringify([{
+                from: 'e',
+                to: 'b'
+            }]);
+
+            // redirects.json file already exits
+            fs.pathExists.withArgs(existingRedirectsFilePath).resolves(true);
+            fs.pathExists.withArgs(`${basePath}redirects.yaml`).resolves(false);
+            // incoming redirects file
+            fs.readFile.withArgs(incomingFilePath, 'utf-8').resolves(redirectsJSONConfig);
+            // backup file already exists
+            fs.pathExists.withArgs(backupFilePath).resolves(true);
+            fs.unlink.withArgs(backupFilePath).resolves(true);
+            fs.move.withArgs(incomingFilePath, backupFilePath).resolves(true);
+
+            customRedirectsAPI = new CustomRedirectsAPI({
+                basePath,
+                redirectManager,
+                getBackupFilePath: () => backupFilePath,
+                validate: () => {}
+            });
+
+            await customRedirectsAPI.setFromFilePath(incomingFilePath, '.json');
+
+            // backed up file with the same name already exists so remove it
+            fs.unlink.called.should.be.true();
+            fs.unlink.calledWith(backupFilePath).should.be.true();
+
+            // backed up current routes file
+            fs.move.called.should.be.true();
+            fs.move.calledWith(existingRedirectsFilePath, backupFilePath).should.be.true();
+
+            // written new routes file
+            fs.writeFile.calledWith(existingRedirectsFilePath, redirectsJSONConfig, 'utf-8').should.be.true();
+
+            // redirects have been re-registered
+            redirectManager.removeAllRedirects.calledOnce.should.be.true();
+            // one redirect in total
+            redirectManager.addRedirect.calledOnce.should.be.true();
+        });
+
+        it('creates a backup file from existing redirects.yaml file', async function () {
+            const incomingFilePath = path.join(__dirname, '/valid/path/redirects_incoming.yaml');
+
+            const backupFilePath = path.join(basePath, 'backup.yaml');
+
+            const redirectsYamlConfig = `
+                301:
+                    /my-old-blog-post/: /revamped-url/
+
+                302:
+                    /another-old-blog-post/: /hello-there/
+            `;
+
+            // redirects.json file already exits
+            fs.pathExists.withArgs(`${basePath}redirects.json`).resolves(false);
+            fs.pathExists.withArgs(`${basePath}redirects.yaml`).resolves(true);
+            // incoming redirects file
+            fs.readFile.withArgs(incomingFilePath, 'utf-8').resolves(redirectsYamlConfig);
+            // backup file DOES not exists yet
+            fs.pathExists.withArgs(backupFilePath).resolves(false);
+            // should not be called
+            fs.unlink.withArgs(backupFilePath).resolves(false);
+            fs.move.withArgs(`${basePath}redirects.yaml`, backupFilePath).resolves(true);
+
+            customRedirectsAPI = new CustomRedirectsAPI({
+                basePath,
+                redirectManager,
+                getBackupFilePath: () => backupFilePath,
+                validate: () => {}
+            });
+
+            await customRedirectsAPI.setFromFilePath(incomingFilePath, '.yaml');
+
+            // no existing backup file name match, did not remove any files
+            fs.unlink.called.should.not.be.true();
+
+            // backed up current routes file
+            fs.move.called.should.be.true();
+
+            // overwritten with incoming routes.yaml file
+            fs.copy.calledWith(incomingFilePath, `${basePath}redirects.yaml`).should.be.true();
+
+            // redirects have been re-registered
+            redirectManager.removeAllRedirects.calledOnce.should.be.true();
+            // two redirects in total
+            redirectManager.addRedirect.calledTwice.should.be.true();
         });
     });
 });
