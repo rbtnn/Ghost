@@ -120,18 +120,14 @@ describe('Default Frontend routing', function () {
             await request.get('/welcome/')
                 .expect('Content-Type', /html/)
                 .expect('Cache-Control', testUtils.cacheRules.public)
+                .expect(200)
                 .expect(assertCorrectFrontendHeaders)
                 .expect((res) => {
-                    const $ = cheerio.load(res.text);
-
-                    // NOTE: This is the title from the settings.
-                    $('title').text().should.equal('Start here for a quick overview of everything you need to know');
-
-                    $('body.post-template').length.should.equal(1);
-                    $('body.tag-getting-started').length.should.equal(1);
-                    $('article.post').length.should.equal(2);
-                    $('article.tag-getting-started').length.should.equal(2);
-
+                    // Test that head and body have rendered something...
+                    res.text.should.containEql('<title>Start here for a quick overview of everything you need to know</title>');
+                    res.text.should.match(/<h1[^>]*?>Start here for a quick overview of everything you need to know<\/h1>/);
+                    // We should write a single test for this, or encapsulate it as an assertion
+                    // E.g. res.text.should.not.containInvalidUrls()
                     res.text.should.not.containEql('__GHOST_URL__');
                 });
         });
@@ -190,52 +186,63 @@ describe('Default Frontend routing', function () {
     });
 
     describe('AMP post', function () {
-        it('should respond with html for valid url', async function () {
-            await request.get('/welcome/amp/')
-                .expect('Content-Type', /html/)
-                .expect('Cache-Control', testUtils.cacheRules.public)
-                .expect(200)
-                .expect(assertCorrectFrontendHeaders)
-                .expect((res) => {
-                    const $ = cheerio.load(res.text);
-
-                    $('.post-title').text().should.equal('Start here for a quick overview of everything you need to know');
-
-                    $('.content .post').length.should.equal(1);
-                    $('.powered').text().should.equal(' Published with Ghost');
-                    $('body.amp-template').length.should.equal(1);
-                    $('article.post').length.should.equal(1);
-
-                    $('style[amp-custom]').length.should.equal(1);
-
-                    // This asserts we should have some content (and not [object Promise] !)
-                    $('.post-content p').length.should.be.greaterThan(0);
-
-                    res.text.should.containEql(':root {--ghost-accent-color: #FF1A75;}');
-                    res.text.should.not.containEql('__GHOST_URL__');
+        describe('AMP Enabled', function () {
+            beforeEach(function () {
+                sinon.stub(settingsCache, 'get').callsFake(function (key, options) {
+                    if (key === 'amp' && !options) {
+                        return true;
+                    }
+                    return origCache.get(key, options);
                 });
-        });
+            });
+            it('should respond with html for valid url', async function () {
+                await request.get('/welcome/amp/')
+                    .expect('Content-Type', /html/)
+                    .expect('Cache-Control', testUtils.cacheRules.public)
+                    .expect(200)
+                    .expect(assertCorrectFrontendHeaders)
+                    .expect((res) => {
+                        const $ = cheerio.load(res.text);
 
-        it('should not work with date permalinks', async function () {
-            // get today's date
-            const date = moment().format('YYYY/MM/DD');
+                        $('.post-title').text().should.equal('Start here for a quick overview of everything you need to know');
 
-            await request.get('/' + date + '/welcome/amp/')
-                .expect('Cache-Control', testUtils.cacheRules.private)
-                .expect(404)
-                .expect(/Page not found/)
-                .expect(assertCorrectFrontendHeaders);
+                        $('.content .post').length.should.equal(1);
+                        $('.powered').text().should.equal(' Published with Ghost');
+                        $('body.amp-template').length.should.equal(1);
+                        $('article.post').length.should.equal(1);
+
+                        $('style[amp-custom]').length.should.equal(1);
+
+                        // This asserts we should have some content (and not [object Promise] !)
+                        $('.post-content p').length.should.be.greaterThan(0);
+
+                        res.text.should.containEql(':root {--ghost-accent-color: #FF1A75;}');
+                        res.text.should.not.containEql('__GHOST_URL__');
+                    });
+            });
+
+            it('should not work with date permalinks', async function () {
+                // get today's date
+                const date = moment().format('YYYY/MM/DD');
+
+                await request.get('/' + date + '/welcome/amp/')
+                    .expect('Cache-Control', testUtils.cacheRules.private)
+                    .expect(404)
+                    .expect(/Page not found/)
+                    .expect(assertCorrectFrontendHeaders);
+            });
         });
 
         describe('AMP Disabled', function () {
-            it('/amp/ should redirect to regular post, including any query params', async function () {
+            beforeEach(function () {
                 sinon.stub(settingsCache, 'get').callsFake(function (key, options) {
                     if (key === 'amp' && !options) {
                         return false;
                     }
                     return origCache.get(key, options);
                 });
-
+            });
+            it('/amp/ should redirect to regular post, including any query params', async function () {
                 await request.get('/welcome/amp/?q=a')
                     .expect('Location', '/welcome/?q=a')
                     .expect(301)
