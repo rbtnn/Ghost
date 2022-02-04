@@ -2,13 +2,13 @@ const should = require('should');
 const sinon = require('sinon');
 const _ = require('lodash');
 const cheerio = require('cheerio');
-const testUtils = require('../../../utils');
-const localUtils = require('../utils');
-const configUtils = require('../../../utils/configUtils');
-const urlUtils = require('../../../utils/urlUtils');
+const testUtils = require('../../utils');
+const localUtils = require('./utils');
+const configUtils = require('../../utils/configUtils');
+const urlUtils = require('../../utils/urlUtils');
 
-const routeSettingsService = require('../../../../core/server/services/route-settings');
-const themeEngine = require('../../../../core/frontend/services/theme-engine');
+const routeSettingsService = require('../../../core/server/services/route-settings');
+const themeEngine = require('../../../core/frontend/services/theme-engine');
 
 describe('Integration - Web - Site canary', function () {
     let app;
@@ -33,9 +33,8 @@ describe('Integration - Web - Site canary', function () {
         });
 
         beforeEach(function () {
-            sinon.stub(themeEngine.getActive(), 'engine').withArgs('ghost-api').returns('canary');
             sinon.stub(themeEngine.getActive(), 'config').withArgs('posts_per_page').returns(2);
-            const postsAPI = require('../../../../core/server/api/canary/posts-public');
+            const postsAPI = require('../../../core/server/api/canary/posts-public');
             postSpy = sinon.spy(postsAPI.browse, 'query');
         });
 
@@ -142,12 +141,12 @@ describe('Integration - Web - Site canary', function () {
 
                 return localUtils.mockExpress.invoke(app, req)
                     .then(function (response) {
-                        const $ = cheerio.load(response.body);
-
                         response.statusCode.should.eql(200);
                         response.template.should.eql('author');
 
-                        $('.author-bio').length.should.equal(1);
+                        const bodyClasses = response.body.match(/<body[^>]*class="([^"]*?)">/)[1].split(' ');
+                        bodyClasses.should.containEql('author-template');
+                        bodyClasses.should.containEql('author-joe-bloggs');
                     });
             });
 
@@ -236,7 +235,7 @@ describe('Integration - Web - Site canary', function () {
                 const req = {
                     secure: true,
                     method: 'GET',
-                    url: '/assets/css/screen.css',
+                    url: '/assets/built/screen.css',
                     host: 'example.com'
                 };
 
