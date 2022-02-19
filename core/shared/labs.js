@@ -27,12 +27,14 @@ const BETA_FEATURES = [
 const ALPHA_FEATURES = [
     'oauthLogin',
     'membersActivity',
-    'cardSettingsPanel',
     'urlCache',
     'beforeAfterCard',
     'tweetGridCard',
     'membersActivityFeed',
-    'tierWelcomePages'
+    'improvedOnboarding',
+    'tierWelcomePages',
+    'tierName',
+    'membersTableStatus'
 ];
 
 module.exports.GA_KEYS = [...GA_FEATURES];

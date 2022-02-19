@@ -70,7 +70,8 @@ const expectedProperties = {
         'meta_description',
         'email_subject',
         'frontmatter',
-        'email_only'
+        'email_only',
+        'tiers'
     ],
 
     page: [
@@ -108,7 +109,8 @@ const expectedProperties = {
         'twitter_description',
         'meta_title',
         'meta_description',
-        'frontmatter'
+        'frontmatter',
+        'tiers'
     ],
 
     user: _(schema.users)
@@ -129,12 +131,24 @@ const expectedProperties = {
     subscriber: _(schema.subscribers)
         .keys()
     ,
-    member: _(schema.members)
-        .keys()
-        .concat('avatar_image')
-        .concat('comped')
-        .concat('labels')
-    ,
+    member: [
+        'id',
+        'uuid',
+        'email',
+        'status',
+        'name',
+        'note',
+        'geolocation',
+        'subscribed',
+        'email_count',
+        'email_opened_count',
+        'email_open_rate',
+        'created_at',
+        'updated_at',
+        'avatar_image',
+        'comped',
+        'labels'
+    ],
     member_signin_url: ['member_id', 'url'],
     role: _(schema.roles)
         .keys()

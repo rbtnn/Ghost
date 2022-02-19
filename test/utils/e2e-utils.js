@@ -105,7 +105,7 @@ const restartModeGhostStart = async ({frontend}) => {
     // TODO: figure out why we need this if we reset again later?
     urlServiceUtils.reset();
 
-    await dbUtils.reset();
+    await dbUtils.reset({truncate: true});
 
     debug('init done');
 
@@ -155,7 +155,7 @@ const freshModeGhostStart = async (options) => {
     await stopGhost();
 
     // Reset the settings cache and disable listeners so they don't get triggered further
-    settingsService.shutdown();
+    settingsService.reset();
 
     await dbUtils.reset();
 

@@ -1,6 +1,7 @@
 const _ = require('lodash');
 const logging = require('@tryghost/logging');
 const membersService = require('./service');
+const models = require('../../models');
 const offersService = require('../offers/service');
 const urlUtils = require('../../../shared/url-utils');
 const ghostVersion = require('@tryghost/version');
@@ -197,12 +198,28 @@ const createSessionFromMagicLink = async function (req, res, next) {
 
         const action = req.query.action;
 
-        if (action === 'signup') {
+        if (action === 'signup' || action === 'signup-paid') {
             let customRedirect = '';
-            if (subscriptions.find(sub => ['active', 'trialing'].includes(sub.status))) {
-                customRedirect = settingsCache.get('members_paid_signup_redirect') || '';
+            const mostRecentActiveSubscription = subscriptions
+                .sort((a, b) => {
+                    const aStartDate = new Date(a.start_date);
+                    const bStartDate = new Date(b.start_date);
+                    return bStartDate.valueOf() - aStartDate.valueOf();
+                })
+                .find(sub => ['active', 'trialing'].includes(sub.status));
+            if (mostRecentActiveSubscription) {
+                if (labsService.isSet('tierWelcomePages')) {
+                    customRedirect = mostRecentActiveSubscription.tier.welcome_page_url;
+                } else {
+                    customRedirect = settingsCache.get('members_paid_signup_redirect') || '';
+                }
             } else {
-                customRedirect = settingsCache.get('members_free_signup_redirect') || '';
+                if (labsService.isSet('tierWelcomePages')) {
+                    const freeTier = await models.Product.findOne({type: 'free'});
+                    customRedirect = freeTier && freeTier.get('welcome_page_url') || '';
+                } else {
+                    customRedirect = settingsCache.get('members_free_signup_redirect') || '';
+                }
             }
 
             if (customRedirect && customRedirect !== '/') {

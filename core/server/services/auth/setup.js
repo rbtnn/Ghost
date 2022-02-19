@@ -12,7 +12,8 @@ const messages = {
     setupUnableToRun: 'Database missing fixture data. Please reset database and try again.',
     sampleBlogDescription: 'Thoughts, stories and ideas.',
     yourNewGhostBlog: 'Your New Ghost Site',
-    unableToSendWelcomeEmail: 'Unable to send welcome email, your site will continue to function.'
+    unableToSendWelcomeEmail: 'Unable to send welcome email, your site will continue to function.',
+    failedThemeInstall: 'Theme {themeName} didn\'t install because of the error: {error}'
 };
 
 /**
@@ -149,11 +150,48 @@ function sendWelcomeEmail(email, mailAPI) {
     return Promise.resolve();
 }
 
+async function installTheme(data, api) {
+    const {theme: themeName} = data.userData;
+
+    if (!themeName) {
+        return data;
+    }
+
+    // Use the api instead of the services as the api performs extra logic
+    try {
+        const installResults = await api.themes.install({
+            source: 'github',
+            ref: themeName,
+            context: {internal: true}
+        });
+        const theme = installResults.themes[0];
+
+        await api.themes.activate({
+            name: theme.name,
+            context: {internal: true}
+        });
+    } catch (error) {
+        //Fallback to Casper by doing nothing as the theme setting update is the last step
+        logging.warn(tpl(messages.failedThemeInstall, {themeName, error: error.message}));
+
+        await api.notifications.add({
+            notifications: [{
+                custom: true, //avoids update-check from deleting the notification
+                type: 'warn',
+                message: 'The installation of the theme you have selected wasn\'t successful.'
+            }]
+        }, {context: {internal: true}});
+    }
+
+    return data;
+}
+
 module.exports = {
     checkIsSetup: checkIsSetup,
     assertSetupCompleted: assertSetupCompleted,
     setupUser: setupUser,
     doSettings: doSettings,
     doProduct: doProduct,
-    sendWelcomeEmail: sendWelcomeEmail
+    sendWelcomeEmail: sendWelcomeEmail,
+    installTheme: installTheme
 };

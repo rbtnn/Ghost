@@ -30,8 +30,8 @@ module.exports = {
             defaultTo: 'public'
         },
         email_recipient_filter: {
-            type: 'string',
-            maxlength: 50,
+            type: 'text',
+            maxlength: 1000000000,
             nullable: false,
             defaultTo: 'none'
         },
@@ -369,6 +369,7 @@ module.exports = {
         email_count: {type: 'integer', unsigned: true, nullable: false, defaultTo: 0},
         email_opened_count: {type: 'integer', unsigned: true, nullable: false, defaultTo: 0},
         email_open_rate: {type: 'integer', unsigned: true, nullable: true, index: true},
+        last_seen_at: {type: 'dateTime',nullable: true},
         created_at: {type: 'dateTime', nullable: false},
         created_by: {type: 'string', maxlength: 24, nullable: false},
         updated_at: {type: 'dateTime', nullable: true},
@@ -421,6 +422,12 @@ module.exports = {
     members_products: {
         id: {type: 'string', maxlength: 24, nullable: false, primary: true},
         member_id: {type: 'string', maxlength: 24, nullable: false, references: 'members.id', cascadeDelete: true},
+        product_id: {type: 'string', maxlength: 24, nullable: false, references: 'products.id', cascadeDelete: true},
+        sort_order: {type: 'integer', nullable: false, unsigned: true, defaultTo: 0}
+    },
+    posts_products: {
+        id: {type: 'string', maxlength: 24, nullable: false, primary: true},
+        post_id: {type: 'string', maxlength: 24, nullable: false, references: 'posts.id', cascadeDelete: true},
         product_id: {type: 'string', maxlength: 24, nullable: false, references: 'products.id', cascadeDelete: true},
         sort_order: {type: 'integer', nullable: false, unsigned: true, defaultTo: 0}
     },
@@ -592,8 +599,8 @@ module.exports = {
             validations: {isIn: [['pending', 'submitting', 'submitted', 'failed']]}
         },
         recipient_filter: {
-            type: 'string',
-            maxlength: 50,
+            type: 'text',
+            maxlength: 1000000000,
             nullable: false,
             defaultTo: 'status:-free'
         },
