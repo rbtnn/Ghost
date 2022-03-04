@@ -7,7 +7,7 @@ const path = require('path');
 const {config} = require('../../../../utils/configUtils');
 const schema = require('../../../../../core/server/data/schema/schema');
 const fixtures = require('../../../../../core/server/data/schema/fixtures/fixtures.json');
-const defaultSettings = require('../../../../../core/server/data/schema/default-settings.json');
+const defaultSettings = require('../../../../../core/server/data/schema/default-settings/default-settings.json');
 
 // Routes are yaml so we can require the file directly
 const routeSettings = require('../../../../../core/server/services/route-settings');
@@ -43,7 +43,7 @@ describe('DB version integrity', function () {
     // If this test is failing, then it is likely a change has been made that requires a DB version bump,
     // and the values above will need updating as confirmation
     it('should not change without fixing this test', function () {
-        const routesPath = path.join(config.get('paths').defaultSettings, 'default-routes.yaml');
+        const routesPath = path.join(config.get('paths').defaultRouteSettings, 'default-routes.yaml');
         const defaultRoutes = validateRouteSettings(yaml.load(fs.readFileSync(routesPath, 'utf-8')));
 
         const tablesNoValidation = _.cloneDeep(schema);

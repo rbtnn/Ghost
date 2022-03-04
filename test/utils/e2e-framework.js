@@ -14,7 +14,7 @@
 // The output state checker is responsible for checking the response from the app after performing a request.
 const _ = require('lodash');
 const {sequence} = require('@tryghost/promise');
-const {any, stringMatching} = require('@tryghost/jest-snapshot');
+const {any, stringMatching} = require('@tryghost/express-test').snapshot;
 const fs = require('fs-extra');
 const path = require('path');
 const os = require('os');
@@ -27,7 +27,9 @@ const urlServiceUtils = require('./url-service-utils');
 const mockManager = require('./e2e-framework-mock-manager');
 
 const boot = require('../../core/boot');
-const TestAgent = require('./test-agent');
+const AdminAPITestAgent = require('./admin-api-test-agent');
+const MembersAPITestAgent = require('./members-api-test-agent');
+const ContentAPITestAgent = require('./content-api-test-agent');
 const db = require('./db-utils');
 
 // Services that need resetting
@@ -142,13 +144,34 @@ const resetData = async () => {
 };
 
 /**
- * Creates a TestAgent which is a drop-in substitution for supertest.
+ * Creates a ContentAPITestAgent which is a drop-in substitution for supertest.
+ * It is automatically hooked up to the Content API so you can make requests to e.g.
+ * agent.get('/posts/') without having to worry about URL paths
+ * @returns {Promise<ContentAPITestAgent>} agent
+ */
+const getContentAPIAgent = async () => {
+    try {
+        const app = await startGhost();
+        const originURL = configUtils.config.get('url');
+
+        return new ContentAPITestAgent(app, {
+            apiURL: '/ghost/api/canary/content/',
+            originURL
+        });
+    } catch (error) {
+        error.message = `Unable to create test agent. ${error.message}`;
+        throw error;
+    }
+};
+
+/**
+ * Creates a AdminAPITestAgent which is a drop-in substitution for supertest.
  * It is automatically hooked up to the Admin API so you can make requests to e.g.
  * agent.get('/posts/') without having to worry about URL paths
  *
  * @param {Object} [options={}]
  * @param {Boolean} [options.members] Include members in the boot process
- * @returns {TestAgent} agent
+ * @returns {Promise<AdminAPITestAgent>} agent
  */
 const getAdminAPIAgent = async (options = {}) => {
     const bootOptions = {};
@@ -161,7 +184,7 @@ const getAdminAPIAgent = async (options = {}) => {
         const app = await startGhost(bootOptions);
         const originURL = configUtils.config.get('url');
 
-        return new TestAgent(app, {
+        return new AdminAPITestAgent(app, {
             apiURL: '/ghost/api/canary/admin/',
             originURL
         });
@@ -172,11 +195,11 @@ const getAdminAPIAgent = async (options = {}) => {
 };
 
 /**
- * Creates a TestAgent which is a drop-in substitution for supertest
+ * Creates a MembersAPITestAgent which is a drop-in substitution for supertest
  * It is automatically hooked up to the Members API so you can make requests to e.g.
  * agent.get('/webhooks/stripe/') without having to worry about URL paths
  *
- * @returns {Promise<TestAgent>} agent
+ * @returns {Promise<MembersAPITestAgent>} agent
  */
 const getMembersAPIAgent = async () => {
     const bootOptions = {
@@ -186,7 +209,7 @@ const getMembersAPIAgent = async () => {
         const app = await startGhost(bootOptions);
         const originURL = configUtils.config.get('url');
 
-        return new TestAgent(app, {
+        return new MembersAPITestAgent(app, {
             apiURL: '/members/',
             originURL
         });
@@ -198,7 +221,7 @@ const getMembersAPIAgent = async () => {
 
 /**
  *
- * @returns {Promise<{adminAgent: TestAgent, membersAgent: TestAgent}>} agent
+ * @returns {Promise<{adminAgent: AdminAPITestAgent, membersAgent: MembersAPITestAgent}>} agents
  */
 const getAgentsForMembers = async () => {
     let membersAgent;
@@ -212,11 +235,11 @@ const getAgentsForMembers = async () => {
         const app = await startGhost(bootOptions);
         const originURL = configUtils.config.get('url');
 
-        membersAgent = new TestAgent(app, {
+        membersAgent = new MembersAPITestAgent(app, {
             apiURL: '/members/',
             originURL
         });
-        adminAgent = new TestAgent(app, {
+        adminAgent = new AdminAPITestAgent(app, {
             apiURL: '/ghost/api/canary/admin/',
             originURL
         });
@@ -236,6 +259,7 @@ module.exports = {
     agentProvider: {
         getAdminAPIAgent,
         getMembersAPIAgent,
+        getContentAPIAgent,
         getAgentsForMembers
     },
 
@@ -254,6 +278,7 @@ module.exports = {
         anyArray: any(Array),
         anyDate: stringMatching(/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.000Z/),
         anyShortDate: stringMatching(/\d{4}-\d{2}-\d{2}/),
+        anyDateWithTimezoneOffset: stringMatching(/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.000\+\d{2}:\d{2}/),
         anyEtag: stringMatching(/(?:W\/)?"(?:[ !#-\x7E\x80-\xFF]*|\r\n[\t ]|\\.)*"/),
         anyObjectId: stringMatching(/[a-f0-9]{24}/),
         anyErrorId: stringMatching(/[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}/),

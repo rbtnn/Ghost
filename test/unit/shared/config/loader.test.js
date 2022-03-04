@@ -96,6 +96,7 @@ describe('Config Loader', function () {
             Object.keys(pathConfig).should.eql([
                 'contentPath',
                 'fixtures',
+                'defaultSettings',
                 'assetSrc',
                 'urlCache',
                 'appRoot',
@@ -104,7 +105,7 @@ describe('Config Loader', function () {
                 'helperTemplates',
                 'adminViews',
                 'defaultViews',
-                'defaultSettings',
+                'defaultRouteSettings',
                 'internalAppPath',
                 'internalAdaptersPath',
                 'migrationPath',
