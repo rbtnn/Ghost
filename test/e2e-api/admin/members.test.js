@@ -1,5 +1,5 @@
 const {agentProvider, mockManager, fixtureManager, matchers} = require('../../utils/e2e-framework');
-const {anyEtag, anyObjectId, anyUuid, anyDate, anyShortDate, anyString, anyArray, anyLocationFor, anyErrorId} = matchers;
+const {anyEtag, anyObjectId, anyUuid, anyISODateTime, anyISODate, anyString, anyArray, anyLocationFor, anyErrorId} = matchers;
 
 const assert = require('assert');
 const nock = require('nock');
@@ -24,15 +24,15 @@ async function assertEvents({eventType, eventName, quantity, asserts}) {
 const memberMatcherNoIncludes = {
     id: anyObjectId,
     uuid: anyUuid,
-    created_at: anyDate,
-    updated_at: anyDate
+    created_at: anyISODateTime,
+    updated_at: anyISODateTime
 };
 
 const memberMatcherShallowIncludes = {
     id: anyObjectId,
     uuid: anyUuid,
-    created_at: anyDate,
-    updated_at: anyDate,
+    created_at: anyISODateTime,
+    updated_at: anyISODateTime,
     subscriptions: anyArray,
     labels: anyArray
 };
@@ -110,8 +110,8 @@ describe('Members API', function () {
                 members: new Array(8).fill({
                     id: anyObjectId,
                     uuid: anyUuid,
-                    created_at: anyDate,
-                    updated_at: anyDate,
+                    created_at: anyISODateTime,
+                    updated_at: anyISODateTime,
                     labels: anyArray,
                     subscriptions: anyArray
                 })
@@ -129,8 +129,8 @@ describe('Members API', function () {
                 members: new Array(1).fill({
                     id: anyObjectId,
                     uuid: anyUuid,
-                    created_at: anyDate,
-                    updated_at: anyDate,
+                    created_at: anyISODateTime,
+                    updated_at: anyISODateTime,
                     labels: anyArray,
                     subscriptions: anyArray
                 })
@@ -148,8 +148,8 @@ describe('Members API', function () {
                 members: new Array(1).fill({
                     id: anyObjectId,
                     uuid: anyUuid,
-                    created_at: anyDate,
-                    updated_at: anyDate,
+                    created_at: anyISODateTime,
+                    updated_at: anyISODateTime,
                     labels: anyArray,
                     subscriptions: anyArray
                 })
@@ -167,8 +167,46 @@ describe('Members API', function () {
                 members: new Array(5).fill({
                     id: anyObjectId,
                     uuid: anyUuid,
-                    created_at: anyDate,
-                    updated_at: anyDate,
+                    created_at: anyISODateTime,
+                    updated_at: anyISODateTime,
+                    labels: anyArray,
+                    subscriptions: anyArray
+                })
+            })
+            .matchHeaderSnapshot({
+                etag: anyEtag
+            });
+    });
+
+    it('Can filter using contains operators', async function () {
+        await agent
+            .get(`/members/?filter=name:~'Venkman'`)
+            .expectStatus(200)
+            .matchBodySnapshot({
+                members: new Array(1).fill({
+                    id: anyObjectId,
+                    uuid: anyUuid,
+                    created_at: anyISODateTime,
+                    updated_at: anyISODateTime,
+                    labels: anyArray,
+                    subscriptions: anyArray
+                })
+            })
+            .matchHeaderSnapshot({
+                etag: anyEtag
+            });
+    });
+
+    it('Can ignore any unknown includes', async function () {
+        await agent
+            .get('/members/?filter=status:paid&include=emailRecipients')
+            .expectStatus(200)
+            .matchBodySnapshot({
+                members: new Array(5).fill({
+                    id: anyObjectId,
+                    uuid: anyUuid,
+                    created_at: anyISODateTime,
+                    updated_at: anyISODateTime,
                     labels: anyArray,
                     subscriptions: anyArray
                 })
@@ -268,8 +306,8 @@ describe('Members API', function () {
                 members: new Array(1).fill({
                     id: anyObjectId,
                     uuid: anyUuid,
-                    created_at: anyDate,
-                    updated_at: anyDate,
+                    created_at: anyISODateTime,
+                    updated_at: anyISODateTime,
                     labels: anyArray,
                     subscriptions: anyArray
                 })
@@ -287,8 +325,8 @@ describe('Members API', function () {
                 members: new Array(1).fill({
                     id: anyObjectId,
                     uuid: anyUuid,
-                    created_at: anyDate,
-                    updated_at: anyDate,
+                    created_at: anyISODateTime,
+                    updated_at: anyISODateTime,
                     labels: anyArray,
                     subscriptions: anyArray
                 })
@@ -317,8 +355,8 @@ describe('Members API', function () {
                 members: new Array(1).fill({
                     id: anyObjectId,
                     uuid: anyUuid,
-                    created_at: anyDate,
-                    updated_at: anyDate,
+                    created_at: anyISODateTime,
+                    updated_at: anyISODateTime,
                     labels: anyArray,
                     subscriptions: anyArray
                 })
@@ -483,8 +521,8 @@ describe('Members API', function () {
                 members: new Array(1).fill({
                     id: anyObjectId,
                     uuid: anyUuid,
-                    created_at: anyDate,
-                    updated_at: anyDate,
+                    created_at: anyISODateTime,
+                    updated_at: anyISODateTime,
                     labels: anyArray,
                     subscriptions: anyArray
                 })
@@ -504,8 +542,8 @@ describe('Members API', function () {
                 members: new Array(1).fill({
                     id: anyObjectId,
                     uuid: anyUuid,
-                    created_at: anyDate,
-                    updated_at: anyDate,
+                    created_at: anyISODateTime,
+                    updated_at: anyISODateTime,
                     labels: anyArray,
                     subscriptions: anyArray
                 })
@@ -558,8 +596,8 @@ describe('Members API', function () {
                 members: new Array(1).fill({
                     id: anyObjectId,
                     uuid: anyUuid,
-                    created_at: anyDate,
-                    updated_at: anyDate,
+                    created_at: anyISODateTime,
+                    updated_at: anyISODateTime,
                     labels: anyArray,
                     subscriptions: anyArray
                 })
@@ -598,8 +636,8 @@ describe('Members API', function () {
                 members: new Array(1).fill({
                     id: anyObjectId,
                     uuid: anyUuid,
-                    created_at: anyDate,
-                    updated_at: anyDate,
+                    created_at: anyISODateTime,
+                    updated_at: anyISODateTime,
                     labels: anyArray,
                     subscriptions: anyArray
                 })
@@ -678,8 +716,8 @@ describe('Members API', function () {
                 members: new Array(1).fill({
                     id: anyObjectId,
                     uuid: anyUuid,
-                    created_at: anyDate,
-                    updated_at: anyDate,
+                    created_at: anyISODateTime,
+                    updated_at: anyISODateTime,
                     labels: anyArray,
                     subscriptions: [{
                         start_date: anyString,
@@ -714,8 +752,8 @@ describe('Members API', function () {
                 members: new Array(1).fill({
                     id: anyObjectId,
                     uuid: anyUuid,
-                    created_at: anyDate,
-                    updated_at: anyDate,
+                    created_at: anyISODateTime,
+                    updated_at: anyISODateTime,
                     labels: anyArray,
                     subscriptions: anyArray
                 })
@@ -832,7 +870,7 @@ describe('Members API', function () {
             .expectStatus(200)
             .matchBodySnapshot({
                 data: [{
-                    date: anyShortDate
+                    date: anyISODate
                 }]
             })
             .matchHeaderSnapshot({

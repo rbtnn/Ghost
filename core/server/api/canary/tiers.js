@@ -54,7 +54,9 @@ module.exports = {
                 }
             }
         },
-        permissions: true,
+        permissions: {
+            docName: 'products'
+        },
         async query(frame) {
             const model = await membersService.api.productRepository.get(frame.data, frame.options);
 
@@ -95,7 +97,9 @@ module.exports = {
         options: [
             'id'
         ],
-        headers: {},
+        headers: {
+            cacheInvalidate: true
+        },
         validation: {
             options: {
                 id: {
@@ -112,11 +116,6 @@ module.exports = {
                 frame.options
             );
 
-            if (model.wasChanged()) {
-                this.headers.cacheInvalidate = true;
-            } else {
-                this.headers.cacheInvalidate = false;
-            }
             return model;
         }
     }

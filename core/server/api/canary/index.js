@@ -208,7 +208,9 @@ module.exports = {
     get productsPublic() {
         return shared.pipeline(require('./products-public'), localUtils, 'content');
     },
-
+    get tiersPublic() {
+        return shared.pipeline(require('./tiers-public'), localUtils, 'content');
+    },
     get bsmPodcast() {
         return shared.pipeline(require('./bsm-podcast'), localUtils, 'content');
     }

@@ -81,6 +81,7 @@ jobs:
       - uses: daniellockyer/mysql-action@main
         if: matrix.env.DB == 'mysql8'
         with:
+          authentication plugin: 'caching_sha2_password'
           mysql version: '8.0'
           mysql database: 'ghost_testing'
           mysql root password: 'root'
@@ -110,7 +111,12 @@ jobs:
           cache: yarn
 
       - run: yarn
+
       - run: yarn test:unit
+        if: matrix.node == '16.13.0'
+
+      - run: yarn test:unit:base
+        if: matrix.node != '16.13.0'
 
       - uses: codecov/codecov-action@v2
 
@@ -162,6 +168,7 @@ jobs:
       - uses: daniellockyer/mysql-action@main
         if: matrix.env.DB == 'mysql8'
         with:
+          authentication plugin: 'caching_sha2_password'
           mysql version: '8.0'
           mysql database: 'ghost_testing'
           mysql root password: 'root'

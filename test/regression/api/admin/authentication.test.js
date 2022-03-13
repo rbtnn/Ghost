@@ -1,7 +1,7 @@
 const nock = require('nock');
 const assert = require('assert');
 const {agentProvider, mockManager, fixtureManager, matchers} = require('../../../utils/e2e-framework');
-const {anyEtag, anyDate, anyErrorId} = matchers;
+const {anyEtag, anyISODateTime, anyErrorId} = matchers;
 
 const {tokens} = require('@tryghost/security');
 const models = require('../../../../core/server/models');
@@ -15,7 +15,8 @@ describe('Authentication API', function () {
             agent = await agentProvider.getAdminAPIAgent();
         });
 
-        beforeEach(function () {
+        beforeEach(async function () {
+            await mockManager.disableStripe();
             mockManager.mockMail();
         });
 
@@ -35,6 +36,9 @@ describe('Authentication API', function () {
         });
 
         it('complete setup', async function () {
+            const email = 'test@example.com';
+            const password = 'thisissupersafe';
+
             const requestMock = nock('https://api.github.com')
                 .get('/repos/tryghost/dawn/zipball')
                 .query(true)
@@ -45,8 +49,8 @@ describe('Authentication API', function () {
                 .body({
                     setup: [{
                         name: 'test user',
-                        email: 'test@example.com',
-                        password: 'thisissupersafe',
+                        email,
+                        password,
                         blogTitle: 'a test blog',
                         theme: 'TryGhost/Dawn',
                         accentColor: '#85FF00',
@@ -56,8 +60,8 @@ describe('Authentication API', function () {
                 .expectStatus(201)
                 .matchBodySnapshot({
                     users: [{
-                        created_at: anyDate,
-                        updated_at: anyDate
+                        created_at: anyISODateTime,
+                        updated_at: anyISODateTime
                     }]
                 })
                 .matchHeaderSnapshot({
@@ -67,7 +71,7 @@ describe('Authentication API', function () {
             // Test our side effects
             mockManager.assert.sentEmail({
                 subject: 'Your New Ghost Site',
-                to: 'test@example.com'
+                to: email
             });
             assert.equal(requestMock.isDone(), true, 'The dawn github URL should have been used');
 
@@ -77,6 +81,22 @@ describe('Authentication API', function () {
             assert.equal(activeTheme, 'dawn', 'The theme dawn should have been installed');
             assert.equal(accentColor, '#85FF00', 'The accent color should have been set');
             assert.equal(description, 'Custom Site Description on Setup &mdash; great for everyone', 'The site description should have been set');
+
+            // Test that we would not show any notifications (errors) to the user
+            await agent.loginAs(email, password);
+            await agent
+                .get('notifications/')
+                .expectStatus(200)
+                .expect(({body}) => {
+                    assert.deepEqual(body.notifications, [], 'The setup should not create notifications');
+                });
+
+            // Test that the default Tier has been renamed from 'Default Product'
+            const {body} = await agent.get('/tiers/');
+
+            const tierWithDefaultProductName = body.tiers.find(x => x.name === 'Default Product');
+
+            assert(tierWithDefaultProductName === undefined, 'The default Tier should have had a name change');
         });
 
         it('is setup? yes', async function () {
@@ -127,13 +147,72 @@ describe('Authentication API', function () {
                 .expectStatus(200)
                 .matchBodySnapshot({
                     users: [{
-                        created_at: anyDate,
-                        last_seen: anyDate,
-                        updated_at: anyDate
+                        created_at: anyISODateTime,
+                        last_seen: anyISODateTime,
+                        updated_at: anyISODateTime
                     }]
                 })
                 .matchHeaderSnapshot({
                     etag: anyEtag
+                });
+        });
+
+        it('complete setup with default theme', async function () {
+            const cleanAgent = await agentProvider.getAdminAPIAgent();
+
+            const email = 'test@example.com';
+            const password = 'thisissupersafe';
+
+            const requestMock = nock('https://api.github.com')
+                .get('/repos/tryghost/casper/zipball')
+                .query(true)
+                .replyWithFile(200, __dirname + '/../../../utils/fixtures/themes/valid.zip');
+
+            await cleanAgent
+                .post('authentication/setup')
+                .body({
+                    setup: [{
+                        name: 'test user',
+                        email,
+                        password,
+                        blogTitle: 'a test blog',
+                        theme: 'TryGhost/Casper',
+                        accentColor: '#85FF00',
+                        description: 'Custom Site Description on Setup &mdash; great for everyone'
+                    }]
+                })
+                .expectStatus(201)
+                .matchBodySnapshot({
+                    users: [{
+                        created_at: anyISODateTime,
+                        updated_at: anyISODateTime
+                    }]
+                })
+                .matchHeaderSnapshot({
+                    etag: anyEtag
+                });
+
+            // Test our side effects
+            mockManager.assert.sentEmail({
+                subject: 'Your New Ghost Site',
+                to: email
+            });
+            assert.equal(requestMock.isDone(), false, 'The ghost github URL should not have been used');
+
+            const activeTheme = await settingsCache.get('active_theme');
+            const accentColor = await settingsCache.get('accent_color');
+            const description = await settingsCache.get('description');
+            assert.equal(activeTheme, 'casper', 'The theme casper should have been installed');
+            assert.equal(accentColor, '#85FF00', 'The accent color should have been set');
+            assert.equal(description, 'Custom Site Description on Setup &mdash; great for everyone', 'The site description should have been set');
+
+            // Test that we would not show any notifications (errors) to the user
+            await cleanAgent.loginAs(email, password);
+            await cleanAgent
+                .get('notifications/')
+                .expectStatus(200)
+                .expect(({body}) => {
+                    assert.deepEqual(body.notifications, [], 'The setup should not create notifications');
                 });
         });
     });

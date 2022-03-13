@@ -1,3 +1,4 @@
+const assert = require('assert');
 const {
     agentProvider,
     fixtureManager,
@@ -29,8 +30,8 @@ describe('Tiers API', function () {
             .matchBodySnapshot({
                 tiers: Array(2).fill({
                     id: matchers.anyObjectId,
-                    created_at: matchers.anyDate,
-                    updated_at: matchers.anyDate
+                    created_at: matchers.anyISODateTime,
+                    updated_at: matchers.anyISODateTime
                 })
             });
     });
@@ -90,5 +91,30 @@ describe('Tiers API', function () {
                     id: matchers.anyUuid
                 }]
             });
+    });
+
+    it('Can read Tiers', async function () {
+        const {body: {tiers: [tier]}} = await agent.get('/tiers/');
+
+        await agent.get(`/tiers/${tier.id}/`)
+            .expectStatus(200);
+    });
+
+    it('Can edit visibility', async function () {
+        const {body: {tiers: [tier]}} = await agent.get('/tiers/?type:paid&limit=1');
+
+        const visibility = tier.visibility === 'none' ? 'public' : 'none';
+
+        await agent.put(`/tiers/${tier.id}/`)
+            .body({
+                tiers: [{
+                    visibility
+                }]
+            })
+            .expectStatus(200);
+
+        const {body: {tiers: [updatedTier]}} = await agent.get(`/tiers/${tier.id}/`);
+
+        assert(updatedTier.visibility === visibility, `The visibility of the Tier should have been updated to ${visibility}`);
     });
 });
