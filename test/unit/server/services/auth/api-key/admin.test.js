@@ -6,7 +6,7 @@ const apiKeyAuth = require('../../../../../../core/server/services/auth/api-key'
 const models = require('../../../../../../core/server/models');
 
 describe('Admin API Key Auth', function () {
-    const ADMIN_API_URL = '/ghost/api/canary/admin/';
+    const ADMIN_API_URL_VERSIONED = '/ghost/api/v4/admin/';
     const ADMIN_API_URL_NON_VERSIONED = '/ghost/api/admin/';
 
     before(models.init);
@@ -32,18 +32,18 @@ describe('Admin API Key Auth', function () {
         sinon.restore();
     });
 
-    it('should authenticate known+valid canary API key', function (done) {
+    it('should authenticate known+valid v4 API key', function (done) {
         const token = jwt.sign({
         }, this.secret, {
             keyid: this.fakeApiKey.id,
             algorithm: 'HS256',
             expiresIn: '5m',
-            audience: '/canary/admin/',
+            audience: '/v4/admin/',
             issuer: this.fakeApiKey.id
         });
 
         const req = {
-            originalUrl: ADMIN_API_URL,
+            originalUrl: ADMIN_API_URL_VERSIONED,
             headers: {
                 authorization: `Ghost ${token}`
             }
@@ -78,6 +78,58 @@ describe('Admin API Key Auth', function () {
         apiKeyAuth.admin.authenticate(req, res, (err) => {
             should.not.exist(err);
             req.api_key.should.eql(this.fakeApiKey);
+            done();
+        });
+    });
+
+    it('should authenticate known+valid non-versioned API key with a token created for versioned API', function (done) {
+        const token = jwt.sign({
+        }, this.secret, {
+            keyid: this.fakeApiKey.id,
+            algorithm: 'HS256',
+            expiresIn: '5m',
+            audience: 'v4/admin/',
+            issuer: this.fakeApiKey.id
+        });
+
+        const req = {
+            originalUrl: `${ADMIN_API_URL_NON_VERSIONED}session/`,
+            headers: {
+                authorization: `Ghost ${token}`
+            }
+        };
+        const res = {};
+
+        apiKeyAuth.admin.authenticate(req, res, (err) => {
+            should.not.exist(err);
+            req.api_key.should.eql(this.fakeApiKey);
+            done();
+        });
+    });
+
+    it('should NOT authenticate known+valid versioned API key with a token created for non-versioned API', function (done) {
+        const token = jwt.sign({
+        }, this.secret, {
+            keyid: this.fakeApiKey.id,
+            algorithm: 'HS256',
+            expiresIn: '5m',
+            audience: 'admin/',
+            issuer: this.fakeApiKey.id
+        });
+
+        const req = {
+            originalUrl: `${ADMIN_API_URL_VERSIONED}session/`,
+            headers: {
+                authorization: `Ghost ${token}`
+            }
+        };
+        const res = {};
+
+        apiKeyAuth.admin.authenticate(req, res, (err) => {
+            should.exist(err);
+            should.equal(err instanceof errors.UnauthorizedError, true);
+            err.code.should.eql('INVALID_JWT');
+            should.not.exist(req.api_key);
             done();
         });
     });
@@ -129,7 +181,7 @@ describe('Admin API Key Auth', function () {
         });
 
         const req = {
-            originalUrl: ADMIN_API_URL,
+            originalUrl: ADMIN_API_URL_VERSIONED,
             headers: {
                 authorization: `Ghost ${token}`
             }
@@ -153,12 +205,12 @@ describe('Admin API Key Auth', function () {
             keyid: this.fakeApiKey.id,
             algorithm: 'HS256',
             expiresIn: '5m',
-            audience: '/canary/admin/',
+            audience: '/v4/admin/',
             issuer: this.fakeApiKey.id
         });
 
         const req = {
-            originalUrl: ADMIN_API_URL,
+            originalUrl: ADMIN_API_URL_VERSIONED,
             headers: {
                 authorization: `Ghost ${token}`
             }
@@ -183,12 +235,12 @@ describe('Admin API Key Auth', function () {
             keyid: this.fakeApiKey.id,
             algorithm: 'HS256',
             expiresIn: '10m',
-            audience: '/canary/admin/',
+            audience: '/v4/admin/',
             issuer: this.fakeApiKey.id
         });
 
         const req = {
-            originalUrl: ADMIN_API_URL,
+            originalUrl: ADMIN_API_URL_VERSIONED,
             headers: {
                 authorization: `Ghost ${token}`
             }
@@ -211,12 +263,12 @@ describe('Admin API Key Auth', function () {
             keyid: this.fakeApiKey.id,
             algorithm: 'HS256',
             expiresIn: '5m',
-            audience: '/canary/admin/',
+            audience: 'v4/admin/',
             issuer: this.fakeApiKey.id
         });
 
         const req = {
-            originalUrl: ADMIN_API_URL,
+            originalUrl: ADMIN_API_URL_VERSIONED,
             headers: {
                 authorization: `Ghost ${token}`
             }
