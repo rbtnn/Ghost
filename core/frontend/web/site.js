@@ -137,7 +137,7 @@ module.exports = function setupSiteApp(options = {}) {
     siteApp.use(mw.servePublicFile('built', 'public/backspacefm/favicon.png', 'image/png', constants.ONE_YEAR_S));
     siteApp.use(mw.servePublicFile('built', 'public/backspacefm/green-color-mug-big.png', 'image/png', constants.ONE_YEAR_S));
     siteApp.use(mw.servePublicFile('built', 'public/backspacefm/icon1400.png', 'image/png', constants.ONE_YEAR_S));
-    siteApp.use(mw.servePublicFile('built', 'public/backspacefm/icon1400_premium.png', 'image/png', constants.ONE_YEAR_S));
+    siteApp.use(mw.servePublicFile('built', 'public/backspacefm/icon1400_bsm.png', 'image/png', constants.ONE_YEAR_S));
     siteApp.use(mw.servePublicFile('built', 'public/backspacefm/icon240.png', 'image/png', constants.ONE_YEAR_S));
     siteApp.use(mw.servePublicFile('built', 'public/backspacefm/icon240_bsm.png', 'image/png', constants.ONE_YEAR_S));
     siteApp.use(mw.servePublicFile('built', 'public/backspacefm/koyawithmug.png', 'image/png', constants.ONE_YEAR_S));
