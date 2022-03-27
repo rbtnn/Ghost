@@ -20,7 +20,8 @@ const GA_FEATURES = [
     'tierName',
     'selectablePortalLinks',
     'membersTableStatus',
-    'improvedOnboarding'
+    'improvedOnboarding',
+    'membersActivityFeed'
 ];
 
 // NOTE: this allowlist is meant to be used to filter out any unexpected
@@ -35,7 +36,8 @@ const ALPHA_FEATURES = [
     'urlCache',
     'beforeAfterCard',
     'tweetGridCard',
-    'membersActivityFeed'
+    'multipleNewsletters',
+    'dashboardV5'
 ];
 
 module.exports.GA_KEYS = [...GA_FEATURES];
