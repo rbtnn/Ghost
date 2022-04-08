@@ -158,7 +158,7 @@ module.exports = {
     },
 
     get emails() {
-        return shared.pipeline(require('./email'), localUtils);
+        return shared.pipeline(require('./emails'), localUtils);
     },
 
     get site() {
@@ -169,12 +169,20 @@ module.exports = {
         return shared.pipeline(require('./snippets'), localUtils);
     },
 
+    get stats() {
+        return shared.pipeline(require('./stats'), localUtils);
+    },
+
     get customThemeSettings() {
         return shared.pipeline(require('./custom-theme-settings'), localUtils);
     },
 
     get serializers() {
         return require('./utils/serializers');
+    },
+
+    get newsletters() {
+        return shared.pipeline(require('./newsletters'), localUtils);
     },
 
     /**

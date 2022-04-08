@@ -41,10 +41,6 @@ module.exports = {
         return require('./schedules');
     },
 
-    get webhooks() {
-        return require('./webhooks');
-    },
-
     get posts() {
         return require('./posts');
     },
@@ -71,14 +67,6 @@ module.exports = {
 
     get tiers() {
         return require('./tiers');
-    },
-
-    get member_signin_urls() {
-        return require('./member-signin-urls');
-    },
-
-    get identities() {
-        return require('./identities');
     },
 
     get images() {
@@ -121,16 +109,8 @@ module.exports = {
         return require('./site');
     },
 
-    get email_preview() {
-        return require('./email-preview');
-    },
-
-    get emails() {
-        return require('./emails');
-    },
-
-    get snippets() {
-        return require('./snippets');
+    get email_previews() {
+        return require('./email-previews');
     },
 
     get custom_theme_settings() {
