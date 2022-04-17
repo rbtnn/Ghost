@@ -20,6 +20,15 @@
             ]
         },
         {
+            "name": "Newsletter",
+            "entries": [
+                {
+                    "name":             "Default Newsletter",
+                    "slug":             "default-newsletter"
+                }
+            ]
+        },
+        {
             "name": "Tag",
             "entries": [
                 {

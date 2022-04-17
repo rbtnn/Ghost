@@ -557,7 +557,7 @@ Post = ghostBookshelf.Model.extend({
                 if (!tag.id && !tag.tag_id && tag.slug) {
                     // Clean up the provided slugs before we do any matching with existing tags
                     tag.slug = await ghostBookshelf.Model.generateSlug(
-                        Tag, 
+                        Tag,
                         tag.slug,
                         {skipDuplicateChecks: true}
                     );
@@ -672,6 +672,13 @@ Post = ghostBookshelf.Model.extend({
             if (this.hasChanged('published_by') && !options.importing) {
                 this.set('published_by', this.previous('published_by') ? String(this.previous('published_by')) : null);
             }
+        }
+
+        // newsletter_id is read-only and should only be set using a query param when publishing/scheduling
+        if (options.newsletter_id
+            && this.hasChanged('status')
+            && (newStatus === 'published' || newStatus === 'scheduled')) {
+            this.set('newsletter_id', options.newsletter_id);
         }
 
         // email_recipient_filter is read-only and should only be set using a query param when publishing/scheduling
@@ -878,6 +885,9 @@ Post = ghostBookshelf.Model.extend({
         // CASE: never expose the revisions
         delete attrs.mobiledoc_revisions;
 
+        // CASE: hide the newsletter_id for now
+        delete attrs.newsletter_id;
+
         // If the current column settings allow it...
         if (!options.columns || (options.columns && options.columns.indexOf('primary_tag') > -1)) {
             // ... attach a computed property of primary_tag which is the first tag if it is public, else null
@@ -1016,7 +1026,7 @@ Post = ghostBookshelf.Model.extend({
             findPage: ['status'],
             findAll: ['columns', 'filter'],
             destroy: ['destroyAll', 'destroyBy'],
-            edit: ['filter', 'email_recipient_filter', 'force_rerender']
+            edit: ['filter', 'email_recipient_filter', 'force_rerender', 'newsletter_id']
         };
 
         // The post model additionally supports having a formats option

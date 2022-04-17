@@ -2,8 +2,8 @@
 const settingsCache = require('../../shared/settings-cache');
 const config = require('../../shared/config');
 
-// Require from the rendering framework
-const {SafeString} = require('./rendering');
+// Require from the handlebars framework
+const {SafeString} = require('./handlebars');
 
 module.exports = {
     /**
@@ -22,8 +22,6 @@ module.exports = {
             }
         });
     },
-    // This is used to decide e.g. if a JSON object is a Post, Page, Tag etc
-    checks: require('../../server/data/schema').checks,
 
     /**
      * Section three: Core API

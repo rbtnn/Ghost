@@ -1,5 +1,5 @@
 const {agentProvider, mockManager, fixtureManager, matchers} = require('../../utils/e2e-framework');
-const {anyEtag, anyObjectId, anyUuid, anyISODateTime, anyISODate, anyString, anyArray, anyLocationFor, anyErrorId} = matchers;
+const {anyEtag, anyObjectId, anyString} = matchers;
 
 const newsletterSnapshot = {
     id: anyObjectId
@@ -26,11 +26,14 @@ describe('Newsletters API', function () {
             name: 'My test newsletter',
             sender_name: 'Test',
             sender_email: 'test@example.com',
-            sender_reply_to: 'test@example.com',
-            default: false,
+            sender_reply_to: 'newsletter',
             status: 'active',
-            recipient_filter: '',
             subscribe_on_signup: true,
+            title_font_category: 'serif',
+            body_font_category: 'serif',
+            show_header_icon: true,
+            show_header_title: true,
+            show_badge: true,
             sort_order: 0
         };
 
@@ -39,7 +42,7 @@ describe('Newsletters API', function () {
             .body({newsletters: [newsletter]})
             .expectStatus(201)
             .matchBodySnapshot({
-                newsletters: [newsletterSnapshot]
+                newsletters: new Array(1).fill(newsletterSnapshot)
             })
             .matchHeaderSnapshot({
                 etag: anyEtag,
@@ -49,7 +52,7 @@ describe('Newsletters API', function () {
         await agent.get('newsletters/')
             .expectStatus(200)
             .matchBodySnapshot({
-                newsletters: [newsletterSnapshot]
+                newsletters: new Array(2).fill(newsletterSnapshot)
             })
             .matchHeaderSnapshot({
                 etag: anyEtag
@@ -60,7 +63,7 @@ describe('Newsletters API', function () {
         await agent.get('newsletters/')
             .expectStatus(200)
             .matchBodySnapshot({
-                newsletters: [newsletterSnapshot]
+                newsletters: new Array(2).fill(newsletterSnapshot)
             })
             .matchHeaderSnapshot({
                 etag: anyEtag
