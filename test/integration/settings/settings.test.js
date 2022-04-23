@@ -6,7 +6,7 @@ const testUtils = require('../../utils');
  *
  * If this test fails for you, you have modified the default settings.
  * When you make a change or add new setting, please ensure that:
- * - If a new `core` setting is added/removed/renamed, update the below whitelist
+ * - If a new `core` setting is added/removed/renamed, update the allowlist below
  * - If a new non-`core` setting is added, it includes corresponding migration to populate its `group` and `flags`
  */
 
@@ -19,6 +19,7 @@ describe('Settings', function () {
         'routes_hash',
         'next_update_check',
         'notifications',
+        'version_notifications',
         'session_secret',
         'theme_session_secret',
         'ghost_public_key',

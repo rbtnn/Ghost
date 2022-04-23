@@ -37,7 +37,9 @@ const ALPHA_FEATURES = [
     'beforeAfterCard',
     'tweetGridCard',
     'multipleNewsletters',
-    'dashboardV5'
+    'multipleNewslettersUI',
+    'dashboardV5',
+    'publishingFlow'
 ];
 
 module.exports.GA_KEYS = [...GA_FEATURES];

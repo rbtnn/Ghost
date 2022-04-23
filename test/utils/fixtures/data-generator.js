@@ -375,7 +375,7 @@ DataGenerator.Content = {
             sender_email: 'jamie@example.com',
             sender_reply_to: 'newsletter',
             status: 'active',
-            subscribe_on_signup: true,
+            subscribe_on_signup: false,
             title_font_category: 'serif',
             body_font_category: 'serif',
             show_header_icon: true,
@@ -506,7 +506,7 @@ DataGenerator.Content = {
             plan_interval: 'month',
             plan_amount: '1000',
             plan_currency: 'usd',
-            mrr: 1000
+            mrr: 0
         },
         {
             id: ObjectId().toHexString(),
