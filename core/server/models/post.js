@@ -676,6 +676,7 @@ Post = ghostBookshelf.Model.extend({
 
         // newsletter_id is read-only and should only be set using a query param when publishing/scheduling
         if (options.newsletter_id
+            && !this.get('newsletter_id')
             && this.hasChanged('status')
             && (newStatus === 'published' || newStatus === 'scheduled')) {
             this.set('newsletter_id', options.newsletter_id);
@@ -695,6 +696,7 @@ Post = ghostBookshelf.Model.extend({
                 return self.related('email').fetch({transacting: options.transacting}).then((email) => {
                     if (!email) {
                         self.set('email_recipient_filter', 'none');
+                        self.set('newsletter_id', null);
                     }
                 });
             });
@@ -826,6 +828,10 @@ Post = ghostBookshelf.Model.extend({
         return this.hasOne('Email', 'post_id');
     },
 
+    newsletter: function newsletter() {
+        return this.belongsTo('Newsletter', 'newsletter_id');
+    },
+
     /**
      * @NOTE:
      * If you are requesting models with `columns`, you try to only receive some fields of the model/s.
@@ -884,9 +890,6 @@ Post = ghostBookshelf.Model.extend({
 
         // CASE: never expose the revisions
         delete attrs.mobiledoc_revisions;
-
-        // CASE: hide the newsletter_id for now
-        delete attrs.newsletter_id;
 
         // If the current column settings allow it...
         if (!options.columns || (options.columns && options.columns.indexOf('primary_tag') > -1)) {

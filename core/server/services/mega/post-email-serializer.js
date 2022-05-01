@@ -169,21 +169,22 @@ const parseReplacements = (email) => {
     return replacements;
 };
 
-const getTemplateSettings = async () => {
+const getTemplateSettings = async (newsletter) => {
     const accentColor = settingsCache.get('accent_color');
     const adjustedAccentColor = accentColor && darkenToContrastThreshold(accentColor, '#ffffff', 2).hex();
     const adjustedAccentContrastColor = accentColor && textColorForBackgroundColor(adjustedAccentColor).hex();
 
     const templateSettings = {
-        headerImage: settingsCache.get('newsletter_header_image'),
-        showHeaderIcon: settingsCache.get('newsletter_show_header_icon') && settingsCache.get('icon'),
-        showHeaderTitle: settingsCache.get('newsletter_show_header_title'),
-        showFeatureImage: settingsCache.get('newsletter_show_feature_image'),
-        titleFontCategory: settingsCache.get('newsletter_title_font_category'),
-        titleAlignment: settingsCache.get('newsletter_title_alignment'),
-        bodyFontCategory: settingsCache.get('newsletter_body_font_category'),
-        showBadge: settingsCache.get('newsletter_show_badge'),
-        footerContent: settingsCache.get('newsletter_footer_content'),
+        headerImage: newsletter.get('header_image'),
+        showHeaderIcon: newsletter.get('show_header_icon') && settingsCache.get('icon'),
+        showHeaderTitle: newsletter.get('show_header_title'),
+        showFeatureImage: newsletter.get('show_feature_image'),
+        titleFontCategory: newsletter.get('title_font_category'),
+        titleAlignment: newsletter.get('title_alignment'),
+        bodyFontCategory: newsletter.get('body_font_category'),
+        showBadge: newsletter.get('show_badge'),
+        footerContent: newsletter.get('footer_content'),
+        showHeaderName: newsletter.get('show_header_name'),
         accentColor,
         adjustedAccentColor,
         adjustedAccentContrastColor
@@ -221,7 +222,7 @@ const getTemplateSettings = async () => {
     return templateSettings;
 };
 
-const serialize = async (postModel, options = {isBrowserPreview: false, apiVersion: 'v4'}) => {
+const serialize = async (postModel, newsletter, options = {isBrowserPreview: false, apiVersion: 'v4'}) => {
     const post = await serializePostModel(postModel, options.apiVersion);
 
     const timezone = settingsCache.get('timezone');
@@ -290,11 +291,11 @@ const serialize = async (postModel, options = {isBrowserPreview: false, apiVersi
         }
     }
 
-    const templateSettings = await getTemplateSettings();
+    const templateSettings = await getTemplateSettings(newsletter);
 
     const render = template;
 
-    let htmlTemplate = render({post, site: getSite(), templateSettings});
+    let htmlTemplate = render({post, site: getSite(), templateSettings, newsletter: newsletter.toJSON()});
 
     if (options.isBrowserPreview) {
         const previewUnsubscribeUrl = createUnsubscribeUrl(null);
@@ -339,5 +340,7 @@ module.exports = {
     serialize,
     createUnsubscribeUrl,
     renderEmailForSegment,
-    parseReplacements
+    parseReplacements,
+    // Export for tests
+    _getTemplateSettings: getTemplateSettings
 };

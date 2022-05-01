@@ -1,22 +1,32 @@
 const models = require('../../models');
 const tpl = require('@tryghost/tpl');
 const errors = require('@tryghost/errors');
+const allowedIncludes = ['count.posts', 'count.members'];
 
 const messages = {
     newsletterNotFound: 'Newsletter not found.'
 };
+const newslettersService = require('../../services/newsletters');
 
 module.exports = {
     docName: 'newsletters',
 
     browse: {
         options: [
+            'include',
             'filter',
             'fields',
             'limit',
             'order',
             'page'
         ],
+        validation: {
+            options: {
+                include: {
+                    values: allowedIncludes
+                }
+            }
+        },
         permissions: true,
         query(frame) {
             return models.Newsletter.findPage(frame.options);
@@ -25,6 +35,7 @@ module.exports = {
 
     read: {
         options: [
+            'include',
             'fields',
             'debug',
             // NOTE: only for internal context
@@ -36,6 +47,13 @@ module.exports = {
             'slug',
             'uuid'
         ],
+        validation: {
+            options: {
+                include: {
+                    values: allowedIncludes
+                }
+            }
+        },
         permissions: true,
         async query(frame) {
             const newsletter = models.Newsletter.findOne(frame.data, frame.options);
@@ -51,27 +69,59 @@ module.exports = {
 
     add: {
         statusCode: 201,
-        permissions: true,
-        async query(frame) {
-            return models.Newsletter.add(frame.data.newsletters[0], frame.options);
-        }
-    },
-
-    edit: {
-        headers: {},
+        headers: {
+            cacheInvalidate: true
+        },
         options: [
-            'id'
+            'include',
+            'opt_in_existing'
         ],
         validation: {
             options: {
-                id: {
-                    required: true
+                include: {
+                    values: allowedIncludes
                 }
             }
         },
         permissions: true,
         async query(frame) {
-            return models.Newsletter.edit(frame.data.newsletters[0], frame.options);
+            return newslettersService.add(frame.data.newsletters[0], frame.options);
+        }
+    },
+
+    edit: {
+        headers: {
+            cacheInvalidate: true
+        },
+        options: [
+            'id',
+            'include'
+        ],
+        validation: {
+            options: {
+                id: {
+                    required: true
+                },
+                include: {
+                    values: allowedIncludes
+                }
+            }
+        },
+        permissions: true,
+        async query(frame) {
+            return newslettersService.edit(frame.data.newsletters[0], frame.options);
+        }
+    },
+
+    verifyPropertyUpdate: {
+        permissions: {
+            method: 'edit'
+        },
+        data: [
+            'token'
+        ],
+        async query(frame) {
+            return newslettersService.verifyPropertyUpdate(frame.data.token);
         }
     }
 };

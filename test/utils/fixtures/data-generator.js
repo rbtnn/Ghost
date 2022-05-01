@@ -354,14 +354,16 @@ DataGenerator.Content = {
             email: 'vip-paid@test.com',
             name: 'Peter Venkman',
             uuid: 'f6f91461-d7d8-4a3f-aa5d-8e582c40b346',
-            status: 'paid'
+            status: 'paid',
+            subscribed: false
         },
         {
             id: ObjectId().toHexString(),
             email: 'with-product@test.com',
             name: 'Dana Barrett',
             uuid: 'f6f91461-d7d8-4a3f-aa5d-8e582c40b347',
-            status: 'paid'
+            status: 'paid',
+            subscribed: false
         }
     ],
 
@@ -392,6 +394,23 @@ DataGenerator.Content = {
             sender_email: 'jamie@example.com',
             sender_reply_to: 'newsletter',
             status: 'active',
+            subscribe_on_signup: true,
+            title_font_category: 'serif',
+            body_font_category: 'serif',
+            show_header_icon: true,
+            show_header_title: true,
+            show_badge: true,
+            sort_order: 2
+        },
+        {
+            id: ObjectId().toHexString(),
+            name: 'Old newsletter',
+            slug: 'old-newsletter',
+            description: '',
+            sender_name: 'Jamie',
+            sender_email: 'jamie@example.com',
+            sender_reply_to: 'newsletter',
+            status: 'archived',
             subscribe_on_signup: true,
             title_font_category: 'serif',
             body_font_category: 'serif',
@@ -473,6 +492,42 @@ DataGenerator.Content = {
         }
     ],
 
+    members_paid_subscription_events: [
+        {
+            id: ObjectId().toHexString(),
+            type: 'created',
+            mrr_delta: 1000,
+            currency: 'usd',
+            source: 'stripe',
+            created_at: null,
+            subscription_id: null,
+            member_id: null,
+            from_plan: null,
+            to_plan: '173e16a1fffa7d232b398e4a9b08d266a456ae8f3d23e5f11cc608ced6730bb8'
+        }, {
+            id: ObjectId().toHexString(),
+            type: 'created',
+            mrr_delta: 0,
+            currency: 'usd',
+            source: 'stripe',
+            created_at: null,
+            subscription_id: null,
+            member_id: null,
+            from_plan: null,
+            to_plan: '173e16a1fffa7d232b398e4a9b08d266a456ae8f3d23e5f11cc608ced6730bb9'
+        }, {
+            id: ObjectId().toHexString(),
+            type: 'created',
+            mrr_delta: 0,
+            currency: 'usd',
+            source: 'stripe',
+            created_at: null,
+            subscription_id: null,
+            member_id: null,
+            from_plan: null,
+            to_plan: '173e16a1fffa7d232b398e4a9b08d266a456ae8f3d23e5f11cc608ced6730ba0'
+        }
+    ],
     members_stripe_customers_subscriptions: [
         {
             id: ObjectId().toHexString(),
@@ -761,6 +816,9 @@ DataGenerator.Content.members_stripe_customers[1].member_id = DataGenerator.Cont
 DataGenerator.Content.members_stripe_customers[2].member_id = DataGenerator.Content.members[4].id;
 DataGenerator.Content.members_stripe_customers[3].member_id = DataGenerator.Content.members[6].id;
 DataGenerator.Content.members_stripe_customers[4].member_id = DataGenerator.Content.members[7].id;
+DataGenerator.Content.members_paid_subscription_events[0].member_id = DataGenerator.Content.members[2].id;
+DataGenerator.Content.members_paid_subscription_events[1].member_id = DataGenerator.Content.members[3].id;
+DataGenerator.Content.members_paid_subscription_events[2].member_id = DataGenerator.Content.members[4].id;
 
 DataGenerator.forKnex = (function () {
     function createBasic(overrides) {
@@ -932,6 +990,7 @@ DataGenerator.forKnex = (function () {
         const newObj = _.cloneDeep(overrides);
         return _.defaults(newObj, {
             id: ObjectId().toHexString(),
+            uuid: uuid.v4(),
             slug: 'daily-newsletter',
             name: 'Daily Newsletter',
             sender_name: 'Jamie Larsen',
@@ -1233,9 +1292,53 @@ DataGenerator.forKnex = (function () {
     const members_newsletters = [
         {
             id: ObjectId().toHexString(),
-            member_id: DataGenerator.Content.posts[0].id,
-            newsletter_id: DataGenerator.Content.tags[0].id
+            member_id: DataGenerator.Content.members[0].id,
+            newsletter_id: DataGenerator.Content.newsletters[0].id
+        },
+        {
+            id: ObjectId().toHexString(),
+            member_id: DataGenerator.Content.members[1].id,
+            newsletter_id: DataGenerator.Content.newsletters[0].id
+        },
+        {
+            id: ObjectId().toHexString(),
+            member_id: DataGenerator.Content.members[2].id,
+            newsletter_id: DataGenerator.Content.newsletters[0].id
+        },
+        {
+            id: ObjectId().toHexString(),
+            member_id: DataGenerator.Content.members[3].id,
+            newsletter_id: DataGenerator.Content.newsletters[1].id
+        },
+        // Member index 4 (comped@test.com), subscribed to two active newsletters
+        {
+            id: ObjectId().toHexString(),
+            member_id: DataGenerator.Content.members[4].id,
+            newsletter_id: DataGenerator.Content.newsletters[0].id
+        },
+        {
+            id: ObjectId().toHexString(),
+            member_id: DataGenerator.Content.members[4].id,
+            newsletter_id: DataGenerator.Content.newsletters[1].id
+        },
+        // Member index 5 (vip@test.com), subscribed to an active and archived newsletter
+        {
+            id: ObjectId().toHexString(),
+            member_id: DataGenerator.Content.members[5].id,
+            newsletter_id: DataGenerator.Content.newsletters[1].id
+        },
+        {
+            id: ObjectId().toHexString(),
+            member_id: DataGenerator.Content.members[5].id,
+            newsletter_id: DataGenerator.Content.newsletters[2].id
+        },
+        // Member index 6 (vip-paid@test.com), subscribed to an archived newsletter
+        {
+            id: ObjectId().toHexString(),
+            member_id: DataGenerator.Content.members[6].id,
+            newsletter_id: DataGenerator.Content.newsletters[2].id
         }
+        // Member index 7 (with-product@test.com), subscribed to no newsletter
     ];
 
     const posts_authors = [
@@ -1351,7 +1454,9 @@ DataGenerator.forKnex = (function () {
 
     const newsletters = [
         createNewsletter(DataGenerator.Content.newsletters[0]),
-        createNewsletter(DataGenerator.Content.newsletters[1])
+        createNewsletter(DataGenerator.Content.newsletters[1]),
+        createNewsletter(DataGenerator.Content.newsletters[2])
+
     ];
 
     const labels = [
@@ -1405,6 +1510,12 @@ DataGenerator.forKnex = (function () {
         createBasic(DataGenerator.Content.members_stripe_customers_subscriptions[0]),
         createBasic(DataGenerator.Content.members_stripe_customers_subscriptions[1]),
         createBasic(DataGenerator.Content.members_stripe_customers_subscriptions[2])
+    ];
+
+    const members_paid_subscription_events = [
+        createBasic(DataGenerator.Content.members_paid_subscription_events[0]),
+        createBasic(DataGenerator.Content.members_paid_subscription_events[1]),
+        createBasic(DataGenerator.Content.members_paid_subscription_events[2])
     ];
 
     const snippets = [
@@ -1471,7 +1582,9 @@ DataGenerator.forKnex = (function () {
         stripe_prices,
         stripe_products,
         snippets,
-        custom_theme_settings
+        custom_theme_settings,
+
+        members_paid_subscription_events
     };
 }());
 

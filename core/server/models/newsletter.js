@@ -1,21 +1,40 @@
 const ghostBookshelf = require('./base');
+const ObjectID = require('bson-objectid');
+const uuid = require('uuid');
 
 const Newsletter = ghostBookshelf.Model.extend({
     tableName: 'newsletters',
 
-    defaults: {
-        sender_reply_to: 'newsletter',
-        status: 'active',
-        visibility: 'members',
-        subscribe_on_signup: true,
-        sort_order: 0,
-        title_font_category: 'sans_serif',
-        title_alignment: 'center',
-        show_feature_image: true,
-        body_font_category: 'sans_serif',
-        show_badge: true,
-        show_header_icon: true,
-        show_header_title: true
+    defaults: function defaults() {
+        return {
+            uuid: uuid.v4(),
+            sender_reply_to: 'newsletter',
+            status: 'active',
+            visibility: 'members',
+            subscribe_on_signup: true,
+            sort_order: 0,
+            title_font_category: 'sans_serif',
+            title_alignment: 'center',
+            show_feature_image: true,
+            body_font_category: 'sans_serif',
+            show_badge: true,
+            show_header_icon: true,
+            show_header_title: true,
+            show_header_name: true
+        };
+    },
+
+    members() {
+        return this.belongsToMany('Member', 'members_newsletters', 'newsletter_id', 'member_id')
+            .query((qb) => {
+                // avoids bookshelf adding a `DISTINCT` to the query
+                // we know the result set will already be unique and DISTINCT hurts query performance
+                qb.columns('members.*');
+            });
+    },
+
+    posts() {
+        return this.hasMany('Post');
     },
 
     async onSaving(model, _attr, options) {
@@ -36,12 +55,76 @@ const Newsletter = ghostBookshelf.Model.extend({
                 model.set({slug: cleanSlug});
             }
         }
+    },
+
+    subscribeMembersById(memberIds, unfilteredOptions = {}) {
+        let pivotRows = [];
+        for (const memberId of memberIds) {
+            pivotRows.push({
+                id: ObjectID().toHexString(),
+                member_id: memberId.id,
+                newsletter_id: this.id
+            });
+        }
+
+        const query = ghostBookshelf.knex.batchInsert('members_newsletters', pivotRows);
+
+        if (unfilteredOptions.transacting) {
+            query.transacting(unfilteredOptions.transacting);
+        }
+
+        return query;
     }
 }, {
+    orderDefaultRaw: function () {
+        return 'sort_order ASC, created_at ASC, id ASC';
+    },
+
     orderDefaultOptions: function orderDefaultOptions() {
         return {
-            sort_order: 'ASC'
+            sort_order: 'ASC',
+            created_at: 'ASC',
+            id: 'ASC'
         };
+    },
+
+    getDefaultNewsletter: async function getDefaultNewsletter(unfilteredOptions = {}) {
+        const options = {
+            filter: 'status:active',
+            order: this.orderDefaultRaw(),
+            limit: 1
+        };
+
+        if (unfilteredOptions.transacting) {
+            options.transacting = unfilteredOptions.transacting;
+        }
+
+        const newsletters = await this.findPage(options);
+
+        if (newsletters.data.length > 0) {
+            return newsletters.data[0];
+        }
+        return null;
+    },
+
+    getNextAvailableSortOrder: async function getNextAvailableSortOrder(unfilteredOptions = {}) {
+        const options = {
+            filter: 'status:active',
+            order: 'sort_order DESC', // there's no NQL syntax available here
+            limit: 1,
+            columns: ['sort_order']
+        };
+
+        if (unfilteredOptions.transacting) {
+            options.transacting = unfilteredOptions.transacting;
+        }
+
+        const lastNewsletter = await this.findPage(options);
+
+        if (lastNewsletter.data.length > 0) {
+            return lastNewsletter.data[0].get('sort_order') + 1;
+        }
+        return 0;
     }
 });
 
