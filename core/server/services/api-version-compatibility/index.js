@@ -1,9 +1,13 @@
 const APIVersionCompatibilityService = require('@tryghost/api-version-compatibility-service');
 const VersionNotificationsDataService = require('@tryghost/version-notifications-data-service');
+const versionMismatchHandler = require('@tryghost/mw-api-version-mismatch');
 // const {GhostMailer} = require('../mail');
 const settingsService = require('../../services/settings');
 const models = require('../../models');
 const logging = require('@tryghost/logging');
+const ghostVersion = require('@tryghost/version');
+
+let serviceInstance;
 
 const init = () => {
     //const ghostMailer = new GhostMailer();
@@ -12,7 +16,7 @@ const init = () => {
         settingsService: settingsService.getSettingsBREADServiceInstance()
     });
 
-    this.APIVersionCompatibilityServiceInstance = new APIVersionCompatibilityService({
+    serviceInstance = new APIVersionCompatibilityService({
         sendEmail: (options) => {
             // NOTE: not using bind here because mockMailer is having trouble mocking bound methods
             //return ghostMailer.send(options);
@@ -25,5 +29,15 @@ const init = () => {
     });
 };
 
-module.exports.APIVersionCompatibilityServiceInstance;
+module.exports.errorHandler = (req, res, next) => {
+    return versionMismatchHandler(serviceInstance)(req, res, next);
+};
+
+module.exports.contentVersion = (req, res, next) => {
+    if (req.header('accept-version')) {
+        res.header('Content-Version', `v${ghostVersion.safe}`);
+    }
+    next();
+};
+
 module.exports.init = init;
