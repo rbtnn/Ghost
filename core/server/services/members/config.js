@@ -4,7 +4,6 @@ const tpl = require('@tryghost/tpl');
 const {URL} = require('url');
 const crypto = require('crypto');
 const createKeypair = require('keypair');
-const path = require('path');
 
 const messages = {
     incorrectKeyType: 'type must be one of "direct" or "connect".'
@@ -36,13 +35,8 @@ class MembersConfigProvider {
     }
 
     getEmailFromAddress() {
-        const fromAddress = this._settingsCache.get('members_from_address') || 'noreply';
-
-        // Any fromAddress without domain uses site domain, like default setting `noreply`
-        if (fromAddress.indexOf('@') < 0) {
-            return `${fromAddress}@${this._getDomain()}`;
-        }
-        return fromAddress;
+        // Individual from addresses are set per newsletter - this is the fallback address
+        return `noreply@${this._getDomain()}`;
     }
 
     getEmailSupportAddress() {
@@ -190,10 +184,7 @@ class MembersConfigProvider {
     }
 
     getTokenConfig() {
-        const {href: membersApiUrl} = new URL(
-            this._urlUtils.getApiPath({version: 'v4', type: 'members'}),
-            this._urlUtils.urlFor('admin', true)
-        );
+        const membersApiUrl = this._urlUtils.urlFor({relativeUrl: '/members/api'}, true);
 
         let privateKey = this._settingsCache.get('members_private_key');
         let publicKey = this._settingsCache.get('members_public_key');
@@ -213,12 +204,11 @@ class MembersConfigProvider {
     }
 
     getSigninURL(token, type) {
-        const siteUrl = this._urlUtils.getSiteUrl();
+        const siteUrl = this._urlUtils.urlFor({relativeUrl: '/members/'}, true);
         const signinURL = new URL(siteUrl);
-        signinURL.pathname = path.join(signinURL.pathname, '/members/');
         signinURL.searchParams.set('token', token);
         signinURL.searchParams.set('action', type);
-        return signinURL.href;
+        return signinURL.toString();
     }
 }
 
