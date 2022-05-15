@@ -136,7 +136,7 @@ module.exports = ({siteTitle, email, url, accentColor = '#15212A', siteDomain, s
                         <p style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol'; font-size: 16px; color: #3A464C; font-weight: normal; margin: 0; line-height: 25px; margin-bottom: 25px;">このマジックリンクはセキュリティ的な観点から24時間後に無効となります。</p>
                         <p style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol'; font-size: 16px; color: #3A464C; font-weight: normal; margin: 0; line-height: 25px; margin-bottom: 30px;">では、また！<br/>backspace.fmインフラ向上委員会</p>
                         <hr/>
-                        <p style="word-break: break-all; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol'; font-size: 15px; color: #3A464C; font-weight: normal; margin: 0; line-height: 25px; margin-bottom: 5px;">下記のURLをコピー＆ペーストでWebブラウザからサイトインすることもできます：</p>
+                        <p style="word-break: break-all; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol'; font-size: 15px; color: #3A464C; font-weight: normal; margin: 0; line-height: 25px; margin-bottom: 5px;">下記のURLをコピー＆ペーストでWebブラウザからログインすることもできます：</p>
                         <p style="word-break: break-all; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol'; font-size: 15px; line-height: 25px; margin-top: 0; color: #3A464C;">${url}</p>
                       </td>
                     </tr>
@@ -148,7 +148,7 @@ module.exports = ({siteTitle, email, url, accentColor = '#15212A', siteDomain, s
 
               <tr>
                 <td style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol'; font-size: 14px; vertical-align: top; padding-top: 80px;">
-                  <p class="small" style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol'; line-height: 18px; font-size: 11px; color: #738A94; font-weight: normal; margin: 0; margin-bottom: 2px;">もしお心当たりのない場合、本メールは破棄して頂けるようお願い致します。<br />上記のリンクをクリックするまで購読は開始されません。</p>
+                  <p class="small" style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol'; line-height: 18px; font-size: 11px; color: #738A94; font-weight: normal; margin: 0; margin-bottom: 2px;">もしお心当たりのない場合、本メールは破棄して頂けるようお願い致します。<br />上記のリンクをクリックするまでBSMの購読は開始されません。</p>
                 </td>
               </tr>
               <tr>

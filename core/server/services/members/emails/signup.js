@@ -4,7 +4,7 @@ module.exports = ({siteTitle, email, url, accentColor = '#15212A', siteDomain, s
   <head>
     <meta name="viewport" content="width=device-width">
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-    <title>backspace.fm: サイトアップ</title>
+    <title>backspace.fm: BSMを購読</title>
     <style>
     /* -------------------------------------
         RESPONSIVE AND MOBILE FRIENDLY STYLES
@@ -136,7 +136,7 @@ module.exports = ({siteTitle, email, url, accentColor = '#15212A', siteDomain, s
                         <p style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol'; font-size: 16px; color: #3A464C; font-weight: normal; line-height: 25px; margin: 0; margin-bottom: 25px;">このマジックリンクはセキュリティ的な観点から24時間後に無効となります。</p>
                         <p style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol'; font-size: 16px; color: #3A464C; font-weight: normal; line-height: 25px; margin: 0; margin-bottom: 30px;">では、また！<br/>backspace.fmインフラ向上委員会</p>
                         <hr/>
-                        <p style="word-break: break-all; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol'; font-size: 15px; color: #3A464C; font-weight: normal; line-height: 25px; margin: 0; margin-bottom: 5px;">下記のURLをコピー＆ペーストでWebブラウザからサイトインすることもできます：</p>
+                        <p style="word-break: break-all; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol'; font-size: 15px; color: #3A464C; font-weight: normal; line-height: 25px; margin: 0; margin-bottom: 5px;">下記のURLをコピー＆ペーストでWebブラウザからログインすることもできます：</p>
                         <p style="word-break: break-all; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol'; font-size: 15px; line-height: 25px; margin-top: 0; color: #3A464C;">${url}</p>
                       </td>
                     </tr>
