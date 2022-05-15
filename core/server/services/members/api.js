@@ -50,14 +50,14 @@ function createApiInstance(config) {
                 case 'subscribe':
                     return `backspace.fm: 購読の確認`;
                 case 'signup':
-                    return `backspace.fm: サイトアップ`;
+                    return `backspace.fm: BSMを購読`;
                 case 'signup-paid':
-                    return `backspace.fm: サイトアップ`;
+                    return `backspace.fm: BSMを購読`;
                 case 'updateEmail':
                     return `backspace.fm: メール認証`;
                 case 'signin':
                 default:
-                    return `backspace.fm: サイトイン`;
+                    return `backspace.fm: ログイン`;
                 }
             },
             getText(url, type, email) {
