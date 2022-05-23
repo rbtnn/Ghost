@@ -14,11 +14,9 @@ const configUtils = require('../../../../utils/configUtils');
 function createSettingsMock({setDirect, setConnect}) {
     const getStub = sinon.stub();
 
-    getStub.withArgs('members_from_address').returns('noreply');
     getStub.withArgs('members_signup_access').returns('all');
     getStub.withArgs('stripe_secret_key').returns(setDirect ? 'direct_secret' : null);
     getStub.withArgs('stripe_publishable_key').returns(setDirect ? 'direct_publishable' : null);
-    getStub.withArgs('stripe_product_name').returns('Test');
     getStub.withArgs('stripe_plans').returns([{
         name: 'Monthly',
         currency: 'usd',
@@ -67,6 +65,7 @@ describe('Members - config', function () {
         sinon.restore();
     });
 
+<<<<<<< HEAD
     it('Does not export webhookHandlerUrl', function () {
         const paymentConfig = membersConfig.getStripePaymentConfig();
 
@@ -76,6 +75,11 @@ describe('Members - config', function () {
     it('can get correct tokenConfig', function () {
         const {issuer, publicKey, privateKey} = membersConfig.getTokenConfig();
 
+=======
+    it('can get correct tokenConfig', function () {
+        const {issuer, publicKey, privateKey} = membersConfig.getTokenConfig();
+
+>>>>>>> v5.0.0
         assert.equal(issuer, 'http://domain.tld/subdir/members/api');
         assert.equal(publicKey, 'PUBLIC');
         assert.equal(privateKey, 'PRIVATE');

@@ -5,6 +5,9 @@ module.exports = {
         es6: true,
         node: true
     },
+    parserOptions: {
+        ecmaVersion: 2020
+    },
     plugins: ['ghost'],
     extends: [
         'plugin:ghost/node'
@@ -36,7 +39,7 @@ module.exports = {
         {
             files: 'core/server/data/migrations/versions/**',
             rules: {
-                'no-restricted-syntax': ['warn', {
+                'no-restricted-syntax': ['error', {
                     selector: 'ForStatement',
                     message: 'For statements can perform badly in migrations'
                 }, {

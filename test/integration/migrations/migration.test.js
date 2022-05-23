@@ -131,8 +131,8 @@ describe('Database Migration (special functions)', function () {
             permissions.should.havePermission('Add snippets', ['Administrator', 'Editor', 'Admin Integration']);
             permissions.should.havePermission('Delete snippets', ['Administrator', 'Editor', 'Admin Integration']);
 
-            permissions.should.havePermission('Browse labels', ['Administrator', 'Editor', 'Admin Integration']);
-            permissions.should.havePermission('Read labels', ['Administrator', 'Editor', 'Admin Integration']);
+            permissions.should.havePermission('Browse labels', ['Administrator', 'Editor', 'Author', 'Admin Integration']);
+            permissions.should.havePermission('Read labels', ['Administrator', 'Editor', 'Author', 'Admin Integration']);
             permissions.should.havePermission('Edit labels', ['Administrator', 'Admin Integration']);
             permissions.should.havePermission('Add labels', ['Administrator', 'Admin Integration']);
             permissions.should.havePermission('Delete labels', ['Administrator', 'Admin Integration']);
@@ -147,15 +147,15 @@ describe('Database Migration (special functions)', function () {
             permissions.should.havePermission('Add Members');
             permissions.should.havePermission('Delete Members');
 
-            permissions.should.havePermission('Browse offers', ['Administrator']);
-            permissions.should.havePermission('Read offers', ['Administrator']);
-            permissions.should.havePermission('Edit offers', ['Administrator']);
-            permissions.should.havePermission('Add offers', ['Administrator']);
+            permissions.should.havePermission('Browse offers');
+            permissions.should.havePermission('Read offers');
+            permissions.should.havePermission('Edit offers');
+            permissions.should.havePermission('Add offers');
 
-            permissions.should.havePermission('Browse Products', ['Administrator', 'Editor', 'Author']);
-            permissions.should.havePermission('Read Products', ['Administrator', 'Editor', 'Author']);
-            permissions.should.havePermission('Edit Products', ['Administrator']);
-            permissions.should.havePermission('Add Products', ['Administrator']);
+            permissions.should.havePermission('Browse Products', ['Administrator', 'Editor', 'Author', 'Admin Integration']);
+            permissions.should.havePermission('Read Products', ['Administrator', 'Editor', 'Author', 'Admin Integration']);
+            permissions.should.havePermission('Edit Products', ['Administrator', 'Admin Integration']);
+            permissions.should.havePermission('Add Products', ['Administrator', 'Admin Integration']);
             permissions.should.havePermission('Delete Products', ['Administrator']);
 
             permissions.should.havePermission('Reset all passwords', ['Administrator']);
@@ -163,10 +163,10 @@ describe('Database Migration (special functions)', function () {
             permissions.should.havePermission('Browse custom theme settings', ['Administrator']);
             permissions.should.havePermission('Edit custom theme settings', ['Administrator']);
 
-            permissions.should.havePermission('Browse newsletters', ['Administrator']);
-            permissions.should.havePermission('Read newsletters', ['Administrator']);
-            permissions.should.havePermission('Edit newsletters', ['Administrator']);
-            permissions.should.havePermission('Add newsletters', ['Administrator']);
+            permissions.should.havePermission('Browse newsletters', ['Administrator', 'Editor', 'Author', 'Admin Integration']);
+            permissions.should.havePermission('Read newsletters', ['Administrator', 'Editor', 'Author', 'Admin Integration']);
+            permissions.should.havePermission('Edit newsletters', ['Administrator', 'Admin Integration']);
+            permissions.should.havePermission('Add newsletters', ['Administrator', 'Admin Integration']);
         });
 
         describe('Populate', function () {

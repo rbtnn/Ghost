@@ -1,133 +1,81 @@
 const _ = require('lodash');
 const url = require('./utils/url');
-const typeGroupMapper = require('../../../../shared/serializers/input/utils/settings-filter-type-group-mapper');
+const localUtils = require('../../index');
 const settingsCache = require('../../../../../../shared/settings-cache');
 const {WRITABLE_KEYS_ALLOWLIST} = require('../../../../../../shared/labs');
 
-const DEPRECATED_SETTINGS = [
-    'bulk_email_settings',
-    'slack'
+const EDITABLE_SETTINGS = [
+    'title',
+    'description',
+    'logo',
+    'cover_image',
+    'icon',
+    'locale',
+    'timezone',
+    'codeinjection_head',
+    'codeinjection_foot',
+    'facebook',
+    'twitter',
+    'navigation',
+    'secondary_navigation',
+    'meta_title',
+    'meta_description',
+    'og_image',
+    'og_title',
+    'og_description',
+    'twitter_image',
+    'twitter_title',
+    'twitter_description',
+    'is_private',
+    'password',
+    'default_content_visibility',
+    'default_content_visibility_tiers',
+    'members_signup_access',
+    'stripe_secret_key',
+    'stripe_publishable_key',
+    'stripe_connect_integration_token',
+    'portal_name',
+    'portal_button',
+    'portal_plans',
+    'portal_button_style',
+    'firstpromoter',
+    'firstpromoter_id',
+    'portal_button_icon',
+    'portal_button_signup_text',
+    'mailgun_api_key',
+    'mailgun_domain',
+    'mailgun_base_url',
+    'email_track_opens',
+    'amp',
+    'amp_gtag_id',
+    'slack_url',
+    'slack_username',
+    'unsplash',
+    'shared_views',
+    'accent_color',
+    'editor_default_email_recipients',
+    'editor_default_email_recipients_filter',
+    'labs'
 ];
 
-const deprecatedSupportedSettingsOneToManyMap = {
-    slack: [{
-        from: '[0].url',
-        to: {
-            key: 'slack_url',
-            group: 'slack',
-            type: 'string'
-        }
-    }, {
-        from: '[0].username',
-        to: {
-            key: 'slack_username',
-            group: 'slack',
-            type: 'string'
-        }
-    }]
-};
-
-const getMappedDeprecatedSettings = (settings) => {
-    const mappedSettings = [];
-
-    for (const key in deprecatedSupportedSettingsOneToManyMap) {
-        const deprecatedSetting = settings.find(setting => setting.key === key);
-
-        if (deprecatedSetting) {
-            let deprecatedSettingValue;
-
-            try {
-                deprecatedSettingValue = JSON.parse(deprecatedSetting.value);
-            } catch (err) {
-                // ignore the value if it's invalid
-            }
-
-            if (deprecatedSettingValue) {
-                deprecatedSupportedSettingsOneToManyMap[key].forEach(({from, to}) => {
-                    const value = _.get(deprecatedSettingValue, from);
-                    mappedSettings.push({
-                        key: to.key,
-                        value: value
-                    });
-                });
-            }
-        }
-    }
-
-    return mappedSettings;
-};
-
 module.exports = {
-    browse(apiConfig, frame) {
-        if (frame.options.type) {
-            let mappedGroupOptions = typeGroupMapper(frame.options.type);
-
-            if (frame.options.group) {
-                frame.options.group = `${frame.options.group},${mappedGroupOptions}`;
-            } else {
-                frame.options.group = mappedGroupOptions;
-            }
-        }
-    },
-
-    read(apiConfig, frame) {
-        if (frame.options.key === 'ghost_head') {
-            frame.options.key = 'codeinjection_head';
-        }
-
-        if (frame.options.key === 'ghost_foot') {
-            frame.options.key = 'codeinjection_foot';
-        }
-
-        if (frame.options.key === 'active_timezone') {
-            frame.options.key = 'timezone';
-        }
-
-        if (frame.options.key === 'default_locale') {
-            frame.options.key = 'lang';
-        }
-
-        if (frame.options.key === 'locale') {
-            frame.options.key = 'lang';
-        }
-    },
-
     edit(apiConfig, frame) {
         // CASE: allow shorthand syntax where a single key and value are passed to edit instead of object and options
         if (_.isString(frame.data)) {
             frame.data = {settings: [{key: frame.data, value: frame.options}]};
         }
+
         const settings = settingsCache.getAll();
 
-        // Ignore and drop all values with Read-only flag
-        frame.data.settings = frame.data.settings.filter((setting) => {
-            const settingFlagsStr = settings[setting.key] ? settings[setting.key].flags : '';
-            const settingFlagsArr = settingFlagsStr ? settingFlagsStr.split(',') : [];
-            return !settingFlagsArr.includes('RO');
-        });
-
-        const mappedDeprecatedSettings = getMappedDeprecatedSettings(frame.data.settings);
-        mappedDeprecatedSettings.forEach((setting) => {
-            // NOTE: give priority for non-deprecated setting values if they exist
-            const nonDeprecatedExists = frame.data.settings.find(s => s.key === setting.key);
-
-            if (!nonDeprecatedExists) {
-                frame.data.settings.push(setting);
-            }
-        });
+        if (!localUtils.isInternal(frame)) {
+            // Ignore and drop all values not in the EDITABLE_SETTINGS list unless this is an internal request
+            frame.data.settings = frame.data.settings.filter((setting) => {
+                return EDITABLE_SETTINGS.includes(setting.key);
+            });
+        }
 
         frame.data.settings.forEach((setting) => {
-            // CASE: transform objects/arrays into string (we store stringified objects in the db)
-            // @TODO: This belongs into the model layer. We should stringify before saving and parse when fetching from db.
-            // @TODO: Fix when dropping v0.1
             const settingType = settings[setting.key] ? settings[setting.key].type : '';
-
-            //TODO: Needs to be removed once we get rid of all `object` type settings
-            // NOTE: this transformation is more related to the fact that internal API calls call
-            //       settings API with plain objects instead of stringified ones
-            if (_.isObject(setting.value)) {
-                setting.value = JSON.stringify(setting.value);
-            }
 
             // @TODO: handle these transformations in a centralized API place (these rules should apply for ALL resources)
 
@@ -141,26 +89,7 @@ module.exports = {
                 setting.value = setting.value === 'true';
             }
 
-            if (setting.key === 'ghost_head') {
-                setting.key = 'codeinjection_head';
-            }
-
-            if (setting.key === 'ghost_foot') {
-                setting.key = 'codeinjection_foot';
-            }
-
-            if (setting.key === 'active_timezone') {
-                setting.key = 'timezone';
-            }
-
-            if (setting.key === 'default_locale') {
-                setting.key = 'lang';
-            }
-
-            if (setting.key === 'locale') {
-                setting.key = 'lang';
-            }
-
+            // CASE: filter labs to allowlist
             if (setting.key === 'labs') {
                 const inputLabsValue = JSON.parse(setting.value);
                 const filteredLabsValue = {};
@@ -175,16 +104,6 @@ module.exports = {
             }
 
             setting = url.forSetting(setting);
-        });
-
-        // Ignore all deprecated settings
-        frame.data.settings = frame.data.settings.filter((setting) => {
-            // NOTE: ignore old unsplash object notation
-            if (setting.key === 'unsplash' && _.isObject(setting.value)) {
-                return true;
-            }
-
-            return DEPRECATED_SETTINGS.includes(setting.key) === false;
         });
     }
 };

@@ -1,12 +1,6 @@
 // # Ghost Server
 // Handles the creation of an HTTP Server for Ghost
 const debug = require('@tryghost/debug')('server');
-
-const Promise = require('bluebird');
-const fs = require('fs-extra');
-const path = require('path');
-const _ = require('lodash');
-const config = require('../shared/config');
 const errors = require('@tryghost/errors');
 const tpl = require('@tryghost/tpl');
 const logging = require('@tryghost/logging');
@@ -42,13 +36,24 @@ const messages = {
  * ## GhostServer
  */
 class GhostServer {
-    constructor({url}) {
+    /**
+     *
+     * @param {Object}  options
+     * @param {String}  options.url
+     * @param {String}  options.env development|production|testing
+     * @param {Object}  options.serverConfig
+     * @param {String}  options.serverConfig.host
+     * @param {Number}  options.serverConfig.port
+     * @param {Number}  options.serverConfig.shutdownTimeout
+     * @param {Boolean} options.serverConfig.testmode
+     */
+    constructor({url, env, serverConfig}) {
         this.url = url;
+        this.env = env;
+        this.serverConfig = serverConfig;
+
         this.rootApp = null;
         this.httpServer = null;
-
-        // Expose config module for use externally.
-        this.config = config;
 
         // Tasks that should be run before the server exits
         this.cleanupTasks = [];
@@ -66,42 +71,16 @@ class GhostServer {
      */
     start(rootApp) {
         debug('Starting...');
-        const self = this;
-        self.rootApp = rootApp;
-        let socketConfig;
+        this.rootApp = rootApp;
 
-        const socketValues = {
-            path: path.join(config.get('paths').contentPath, config.get('env') + '.socket'),
-            permissions: '660'
-        };
+        const {host, port, testmode, shutdownTimeout} = this.serverConfig;
+        const self = this;
 
         return new Promise(function (resolve, reject) {
-            if (_.has(config.get('server'), 'socket')) {
-                socketConfig = config.get('server').socket;
-
-                if (_.isString(socketConfig)) {
-                    socketValues.path = socketConfig;
-                } else if (_.isObject(socketConfig)) {
-                    socketValues.path = socketConfig.path || socketValues.path;
-                    socketValues.permissions = socketConfig.permissions || socketValues.permissions;
-                }
-
-                // Make sure the socket is gone before trying to create another
-                try {
-                    fs.unlinkSync(socketValues.path);
-                } catch (e) {
-                    // We can ignore this.
-                }
-
-                self.httpServer = rootApp.listen(socketValues.path);
-                fs.chmod(socketValues.path, socketValues.permissions);
-                config.set('server:socket', socketValues);
-            } else {
-                self.httpServer = rootApp.listen(
-                    config.get('server').port,
-                    config.get('server').host
-                );
-            }
+            self.httpServer = rootApp.listen(
+                port,
+                host
+            );
 
             self.httpServer.on('error', function (error) {
                 let ghostError;
@@ -109,7 +88,7 @@ class GhostServer {
                 if (error.code === 'EADDRINUSE') {
                     ghostError = new errors.InternalServerError({
                         message: tpl(messages.addressInUse.error),
-                        context: tpl(messages.addressInUse.context, {port: config.get('server').port}),
+                        context: tpl(messages.addressInUse.context, {port}),
                         help: tpl(messages.addressInUse.help)
                     });
                 } else {
@@ -132,7 +111,7 @@ class GhostServer {
                 self._logStartMessages();
 
                 // Debug logs output in testmode only
-                if (config.get('server:testmode')) {
+                if (testmode) {
                     self._startTestMode();
                 }
 
@@ -143,7 +122,7 @@ class GhostServer {
                     });
             });
 
-            stoppable(self.httpServer, config.get('server:shutdownTimeout'));
+            stoppable(self.httpServer, shutdownTimeout);
 
             // ensure that Ghost exits correctly on Ctrl+C and SIGTERM
             process
@@ -177,7 +156,7 @@ class GhostServer {
      * Stops the server & handles cleanup, but does not exit the process
      * Used in tests for quick start/stop actions
      * Called by shutdown to handle server stop and cleanup before exiting
-     * @returns {Promise} Resolves once Ghost has stopped
+     * @returns {Promise<any>} Resolves once Ghost has stopped
      */
     async stop() {
         try {
@@ -221,22 +200,13 @@ class GhostServer {
      * If server.shutdownTimeout is reached, requests are terminated in-flight
      */
     async _stopServer() {
-        return new Promise((resolve, reject) => {
-            this.httpServer
-                .stop((error, status) => {
-                    if (error) {
-                        return reject(error);
-                    }
-
-                    return resolve(status);
-                });
-        });
+        const util = require('util');
+        return util.promisify(this.httpServer.stop)();
     }
 
     async _cleanup() {
         // Wait for all cleanup tasks to finish
-        await Promise
-            .all(this.cleanupTasks.map(task => task()));
+        return Promise.all(this.cleanupTasks.map(task => task()));
     }
 
     /**
@@ -281,14 +251,14 @@ class GhostServer {
      * Log Start Messages
      */
     _logStartMessages() {
-        logging.info(tpl(messages.ghostIsRunningIn, {env: config.get('env')}));
+        logging.info(tpl(messages.ghostIsRunningIn, {env: this.env}));
 
-        if (config.get('env') === 'production') {
+        if (this.env === 'production') {
             logging.info(tpl(messages.yourBlogIsAvailableOn, {url: this.url}));
         } else {
             logging.info(tpl(messages.listeningOn, {
-                host: config.get('server').socket || config.get('server').host,
-                port: config.get('server').port
+                host: this.serverConfig.host,
+                port: this.serverConfig.port
             }));
             logging.info(tpl(messages.urlConfiguredAs, {url: this.url}));
         }
@@ -303,7 +273,7 @@ class GhostServer {
         logging.warn(tpl(messages.ghostHasShutdown));
 
         // Extra clear message for production mode
-        if (config.get('env') === 'production') {
+        if (this.env === 'production') {
             logging.warn(tpl(messages.yourBlogIsNowOffline));
         }
 

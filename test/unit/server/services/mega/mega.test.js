@@ -13,12 +13,18 @@ describe('MEGA', function () {
         });
 
         // via transformEmailRecipientFilter
-        it('throws when "free" or "paid" strings are used as a email_recipient_filter', async function () {
+        it('throws when "none" is used as a email_recipient_filter', async function () {
             const postModel = {
+<<<<<<< HEAD
                 get: sinon.stub().returns('free'),
+=======
+                get: sinon.stub().returns('none'),
+>>>>>>> v5.0.0
                 relations: {},
                 related: sinon.stub().returns({
-                    fetch: sinon.stub().returns(null)
+                    fetch: sinon.stub().returns({
+                        get: sinon.stub().returns('active')
+                    })
                 })
             };
 
@@ -27,17 +33,22 @@ describe('MEGA', function () {
                 should.fail('addEmail did not throw');
             } catch (err) {
                 should.equal(errors.utils.isGhostError(err), true);
-                err.message.should.equal('Unexpected email_recipient_filter value "free", expected an NQL equivalent');
+                err.message.should.equal('Cannot send email to "none" email_segment');
             }
         });
 
-        // via transformEmailRecipientFilter
-        it('throws when "none" is used as a email_recipient_filter', async function () {
+        it('throws when sending to an archived newsletter', async function () {
             const postModel = {
+<<<<<<< HEAD
                 get: sinon.stub().returns('none'),
+=======
+                get: sinon.stub().returns('all'),
+>>>>>>> v5.0.0
                 relations: {},
                 related: sinon.stub().returns({
-                    fetch: sinon.stub().returns(null)
+                    fetch: sinon.stub().returns({
+                        get: sinon.stub().returns('archived')
+                    })
                 })
             };
 
@@ -46,20 +57,31 @@ describe('MEGA', function () {
                 should.fail('addEmail did not throw');
             } catch (err) {
                 should.equal(errors.utils.isGhostError(err), true);
-                err.message.should.equal('Cannot send email to "none" email_recipient_filter');
+                err.message.should.equal('Cannot send email to archived newsletters');
             }
         });
 
         // via transformEmailRecipientFilter
         it('throws when "public" is used as newsletter.visibility', async function () {
+            const newsletterGetter = sinon.stub();
+            newsletterGetter.withArgs('status').returns('active');
+            newsletterGetter.withArgs('visibility').returns('public');
+
             const postModel = {
                 get: sinon.stub().returns('status:free'),
                 relations: {},
+<<<<<<< HEAD
                 fetch: sinon.stub().returns(Promise.resolve({
                     get: () => 'public'
                 }))
+=======
+                related: sinon.stub().returns({
+                    fetch: sinon.stub().returns({
+                        get: newsletterGetter
+                    })
+                })
+>>>>>>> v5.0.0
             };
-            postModel.related = sinon.stub().returns(postModel);
             sinon.stub(labs, 'isSet').returns(true);
 
             try {
@@ -73,18 +95,21 @@ describe('MEGA', function () {
     });
 
     describe('transformEmailRecipientFilter', function () {
-        it('enforces subscribed:true with correct operator precedence', function () {
-            const transformedFilter = _transformEmailRecipientFilter('status:free,status:-free');
-            transformedFilter.should.equal('subscribed:true+(status:free,status:-free)');
-        });
+        it('public newsletter', function () {
+            const newsletterGetter = sinon.stub();
+            newsletterGetter.withArgs('status').returns('active');
+            newsletterGetter.withArgs('visibility').returns('members');
 
-        it('doesn\'t enforce subscribed:true when sending an email to a newsletter', function () {
-            const transformedFilter = _transformEmailRecipientFilter('status:free,status:-free', {}, {id: 'test', get: () => 'members'});
+            const transformedFilter = _transformEmailRecipientFilter({id: 'test', get: newsletterGetter}, 'status:free,status:-free', 'field');
             transformedFilter.should.equal('newsletters.id:test+(status:free,status:-free)');
         });
 
-        it('combines successfully with the newsletter paid-only visibility', function () {
-            const transformedFilter = _transformEmailRecipientFilter('status:free,status:-free', {}, {id: 'test', get: () => 'paid'});
+        it('paid-only newsletter', function () {
+            const newsletterGetter = sinon.stub();
+            newsletterGetter.withArgs('status').returns('active');
+            newsletterGetter.withArgs('visibility').returns('paid');
+
+            const transformedFilter = _transformEmailRecipientFilter({id: 'test', get: newsletterGetter}, 'status:free,status:-free', 'field');
             transformedFilter.should.equal('newsletters.id:test+(status:free,status:-free)+status:-free');
         });
     });
@@ -128,6 +153,7 @@ describe('MEGA', function () {
     });
 
     describe('getEmailMemberRows', function () {
+<<<<<<< HEAD
         it('addEmail throws when "free" or "paid" strings are used as a recipient_filter', async function () {
             const emailModel = {
                 get: sinon.stub().returns('paid'),
@@ -147,14 +173,20 @@ describe('MEGA', function () {
                 err.message.should.equal('Unexpected recipient_filter value "paid", expected an NQL equivalent');
             }
         });
+=======
+        it('getEmailMemberRows throws when "none" is used as a recipient_filter', async function () {
+            const newsletterGetter = sinon.stub();
+            newsletterGetter.withArgs('status').returns('active');
+            newsletterGetter.withArgs('visibility').returns('members');
+>>>>>>> v5.0.0
 
-        it('addEmail throws when "none" is used as a recipient_filter', async function () {
             const emailModel = {
                 get: sinon.stub().returns('none'),
                 relations: {},
                 related: sinon.stub().returns({
                     fetch: sinon.stub().returns({
-                        id: 'test'
+                        id: 'test',
+                        newsletterGetter
                     })
                 })
             };

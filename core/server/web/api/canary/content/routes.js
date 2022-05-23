@@ -1,6 +1,7 @@
 const express = require('../../../../../shared/express');
 const cors = require('cors');
-const api = require('../../../../api').canary;
+const api = require('../../../../api').endpoints;
+const http = require('../../../../api').shared.http;
 const mw = require('./middleware');
 
 module.exports = function apiRoutes() {
@@ -8,11 +9,14 @@ module.exports = function apiRoutes() {
 
     router.use(cors());
 
+<<<<<<< HEAD
     const http = api.http;
 
     // ## bsm_podcast
     router.get('/bsm_podcast/:uuid', mw.bsmPodcast, http(api.bsmPodcast.browse));
 
+=======
+>>>>>>> v5.0.0
     // ## Posts
     router.get('/posts', mw.authenticatePublic, http(api.postsPublic.browse));
     router.get('/posts/:id', mw.authenticatePublic, http(api.postsPublic.read));
@@ -36,8 +40,10 @@ module.exports = function apiRoutes() {
     // ## Settings
     router.get('/settings', mw.authenticatePublic, http(api.publicSettings.browse));
 
-    router.get('/products', mw.authenticatePublic, http(api.productsPublic.browse));
+    // ## Members
+    router.get('/newsletters', mw.authenticatePublic, http(api.newslettersPublic.browse));
     router.get('/tiers', mw.authenticatePublic, http(api.tiersPublic.browse));
+    router.get('/offers/:id', mw.authenticatePublic, http(api.offersPublic.read));
 
     return router;
 };

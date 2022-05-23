@@ -61,10 +61,6 @@ module.exports = {
         return require('./members');
     },
 
-    get products() {
-        return require('./products');
-    },
-
     get tiers() {
         return require('./tiers');
     },
@@ -85,8 +81,8 @@ module.exports = {
         return require('./users');
     },
 
-    get preview() {
-        return require('./preview');
+    get previews() {
+        return require('./previews');
     },
 
     get email_post() {
@@ -107,10 +103,6 @@ module.exports = {
 
     get site() {
         return require('./site');
-    },
-
-    get email_previews() {
-        return require('./email-previews');
     },
 
     get custom_theme_settings() {

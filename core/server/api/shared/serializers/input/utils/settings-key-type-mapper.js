@@ -1,7 +1,7 @@
 // NOTE: mapping is based on maping present in migration - 3.22/07-update-type-for-settings
 const keyTypeMapping = {
     db_hash: 'string',
-    session_secret: 'string',
+    admin_session_secret: 'string',
     theme_session_secret: 'string',
     ghost_public_key: 'string',
     ghost_private_key: 'string',
@@ -11,7 +11,7 @@ const keyTypeMapping = {
     cover_image: 'string',
     icon: 'string',
     accent_color: 'string',
-    lang: 'string',
+    locale: 'string',
     timezone: 'string',
     codeinjection_head: 'string',
     codeinjection_foot: 'string',
@@ -32,8 +32,6 @@ const keyTypeMapping = {
     members_private_key: 'string',
     members_email_auth_secret: 'string',
     default_content_visibility: 'string',
-    members_from_address: 'string',
-    stripe_product_name: 'string',
     stripe_secret_key: 'string',
     stripe_publishable_key: 'string',
     stripe_connect_publishable_key: 'string',

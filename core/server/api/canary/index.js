@@ -8,10 +8,6 @@ const localUtils = require('./utils');
 /* eslint-disable max-lines */
 
 module.exports = {
-    get http() {
-        return shared.http;
-    },
-
     get authentication() {
         return shared.pipeline(require('./authentication'), localUtils);
     },
@@ -89,10 +85,6 @@ module.exports = {
         return shared.pipeline(require('./offers'), localUtils);
     },
 
-    get products() {
-        return shared.pipeline(require('./products'), localUtils);
-    },
-
     get tiers() {
         return shared.pipeline(require('./tiers'), localUtils);
     },
@@ -125,8 +117,8 @@ module.exports = {
         return shared.pipeline(require('./users'), localUtils);
     },
 
-    get preview() {
-        return shared.pipeline(require('./preview'), localUtils);
+    get previews() {
+        return shared.pipeline(require('./previews'), localUtils);
     },
 
     get emailPost() {
@@ -153,8 +145,8 @@ module.exports = {
         return shared.pipeline(require('./actions'), localUtils);
     },
 
-    get email_preview() {
-        return shared.pipeline(require('./email-preview'), localUtils);
+    get email_previews() {
+        return shared.pipeline(require('./email-previews'), localUtils);
     },
 
     get emails() {
@@ -190,8 +182,8 @@ module.exports = {
      *
      * @NOTE:
      *
-     * Please create separate controllers for Content & Admin API. The goal is to expose `api.canary.content` and
-     * `api.canary.admin` soon. Need to figure out how serializers & validation works then.
+     * Please create separate controllers for Content & Admin API. The goal is to expose `api.content` and
+     * `api.admin` soon. Need to figure out how serializers & validation works then.
      */
     get pagesPublic() {
         return shared.pipeline(require('./pages-public'), localUtils, 'content');
@@ -213,6 +205,7 @@ module.exports = {
         return shared.pipeline(require('./authors-public'), localUtils, 'content');
     },
 
+<<<<<<< HEAD
     get productsPublic() {
         return shared.pipeline(require('./products-public'), localUtils, 'content');
     },
@@ -221,5 +214,17 @@ module.exports = {
     },
     get bsmPodcast() {
         return shared.pipeline(require('./bsm-podcast'), localUtils, 'content');
+=======
+    get tiersPublic() {
+        return shared.pipeline(require('./tiers-public'), localUtils, 'content');
+    },
+
+    get newslettersPublic() {
+        return shared.pipeline(require('./newsletters-public'), localUtils, 'content');
+    },
+
+    get offersPublic() {
+        return shared.pipeline(require('./offers-public'), localUtils, 'content');
+>>>>>>> v5.0.0
     }
 };

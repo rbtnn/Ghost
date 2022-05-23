@@ -1,10 +1,7 @@
 const errors = require('@tryghost/errors');
-const _ = require('lodash');
-const Promise = require('bluebird');
 const rewire = require('rewire');
 const should = require('should');
 const sinon = require('sinon');
-const events = require('../../../../../core/server/lib/common/events');
 const Queue = require('../../../../../core/server/services/url/Queue');
 const Resources = require('../../../../../core/server/services/url/Resources');
 const UrlGenerator = require('../../../../../core/server/services/url/UrlGenerator');
@@ -36,8 +33,6 @@ describe('Unit: services/url/UrlService', function () {
         UrlService.__set__('Urls', UrlsStub);
         UrlService.__set__('UrlGenerator', UrlGeneratorStub);
 
-        sinon.stub(events, 'on');
-
         urlService = new UrlService();
     });
 
@@ -57,9 +52,6 @@ describe('Unit: services/url/UrlService', function () {
         urlService.queue.addListener.calledTwice.should.be.true();
         urlService.queue.addListener.args[0][0].should.eql('started');
         urlService.queue.addListener.args[1][0].should.eql('ended');
-
-        events.on.calledOnce.should.be.true();
-        events.on.args[0][0].should.eql('services.themes.api.changed');
     });
 
     it('fn: _onQueueStarted', function () {
@@ -208,7 +200,7 @@ describe('Unit: services/url/UrlService', function () {
             urlService.urls.getByResourceId.withArgs(1).returns(null);
             urlService.getUrlByResourceId(1, {absolute: true});
 
-            urlService.utils.createUrl.calledWith('/404/', true, undefined).should.be.true();
+            urlService.utils.createUrl.calledWith('/404/', true).should.be.true();
         });
 
         it('found', function () {
@@ -222,16 +214,7 @@ describe('Unit: services/url/UrlService', function () {
 
             urlService.urls.getByResourceId.withArgs(1).returns({url: '/post/'});
             urlService.getUrlByResourceId(1, {absolute: true});
-            urlService.utils.createUrl.calledWith('/post/', true, undefined).should.be.true();
-        });
-
-        it('found: absolute + secure', function () {
-            urlService.utils = sinon.stub();
-            urlService.utils.createUrl = sinon.stub();
-
-            urlService.urls.getByResourceId.withArgs(1).returns({url: '/post/'});
-            urlService.getUrlByResourceId(1, {absolute: true, secure: true});
-            urlService.utils.createUrl.calledWith('/post/', true, true).should.be.true();
+            urlService.utils.createUrl.calledWith('/post/', true).should.be.true();
         });
 
         it('not found: withSubdirectory', function () {
@@ -240,25 +223,16 @@ describe('Unit: services/url/UrlService', function () {
 
             urlService.urls.getByResourceId.withArgs(1).returns(null);
             urlService.getUrlByResourceId(1, {withSubdirectory: true});
-            urlService.utils.createUrl.calledWith('/404/', false, undefined).should.be.true();
+            urlService.utils.createUrl.calledWith('/404/', false).should.be.true();
         });
 
-        it('not found: withSubdirectory + secure', function () {
+        it('not found: withSubdirectory + absolute', function () {
             urlService.utils = sinon.stub();
             urlService.utils.createUrl = sinon.stub();
 
             urlService.urls.getByResourceId.withArgs(1).returns(null);
-            urlService.getUrlByResourceId(1, {withSubdirectory: true, secure: true});
-            urlService.utils.createUrl.calledWith('/404/', false, true).should.be.true();
-        });
-
-        it('not found: withSubdirectory + secure + absolute', function () {
-            urlService.utils = sinon.stub();
-            urlService.utils.createUrl = sinon.stub();
-
-            urlService.urls.getByResourceId.withArgs(1).returns(null);
-            urlService.getUrlByResourceId(1, {withSubdirectory: true, secure: true, absolute: true});
-            urlService.utils.createUrl.calledWith('/404/', true, true).should.be.true();
+            urlService.getUrlByResourceId(1, {withSubdirectory: true, absolute: true});
+            urlService.utils.createUrl.calledWith('/404/', true).should.be.true();
         });
 
         it('found: withSubdirectory', function () {
@@ -267,25 +241,16 @@ describe('Unit: services/url/UrlService', function () {
 
             urlService.urls.getByResourceId.withArgs(1).returns({url: '/post/'});
             urlService.getUrlByResourceId(1, {withSubdirectory: true});
-            urlService.utils.createUrl.calledWith('/post/', false, undefined).should.be.true();
+            urlService.utils.createUrl.calledWith('/post/', false).should.be.true();
         });
 
-        it('found: withSubdirectory + secure', function () {
+        it('found: withSubdirectory + absolute', function () {
             urlService.utils = sinon.stub();
             urlService.utils.createUrl = sinon.stub();
 
             urlService.urls.getByResourceId.withArgs(1).returns({url: '/post/'});
-            urlService.getUrlByResourceId(1, {withSubdirectory: true, secure: true});
-            urlService.utils.createUrl.calledWith('/post/', false, true).should.be.true();
-        });
-
-        it('found: withSubdirectory + secure + absolute', function () {
-            urlService.utils = sinon.stub();
-            urlService.utils.createUrl = sinon.stub();
-
-            urlService.urls.getByResourceId.withArgs(1).returns({url: '/post/'});
-            urlService.getUrlByResourceId(1, {withSubdirectory: true, secure: true, absolute: true});
-            urlService.utils.createUrl.calledWith('/post/', true, true).should.be.true();
+            urlService.getUrlByResourceId(1, {withSubdirectory: true, absolute: true});
+            urlService.utils.createUrl.calledWith('/post/', true).should.be.true();
         });
     });
 });

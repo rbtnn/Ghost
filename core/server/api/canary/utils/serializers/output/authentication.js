@@ -33,7 +33,7 @@ module.exports = {
 
     generateResetToken(data, apiConfig, frame) {
         frame.response = {
-            passwordreset: [{
+            password_reset: [{
                 message: tpl(messages.checkEmailForInstructions)
             }]
         };
@@ -41,14 +41,10 @@ module.exports = {
 
     resetPassword(data, apiConfig, frame) {
         frame.response = {
-            passwordreset: [{
+            password_reset: [{
                 message: tpl(messages.passwordChanged)
             }]
         };
-    },
-
-    resetAllPasswords(data, apiConfig, frame) {
-        frame.response = data;
     },
 
     acceptInvitation(data, apiConfig, frame) {

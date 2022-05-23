@@ -38,6 +38,11 @@ const Newsletter = ghostBookshelf.Model.extend({
         return this.hasMany('Post');
     },
 
+    // Force active newsletters for content API
+    enforcedFilters: function enforcedFilters(options) {
+        return (options.context && options.context.public) ? 'status:active' : null;
+    },
+
     async onSaving(model, _attr, options) {
         ghostBookshelf.Model.prototype.onSaving.apply(this, arguments);
 
@@ -99,6 +104,28 @@ const Newsletter = ghostBookshelf.Model.extend({
         return attrs;
     }
 }, {
+    /**
+     * Returns an array of keys permitted in a method's `options` hash, depending on the current method.
+     * @param {String} methodName The name of the method to check valid options for.
+     * @return {Array} Keys allowed in the `options` hash of the model's method.
+     */
+    permittedOptions: function permittedOptions(methodName) {
+        let options = ghostBookshelf.Model.permittedOptions.call(this, methodName);
+
+        // allowlists for the `options` hash argument on methods, by method name.
+        // these are the only options that can be passed to Bookshelf / Knex.
+        const validOptions = {
+            findOne: ['filter'],
+            findAll: ['filter']
+        };
+
+        if (validOptions[methodName]) {
+            options = options.concat(validOptions[methodName]);
+        }
+
+        return options;
+    },
+
     orderDefaultRaw: function () {
         return 'sort_order ASC, created_at ASC, id ASC';
     },

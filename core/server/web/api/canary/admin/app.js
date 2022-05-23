@@ -35,7 +35,11 @@ module.exports = function setupApiApp() {
     // API error handling
     apiApp.use(errorHandler.resourceNotFound);
     apiApp.use(APIVersionCompatibilityService.errorHandler);
+<<<<<<< HEAD
     apiApp.use(errorHandler.handleJSONResponseV2(sentry));
+=======
+    apiApp.use(errorHandler.handleJSONResponse(sentry));
+>>>>>>> v5.0.0
 
     debug('Admin API canary setup end');
 

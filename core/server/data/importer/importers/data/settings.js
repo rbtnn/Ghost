@@ -10,15 +10,15 @@ const keyTypeMapper = require('../../../../api/shared/serializers/input/utils/se
 const {WRITABLE_KEYS_ALLOWLIST} = require('../../../../../shared/labs');
 
 const labsDefaults = JSON.parse(defaultSettings.labs.labs.defaultValue);
-const ignoredSettings = ['slack_url', 'members_from_address', 'members_support_address'];
+const ignoredSettings = ['slack_url', 'members_from_address', 'members_support_address', 'portal_products'];
 
-// NOTE: drop support in Ghost 5.0
-const deprecatedSupportedSettingsMap = {
-    default_locale: 'lang',
-    active_timezone: 'timezone',
-    ghost_head: 'codeinjection_head',
-    ghost_foot: 'codeinjection_foot'
+// Importer maintains as much backwards compatibility as possible
+const renamedSettingsMap = {
+    default_locale: 'locale',
+    lang: 'locale',
+    active_timezone: 'timezone'
 };
+
 const deprecatedSupportedSettingsOneToManyMap = {
     // NOTE: intentionally ignoring slack_url setting
     slack: [{
@@ -101,8 +101,8 @@ class SettingsImporter extends BaseImporter {
 
         // NOTE: import settings removed in v3 and move them to ignored once Ghost v4 changes are done
         this.dataToImport = this.dataToImport.map((data) => {
-            if (deprecatedSupportedSettingsMap[data.key]) {
-                data.key = deprecatedSupportedSettingsMap[data.key];
+            if (renamedSettingsMap[data.key]) {
+                data.key = renamedSettingsMap[data.key];
             }
 
             return data;

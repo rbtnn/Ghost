@@ -196,15 +196,35 @@ describe('User API', function () {
             .expect(200);
     });
 
-    it('Can destroy an active user', async function () {
+    it('Can destroy an active user and transfer posts to the owner', async function () {
         const userId = testUtils.getExistingData().users[1].id;
+        const userSlug = testUtils.getExistingData().users[1].slug;
+        const ownerId = testUtils.getExistingData().users[0].id;
 
         const res = await request
-            .get(localUtils.API.getApiQuery(`posts/?filter=author_id:${userId}`))
+            .get(localUtils.API.getApiQuery(`posts/?filter=authors:${userSlug}`))
             .set('Origin', config.get('url'))
             .expect(200);
 
         res.body.posts.length.should.eql(7);
+
+        const ownerPostsAuthorsModels = await db.knex('posts_authors')
+            .where({
+                author_id: ownerId
+            })
+            .select();
+
+        // includes posts & pages
+        should.equal(ownerPostsAuthorsModels.length, 8);
+
+        const userPostsAuthorsModels = await db.knex('posts_authors')
+            .where({
+                author_id: userId
+            })
+            .select();
+
+        // includes posts & pages
+        should.equal(userPostsAuthorsModels.length, 11);
 
         const res2 = await request
             .delete(localUtils.API.getApiQuery(`users/${userId}`))
@@ -224,7 +244,7 @@ describe('User API', function () {
             .expect(404);
 
         const res3 = await request
-            .get(localUtils.API.getApiQuery(`posts/?filter=author_id:${userId}`))
+            .get(localUtils.API.getApiQuery(`posts/?filter=authors:${userSlug}}`))
             .set('Origin', config.get('url'))
             .expect(200);
 
@@ -240,6 +260,22 @@ describe('User API', function () {
 
         const rolesUsers = await db.knex('roles_users').select();
         rolesUsers.length.should.greaterThan(0);
+
+        const ownerPostsAuthorsModelsAfter = await db.knex('posts_authors')
+            .where({
+                author_id: ownerId
+            })
+            .select();
+
+        should.equal(ownerPostsAuthorsModelsAfter.length, 19);
+
+        const userPostsAuthorsModelsAfter = await db.knex('posts_authors')
+            .where({
+                author_id: userId
+            })
+            .select();
+
+        should.equal(userPostsAuthorsModelsAfter.length, 0);
     });
 
     it('Can transfer ownership to admin user', async function () {

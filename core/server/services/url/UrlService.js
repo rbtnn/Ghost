@@ -9,9 +9,6 @@ const Urls = require('./Urls');
 const Resources = require('./Resources');
 const urlUtils = require('../../../shared/url-utils');
 
-// This listens to services.themes.api.changed, routing events, and it's own queue events
-const events = require('../../lib/common/events');
-
 /**
  * The url service class holds all instances in a centralized place.
  * It's the public API you can talk to.
@@ -49,9 +46,6 @@ class UrlService {
      * @private
      */
     _listeners() {
-        this._onThemeChangedListener = this._onThemeChangedListener.bind(this);
-        events.on('services.themes.api.changed', this._onThemeChangedListener);
-
         this._onQueueStartedListener = this._onQueueStarted.bind(this);
         this.queue.addListener('started', this._onQueueStartedListener);
 
@@ -118,15 +112,6 @@ class UrlService {
     onRouterUpdated(identifier) {
         const generator = this.urlGenerators.find(g => g.identifier === identifier);
         generator.regenerateResources();
-    }
-
-    /**
-     * @description If the API version in the theme config changes, we have to reset urls and resources.
-     * @private
-     */
-    _onThemeChangedListener() {
-        this.reset({keepListeners: true});
-        this.init();
     }
 
     /**
@@ -233,6 +218,8 @@ class UrlService {
      *
      * @param {String} id
      * @param {Object} options
+     * @param {Object} [options.absolute]
+     * @param {Object} [options.withSubdirectory]
      * @returns {String}
      */
     getUrlByResourceId(id, options) {
@@ -242,22 +229,22 @@ class UrlService {
 
         if (obj) {
             if (options.absolute) {
-                return this.utils.createUrl(obj.url, options.absolute, options.secure);
+                return this.utils.createUrl(obj.url, options.absolute);
             }
 
             if (options.withSubdirectory) {
-                return this.utils.createUrl(obj.url, false, options.secure, true);
+                return this.utils.createUrl(obj.url, false, true);
             }
 
             return obj.url;
         }
 
         if (options.absolute) {
-            return this.utils.createUrl('/404/', options.absolute, options.secure);
+            return this.utils.createUrl('/404/', options.absolute);
         }
 
         if (options.withSubdirectory) {
-            return this.utils.createUrl('/404/', false, options.secure);
+            return this.utils.createUrl('/404/', false);
         }
 
         return '/404/';
@@ -375,7 +362,6 @@ class UrlService {
         if (!options.keepListeners) {
             this._onQueueStartedListener && this.queue.removeListener('started', this._onQueueStartedListener);
             this._onQueueEndedListener && this.queue.removeListener('ended', this._onQueueEndedListener);
-            this._onThemeChangedListener && events.removeListener('services.themes.api.changed', this._onThemeChangedListener);
         }
     }
 

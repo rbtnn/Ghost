@@ -3,6 +3,13 @@ const MagicLink = require('@tryghost/magic-link');
 const logging = require('@tryghost/logging');
 const verifyEmailTemplate = require('./emails/verify-email');
 const debug = require('@tryghost/debug')('services:newsletters');
+const tpl = require('@tryghost/tpl');
+const errors = require('@tryghost/errors');
+
+const messages = {
+    nameAlreadyExists: 'A newsletter with the same name already exists',
+    newsletterNotFound: 'Newsletter not found.'
+};
 
 class NewslettersService {
     /**
@@ -75,6 +82,23 @@ class NewslettersService {
 
     /**
      * @public
+     * @param {Object} options data (id, uuid, slug...)
+     * @param {Object} [options] options
+     * @returns {Promise<object>} JSONified Newsletter models
+     */
+    async read(data, options = {}) {
+        const newsletter = await this.NewsletterModel.findOne(data, options);
+
+        if (!newsletter) {
+            throw new errors.NotFoundError({
+                message: tpl(messages.newsletterNotFound)
+            });
+        }
+        return newsletter;
+    }
+
+    /**
+     * @public
      * @param {Object} [options] options
      * @returns {Promise<object>} JSONified Newsletter models
      */
@@ -83,11 +107,13 @@ class NewslettersService {
 
         return newsletters.toJSON();
     }
+
     /**
      * @public
      * @param {object} attrs model properties
      * @param {Object} [options] options
-     * @param {Object} [options] options.transacting
+     * @param {boolean} [options.opt_in_existing] Opt in existing members
+     * @param {Object} [options.transacting]
      * @returns {Promise<{object}>} Newsetter Model with verification metadata
      */
     async add(attrs, options = {}) {
@@ -99,7 +125,9 @@ class NewslettersService {
             });
         }
 
-        await this.limitService.errorIfWouldGoOverLimit('newsletters');
+        if (!attrs.status || attrs.status === 'active') {
+            await this.limitService.errorIfWouldGoOverLimit('newsletters', options.transacting ? {transacting: options.transacting} : {});
+        }
 
         // remove any email properties that are not allowed to be set without verification
         const {cleanedAttrs, emailsToVerify} = await this.prepAttrsForEmailVerification(attrs);
@@ -108,8 +136,23 @@ class NewslettersService {
         const sortOrder = await this.NewsletterModel.getNextAvailableSortOrder(options);
         cleanedAttrs.sort_order = sortOrder;
 
-        // add the model now because we need the ID for sending verification emails
-        const newsletter = await this.NewsletterModel.add(cleanedAttrs, options);
+        let newsletter;
+        try {
+            // add the model now because we need the ID for sending verification emails
+            newsletter = await this.NewsletterModel.add(cleanedAttrs, options);
+        } catch (error) {
+            if (error.code && error.message.toLowerCase().indexOf('unique') !== -1) {
+                throw new errors.ValidationError({
+                    message: tpl(messages.nameAlreadyExists),
+                    property: 'name'
+                });
+            }
+
+            throw error;
+        }
+
+        // Load relations correctly
+        newsletter = await this.NewsletterModel.findOne({id: newsletter.id}, {...options, require: true});
 
         // subscribe existing members if opt_in_existing=true
         if (options.opt_in_existing) {
@@ -135,18 +178,43 @@ class NewslettersService {
     /**
      * @public
      * @param {object} attrs model properties
-     * @param {Object} [options] options
+     * @param {Object} options options
+     * @param {string} options.id Newsletter id to edit
+     * @param {Object} [options.transacting]
      * @returns {Promise<{object}>} Newsetter Model with verification metadata
      */
-    async edit(attrs, options = {}) {
+    async edit(attrs, options) {
+        const sharedOptions = _.pick(options, 'transacting');
+
         // fetch newsletter first so we can compare changed emails
-        const originalNewsletter = await this.NewsletterModel.findOne(options, {require: true});
+        const originalNewsletter = await this.NewsletterModel.findOne({id: options.id}, {...sharedOptions, require: true});
 
         const {cleanedAttrs, emailsToVerify} = await this.prepAttrsForEmailVerification(attrs, originalNewsletter);
 
-        const updatedNewsletter = await this.NewsletterModel.edit(cleanedAttrs, options);
+        if (originalNewsletter.get('status') !== 'active' && cleanedAttrs.status === 'active') {
+            await this.limitService.errorIfWouldGoOverLimit('newsletters', sharedOptions);
+        }
 
-        return this.respondWithEmailVerification(updatedNewsletter, emailsToVerify);
+        let updatedNewsletter;
+        
+        try {
+            updatedNewsletter = await this.NewsletterModel.edit(cleanedAttrs, options);
+        } catch (error) {
+            if (error.code && error.message.toLowerCase().indexOf('unique') !== -1) {
+                throw new errors.ValidationError({
+                    message: tpl(messages.nameAlreadyExists),
+                    property: 'name'
+                });
+            }
+
+            throw error;
+        }
+
+        // Load relations correctly in the response
+        updatedNewsletter = await this.NewsletterModel.findOne({id: updatedNewsletter.id}, {...options, require: true});
+        
+        await this.respondWithEmailVerification(updatedNewsletter, emailsToVerify);
+        return updatedNewsletter;
     }
 
     /**
@@ -249,7 +317,7 @@ class NewslettersService {
 
 /**
  * @typedef {object} ILimitService
- * @prop {(name: string) => Promise<void>} errorIfWouldGoOverLimit
+ * @prop {(name: string, options?: {transacting?: Object}) => Promise<void>} errorIfWouldGoOverLimit
  **/
 
 module.exports = NewslettersService;

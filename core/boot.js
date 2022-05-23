@@ -97,7 +97,7 @@ async function initCore({ghostServer, config, bootLogger, frontend}) {
 
     // Settings are a core concept we use settings to store key-value pairs used in critical pathways as well as public data like the site title
     debug('Begin: settings');
-    const settings = require('./server/services/settings');
+    const settings = require('./server/services/settings/settings-service');
     await settings.init();
     await settings.syncEmailSettings(config.get('hostSettings:emailVerification:verified'));
     debug('End: settings');
@@ -168,14 +168,21 @@ async function initServicesForFrontend({bootLogger}) {
     await offers.init();
     debug('End: Offers');
 
+    const frontendDataService = require('./server/services/frontend-data-service');
+    let dataService = await frontendDataService.init();
+
     debug('End: initServicesForFrontend');
+    return {dataService};
 }
 
 /**
  * Frontend is intended to be just Ghost's frontend
  */
-async function initFrontend() {
+async function initFrontend(dataService) {
     debug('Begin: initFrontend');
+
+    const proxyService = require('./frontend/services/proxy');
+    proxyService.init({dataService});
 
     const helperService = require('./frontend/services/helpers');
     await helperService.init();
@@ -207,7 +214,8 @@ async function initExpressApps({frontend, backend, config}) {
 
     if (frontend) {
         // SITE + MEMBERS
-        const frontendApp = require('./server/web/parent/frontend')({});
+        const urlService = require('./server/services/url');
+        const frontendApp = require('./server/web/parent/frontend')({urlService});
         parentApp.use(vhost(config.getFrontendMountPath(), frontendApp));
     }
 
@@ -228,15 +236,13 @@ async function initDynamicRouting() {
     const bridge = require('./bridge');
     bridge.init();
 
-    // We pass the frontend API version + the dynamic routes here, so that the frontend services are slightly less tightly-coupled
-    const apiVersion = bridge.getFrontendApiVersion();
+    // We pass the dynamic routes here, so that the frontend services are slightly less tightly-coupled
     const routeSettings = await routeSettingsService.loadRouteSettings();
-    debug(`Frontend API Version: ${apiVersion}`);
 
-    routing.routerManager.start(apiVersion, routeSettings);
+    routing.routerManager.start(routeSettings);
     const getRoutesHash = () => routeSettingsService.api.getCurrentHash();
 
-    const settings = require('./server/services/settings');
+    const settings = require('./server/services/settings/settings-service');
     await settings.syncRoutesHash(getRoutesHash);
 
     debug('End: Dynamic Routing');
@@ -252,9 +258,6 @@ async function initDynamicRouting() {
  */
 async function initServices({config}) {
     debug('Begin: initServices');
-
-    const defaultApiVersion = config.get('api:versions:default');
-    debug(`Default API Version: ${defaultApiVersion}`);
 
     debug('Begin: Services');
     const stripe = require('./server/services/stripe');
@@ -289,7 +292,7 @@ async function initServices({config}) {
         appService.init(),
         apiVersionCompatibility.init(),
         scheduling.init({
-            apiUrl: urlUtils.urlFor('api', {version: defaultApiVersion, versionType: 'admin'}, true)
+            apiUrl: urlUtils.urlFor('api', {type: 'admin'}, true)
         })
     ]);
     debug('End: Services');
@@ -403,7 +406,7 @@ async function bootGhost({backend = true, frontend = true, server = true} = {}) 
 
         if (server) {
             const GhostServer = require('./server/ghost-server');
-            ghostServer = new GhostServer({url: config.getSiteUrl()});
+            ghostServer = new GhostServer({url: config.getSiteUrl(), env: config.get('env'), serverConfig: config.get('server')});
             await ghostServer.start(rootApp);
             bootLogger.log('server started');
             debug('End: load server + minimal app');
@@ -418,10 +421,10 @@ async function bootGhost({backend = true, frontend = true, server = true} = {}) 
         // Step 4 - Load Ghost with all its services
         debug('Begin: Load Ghost Services & Apps');
         await initCore({ghostServer, config, bootLogger, frontend});
-        await initServicesForFrontend({bootLogger});
+        const {dataService} = await initServicesForFrontend({bootLogger});
 
         if (frontend) {
-            await initFrontend();
+            await initFrontend(dataService);
         }
         const ghostApp = await initExpressApps({frontend, backend, config});
 

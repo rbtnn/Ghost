@@ -128,8 +128,8 @@
         "emailAnalytics": true
     },
     "portal": {
-        "url": "https://unpkg.com/@tryghost/portal@~1.22.0/umd/portal.min.js",
-        "version": "1.20"
+        "url": "https://unpkg.com/@tryghost/portal@~2.1.0/umd/portal.min.js",
+        "version": "2.1"
     },
     "tenor": {
         "publicReadOnlyApiKey": null,
@@ -140,5 +140,8 @@
     },
     "twitter": {
         "privateReadOnlyToken": null
+    },
+    "gravatar": {
+        "url": "https://www.gravatar.com/avatar/{hash}?s={size}&r={rating}&d={_default}"
     }
 }

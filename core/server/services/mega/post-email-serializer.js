@@ -3,10 +3,11 @@ const template = require('./template');
 const settingsCache = require('../../../shared/settings-cache');
 const urlUtils = require('../../../shared/url-utils');
 const moment = require('moment-timezone');
-const api = require('../../api');
+const api = require('../../api').endpoints;
+const apiShared = require('../../api').shared;
 const {URL} = require('url');
 const mobiledocLib = require('../../lib/mobiledoc');
-const htmlToText = require('html-to-text');
+const htmlToPlaintext = require('../../../shared/html-to-plaintext');
 const {isUnsplashImage, isLocalContentImage} = require('@tryghost/kg-default-cards/lib/utils');
 const {textColorForBackgroundColor, darkenToContrastThreshold} = require('@tryghost/color-utils');
 const logging = require('@tryghost/logging');
@@ -48,29 +49,16 @@ const getSite = () => {
     });
 };
 
-const htmlToPlaintext = (html) => {
-    // same options as used in Post model for generating plaintext but without `wordwrap: 80`
-    // to avoid replacement strings being split across lines and for mail clients to handle
-    // word wrapping based on user preferences
-    return htmlToText.fromString(html, {
-        wordwrap: false,
-        ignoreImage: true,
-        hideLinkHrefIfSameAsText: true,
-        preserveNewlines: true,
-        returnDomByDefault: true,
-        uppercaseHeadings: false
-    });
-};
-
 /**
  * createUnsubscribeUrl
  *
- * Takes a member uuid and returns the url that should be used to unsubscribe
+ * Takes a member and newsletter uuid. Returns the url that should be used to unsubscribe
  * In case of no member uuid, generates the preview unsubscribe url - `?preview=1`
  *
- * @param {string} uuid
+ * @param {string} uuid post uuid
+ * @param {string} newsletterUuid newsletter uuid
  */
-const createUnsubscribeUrl = (uuid) => {
+const createUnsubscribeUrl = (uuid, newsletterUuid) => {
     const siteUrl = urlUtils.getSiteUrl();
     const unsubscribeUrl = new URL(siteUrl);
     unsubscribeUrl.pathname = `${unsubscribeUrl.pathname}/unsubscribe/`.replace('//', '/');
@@ -79,21 +67,23 @@ const createUnsubscribeUrl = (uuid) => {
     } else {
         unsubscribeUrl.searchParams.set('preview', '1');
     }
+    if (newsletterUuid) {
+        unsubscribeUrl.searchParams.set('newsletter', newsletterUuid);
+    }
 
     return unsubscribeUrl.href;
 };
 
-// NOTE: serialization is needed to make sure we are using current API and do post transformations
-//       such as image URL transformation from relative to absolute
-const serializePostModel = async (model, apiVersion = 'v4') => {
+// NOTE: serialization is needed to make sure we do post transformations such as image URL transformation from relative to absolute
+const serializePostModel = async (model) => {
     // fetch mobiledoc rather than html and plaintext so we can render email-specific contents
     const frame = {options: {context: {user: true}, formats: 'mobiledoc'}};
     const docName = 'posts';
 
-    await api.shared
+    await apiShared
         .serializers
         .handle
-        .output(model, {docName: docName, method: 'read'}, api[apiVersion].serializers.output, frame);
+        .output(model, {docName: docName, method: 'read'}, api.serializers.output, frame);
 
     return frame.response[docName][0];
 };
@@ -222,8 +212,8 @@ const getTemplateSettings = async (newsletter) => {
     return templateSettings;
 };
 
-const serialize = async (postModel, newsletter, options = {isBrowserPreview: false, apiVersion: 'v4'}) => {
-    const post = await serializePostModel(postModel, options.apiVersion);
+const serialize = async (postModel, newsletter, options = {isBrowserPreview: false}) => {
+    const post = await serializePostModel(postModel);
 
     const timezone = settingsCache.get('timezone');
     const momentDate = post.published_at ? moment(post.published_at) : moment();
@@ -258,7 +248,7 @@ const serialize = async (postModel, newsletter, options = {isBrowserPreview: fal
     `).remove();
     post.html = _cheerio('body').html();
 
-    post.plaintext = htmlToPlaintext(post.html);
+    post.plaintext = htmlToPlaintext.email(post.html);
 
     // Outlook will render feature images at full-size breaking the layout.
     // Content images fix this by rendering max 600px images - do the same for feature image here
@@ -331,7 +321,7 @@ function renderEmailForSegment(email, memberSegment) {
     });
 
     result.html = formatHtmlForEmail($.html());
-    result.plaintext = htmlToPlaintext(result.html);
+    result.plaintext = htmlToPlaintext.email(result.html);
 
     return result;
 }

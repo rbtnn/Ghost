@@ -1,5 +1,15 @@
 const {agentProvider, fixtureManager, matchers, mockManager} = require('../../utils/e2e-framework');
+<<<<<<< HEAD
 const {anyErrorId, stringMatching, anyEtag} = matchers;
+=======
+const {anyErrorId, stringMatching, anyObjectId, anyLocationFor, anyISODateTime, anyEtag, anyString, anyContentLength, anyContentVersion} = matchers;
+
+const settingsMatcher = {
+    settings: {
+        version: anyString
+    }
+};
+>>>>>>> v5.0.0
 
 describe('API Versioning', function () {
     describe('Admin API', function () {
@@ -29,6 +39,10 @@ describe('API Versioning', function () {
                     }
                 })
                 .matchHeaderSnapshot({
+<<<<<<< HEAD
+=======
+                    'content-length': anyContentLength,
+>>>>>>> v5.0.0
                     etag: anyEtag
                 });
         });
@@ -45,7 +59,12 @@ describe('API Versioning', function () {
                 })
                 .matchHeaderSnapshot({
                     etag: anyEtag,
+<<<<<<< HEAD
                     'content-version': stringMatching(/v\d+\.\d+/)
+=======
+                    'content-version': anyContentVersion,
+                    'content-length': anyContentLength
+>>>>>>> v5.0.0
                 });
         });
 
@@ -61,7 +80,29 @@ describe('API Versioning', function () {
                 })
                 .matchHeaderSnapshot({
                     etag: anyEtag,
+<<<<<<< HEAD
                     'content-version': stringMatching(/v\d+\.\d+/)
+=======
+                    'content-version': anyContentVersion,
+                    'content-length': anyContentLength
+                });
+        });
+
+        it('allows invalid accept-version header', async function () {
+            await agentAdminAPI
+                .get('site/')
+                .header('Accept-Version', 'canary')
+                .expectStatus(200)
+                .matchBodySnapshot({
+                    site: {
+                        version: stringMatching(/\d+\.\d+/)
+                    }
+                })
+                .matchHeaderSnapshot({
+                    etag: anyEtag,
+                    'content-version': anyContentVersion,
+                    'content-length': anyContentLength
+>>>>>>> v5.0.0
                 });
         });
 
@@ -73,11 +114,16 @@ describe('API Versioning', function () {
                 .expectStatus(406)
                 .matchHeaderSnapshot({
                     etag: anyEtag,
+<<<<<<< HEAD
                     'content-version': stringMatching(/v\d+\.\d+/)
+=======
+                    'content-version': anyContentVersion,
+                    'content-length': anyContentLength
+>>>>>>> v5.0.0
                 })
                 .matchBodySnapshot({
                     errors: [{
-                        context: stringMatching(/Provided client version v999\.1 is ahead of current Ghost instance version v\d+\.\d+/),
+                        context: stringMatching(/Provided client accept-version v999\.1 is ahead of current Ghost version v\d+\.\d+/),
                         id: anyErrorId
                     }]
                 });
@@ -92,21 +138,25 @@ describe('API Versioning', function () {
                 .expectStatus(406)
                 .matchHeaderSnapshot({
                     etag: anyEtag,
+<<<<<<< HEAD
                     'content-version': stringMatching(/v\d+\.\d+/)
+=======
+                    'content-version': anyContentVersion,
+                    'content-length': anyContentLength
+>>>>>>> v5.0.0
                 })
                 .matchBodySnapshot({
                     errors: [{
-                        context: stringMatching(/Provided client version v3.1 is outdated and is behind current Ghost version v\d+\.\d+/),
+                        context: stringMatching(/Provided client accept-version v3.1 is behind current Ghost version v\d+\.\d+/),
                         id: anyErrorId
                     }]
                 });
 
-            // temporarily disable email sending
-            mockManager.assert.sentEmailCount(0);
-            // mockManager.assert.sentEmail({
-            //     subject: 'Attention required: Your Zapier 1.3 integration has failed',
-            //     to: 'jbloggs@example.com'
-            // });
+            mockManager.assert.sentEmailCount(1);
+            mockManager.assert.sentEmail({
+                subject: 'Attention required: Your Zapier integration has failed',
+                to: 'jbloggs@example.com'
+            });
         });
 
         it('responds with error and sends email ONCE when requested version is BEHIND and CANNOT respond multiple times', async function () {
@@ -117,21 +167,25 @@ describe('API Versioning', function () {
                 .expectStatus(406)
                 .matchHeaderSnapshot({
                     etag: anyEtag,
+<<<<<<< HEAD
                     'content-version': stringMatching(/v\d+\.\d+/)
+=======
+                    'content-version': anyContentVersion,
+                    'content-length': anyContentLength
+>>>>>>> v5.0.0
                 })
                 .matchBodySnapshot({
                     errors: [{
-                        context: stringMatching(/Provided client version v3.5 is outdated and is behind current Ghost version v\d+\.\d+/),
+                        context: stringMatching(/Provided client accept-version v3.5 is behind current Ghost version v\d+\.\d+/),
                         id: anyErrorId
                     }]
                 });
 
-            // temporarily disable email sending
-            mockManager.assert.sentEmailCount(0);
-            // mockManager.assert.sentEmail({
-            //     subject: 'Attention required: Your Zapier 1.4 integration has failed',
-            //     to: 'jbloggs@example.com'
-            // });
+            mockManager.assert.sentEmailCount(1);
+            mockManager.assert.sentEmail({
+                subject: 'Attention required: Your Zapier integration has failed',
+                to: 'jbloggs@example.com'
+            });
 
             await agentAdminAPI
                 .get('removed_endpoint')
@@ -140,17 +194,21 @@ describe('API Versioning', function () {
                 .expectStatus(406)
                 .matchHeaderSnapshot({
                     etag: anyEtag,
+<<<<<<< HEAD
                     'content-version': stringMatching(/v\d+\.\d+/)
+=======
+                    'content-version': anyContentVersion,
+                    'content-length': anyContentLength
+>>>>>>> v5.0.0
                 })
                 .matchBodySnapshot({
                     errors: [{
-                        context: stringMatching(/Provided client version v3.5 is outdated and is behind current Ghost version v\d+\.\d+/),
+                        context: stringMatching(/Provided client accept-version v3.5 is behind current Ghost version v\d+\.\d+/),
                         id: anyErrorId
                     }]
                 });
 
-            // temporarily disable email sending
-            mockManager.assert.sentEmailCount(0);
+            mockManager.assert.sentEmailCount(1);
         });
 
         it('responds with 404 error when the resource cannot be found', async function () {
@@ -160,7 +218,12 @@ describe('API Versioning', function () {
                 .expectStatus(404)
                 .matchHeaderSnapshot({
                     etag: anyEtag,
+<<<<<<< HEAD
                     'content-version': stringMatching(/v\d+\.\d+/)
+=======
+                    'content-version': anyContentVersion,
+                    'content-length': anyContentLength
+>>>>>>> v5.0.0
                 })
                 .matchBodySnapshot({
                     errors: [{
@@ -169,6 +232,45 @@ describe('API Versioning', function () {
                 });
         });
 
+<<<<<<< HEAD
+=======
+        it('Does an internal rewrite for canary URLs with accept version set', async function () {
+            await agentAdminAPI
+                .get('/site/', {baseUrl: '/ghost/api/canary/admin/'})
+                .expectStatus(200)
+                .matchHeaderSnapshot({
+                    etag: anyEtag,
+                    'content-version': anyContentVersion,
+                    'content-length': anyContentLength
+                })
+                .matchBodySnapshot({site: {
+                    version: stringMatching(/\d+\.\d+/)
+                }});
+        });
+
+        it('Does an internal rewrite for v3 URL + POST with accept version set', async function () {
+            await agentAdminAPI
+                .post('/tags/', {baseUrl: '/ghost/api/v3/admin/'})
+                .body({
+                    tags: [{name: 'version tag'}]
+                })
+                .expectStatus(201)
+                .matchHeaderSnapshot({
+                    etag: anyEtag,
+                    location: anyLocationFor('tags'),
+                    'content-version': anyContentVersion,
+                    'content-length': anyContentLength
+                })
+                .matchBodySnapshot({
+                    tags: [{
+                        id: anyObjectId,
+                        created_at: anyISODateTime,
+                        updated_at: anyISODateTime
+                    }]
+                });
+        });
+
+>>>>>>> v5.0.0
         it('responds with 406 for an unknown version with accept-version set ahead', async function () {
             await agentAdminAPI
                 .get('/site/', {baseUrl: '/ghost/api/v99/admin/'})
@@ -176,11 +278,20 @@ describe('API Versioning', function () {
                 .expectStatus(406)
                 .matchHeaderSnapshot({
                     etag: anyEtag,
+<<<<<<< HEAD
                     'content-version': stringMatching(/v\d+\.\d+/)
                 })
                 .matchBodySnapshot({errors: [{
                     context: stringMatching(/Provided client version v99\.0 is ahead of current Ghost instance version v\d+\.\d+/)
                     // @NOTE: ID is missing because we use the old formatter here
+=======
+                    'content-version': anyContentVersion,
+                    'content-length': anyContentLength
+                })
+                .matchBodySnapshot({errors: [{
+                    context: stringMatching(/Provided client accept-version v99\.0 is ahead of current Ghost version v\d+\.\d+/),
+                    id: anyErrorId
+>>>>>>> v5.0.0
                 }]});
         });
 
@@ -191,11 +302,20 @@ describe('API Versioning', function () {
                 .expectStatus(406)
                 .matchHeaderSnapshot({
                     etag: anyEtag,
+<<<<<<< HEAD
                     'content-version': stringMatching(/v\d+\.\d+/)
                 })
                 .matchBodySnapshot({errors: [{
                     context: stringMatching(/Provided client version v1\.0 is outdated and is behind current Ghost version v\d+\.\d+/)
                     // @NOTE: ID is missing because we use the old formatter here
+=======
+                    'content-version': anyContentVersion,
+                    'content-length': anyContentLength
+                })
+                .matchBodySnapshot({errors: [{
+                    context: stringMatching(/Provided client accept-version v1\.0 is behind current Ghost version v\d+\.\d+/),
+                    id: anyErrorId
+>>>>>>> v5.0.0
                 }]});
         });
     });
@@ -212,8 +332,11 @@ describe('API Versioning', function () {
         it('responds with no content version header when accept version header is NOT PRESENT', async function () {
             await agentContentAPI.get('settings/')
                 .expectStatus(200)
-                .matchHeaderSnapshot()
-                .matchBodySnapshot();
+                .matchHeaderSnapshot({
+                    etag: anyEtag,
+                    'content-length': anyContentLength
+                })
+                .matchBodySnapshot(settingsMatcher);
         });
 
         it('responds with current content version header when requested version is BEHIND current version and CAN respond', async function () {
@@ -221,9 +344,27 @@ describe('API Versioning', function () {
                 .header('Accept-Version', 'v3.0')
                 .expectStatus(200)
                 .matchHeaderSnapshot({
-                    'content-version': stringMatching(/v\d+\.\d+/)
+                    etag: anyEtag,
+                    'content-version': anyContentVersion,
+                    'content-length': anyContentLength
                 })
-                .matchBodySnapshot();
+                .matchBodySnapshot(settingsMatcher);
+        });
+
+        it('Does an internal rewrite with accept version set when version is included in the URL', async function () {
+            await agentContentAPI
+                .get('/tags/?limit=1', {baseUrl: '/ghost/api/canary/content/'})
+                .expectStatus(200)
+                .matchHeaderSnapshot({
+                    etag: anyEtag,
+                    'content-version': anyContentVersion,
+                    'content-length': anyContentLength
+                })
+                .matchBodySnapshot({
+                    tags: [{
+                        id: anyObjectId
+                    }]
+                });
         });
     });
 });

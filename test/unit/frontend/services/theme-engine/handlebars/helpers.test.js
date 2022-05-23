@@ -8,12 +8,12 @@ const helpers = require('../../../../../../core/frontend/services/helpers');
 describe('Helpers', function () {
     const hbsHelpers = ['each', 'if', 'unless', 'with', 'helperMissing', 'blockHelperMissing', 'log', 'lookup', 'block', 'contentFor'];
     const ghostHelpers = [
-        'asset', 'author', 'authors', 'body_class', 'cancel_link', 'concat', 'content', 'date', 'encode', 'excerpt', 'facebook_url', 'foreach', 'get',
+        'asset', 'authors', 'body_class', 'cancel_link', 'concat', 'content', 'date', 'encode', 'excerpt', 'facebook_url', 'foreach', 'get',
         'ghost_foot', 'ghost_head', 'has', 'img_url', 'is', 'lang', 'link', 'link_class', 'meta_description', 'meta_title', 'navigation',
         'next_post', 'page_url', 'pagination', 'plural', 'post_class', 'prev_post', 'price', 'raw', 'reading_time', 't', 'tags', 'title', 'twitter_url',
         'url'
     ];
-    const experimentalHelpers = ['match', 'products', 'tiers'];
+    const experimentalHelpers = ['match', 'tiers'];
 
     const expectedHelpers = _.concat(hbsHelpers, ghostHelpers, experimentalHelpers);
 

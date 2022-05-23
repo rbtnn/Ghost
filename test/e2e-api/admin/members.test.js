@@ -14,7 +14,7 @@ const models = require('../../../core/server/models');
 async function assertMemberEvents({eventType, memberId, asserts}) {
     const events = await models[eventType].where('member_id', memberId).fetchAll();
     const eventsJSON = events.map(e => e.toJSON());
-    
+
     // Order shouldn't matter here
     for (const a of asserts) {
         eventsJSON.should.matchAny(a);
@@ -43,6 +43,17 @@ const newsletterSnapshot = {
     uuid: anyUuid,
     created_at: anyISODateTime,
     updated_at: anyISODateTime
+};
+
+const subscriptionSnapshot = {
+    start_date: anyString,
+    current_period_end: anyString,
+    price: {
+        price_id: anyObjectId,
+        tier: {
+            tier_id: anyObjectId
+        }
+    }
 };
 
 function buildMemberWithoutIncludesSnapshot(options) {
@@ -77,6 +88,11 @@ const memberMatcherShallowIncludes = {
     newsletters: anyArray
 };
 
+const memberMatcherShallowIncludesWithTiers = {
+    ...memberMatcherShallowIncludes,
+    tiers: anyArray
+};
+
 let agent;
 
 describe('Members API without Stripe', function () {
@@ -84,12 +100,10 @@ describe('Members API without Stripe', function () {
         agent = await agentProvider.getAdminAPIAgent();
         await fixtureManager.init();
         await agent.loginAsOwner();
-    });
 
-    before(async function () {
         await agent
             .delete('/settings/stripe/connect/')
-            .expectStatus(200);
+            .expectStatus(204);
     });
 
     beforeEach(function () {
@@ -315,6 +329,18 @@ describe('Members API', function () {
             .expectStatus(200)
             .matchBodySnapshot({
                 members: new Array(1).fill(memberMatcherShallowIncludes)
+            })
+            .matchHeaderSnapshot({
+                etag: anyEtag
+            });
+    });
+
+    it('Can read and include tiers', async function () {
+        await agent
+            .get(`/members/${testUtils.DataGenerator.Content.members[0].id}/?include=tiers`)
+            .expectStatus(200)
+            .matchBodySnapshot({
+                members: new Array(1).fill(memberMatcherShallowIncludesWithTiers)
             })
             .matchHeaderSnapshot({
                 etag: anyEtag
@@ -579,7 +605,7 @@ describe('Members API', function () {
         const compedPayload = {
             id: newMember.id,
             email: newMember.email,
-            products: [
+            tiers: [
                 {
                     id: product.id
                 }
@@ -593,7 +619,7 @@ describe('Members API', function () {
 
         const updatedMember = body2.members[0];
         assert.equal(updatedMember.status, 'comped', 'A comped member should have the comped status');
-        assert.equal(updatedMember.products.length, 1, 'The member should have one product');
+        assert.equal(updatedMember.tiers.length, 1, 'The member should have one product');
 
         await assertMemberEvents({
             eventType: 'MemberStatusEvent',
@@ -633,7 +659,7 @@ describe('Members API', function () {
             name: 'Name',
             email: 'compedtest3@test.com',
             newsletters: [newsletters[0]],
-            products: [
+            tiers: [
                 {
                     id: product.id
                 }
@@ -647,13 +673,13 @@ describe('Members API', function () {
 
         const newMember = body.members[0];
         assert.equal(newMember.status, 'comped', 'The new member should have the comped status');
-        assert.equal(newMember.products.length, 1, 'The member should have 1 product');
+        assert.equal(newMember.tiers.length, 1, 'The member should have 1 product');
 
         // Remove it
         const removePayload = {
             id: newMember.id,
             email: newMember.email,
-            products: []
+            tiers: []
         };
 
         const {body: body2} = await agent
@@ -663,7 +689,7 @@ describe('Members API', function () {
 
         const updatedMember = body2.members[0];
         assert.equal(updatedMember.status, 'free', 'The member should have the free status');
-        assert.equal(updatedMember.products.length, 0, 'The member should have 0 products');
+        assert.equal(updatedMember.tiers.length, 0, 'The member should have 0 tiers');
 
         await assertMemberEvents({
             eventType: 'MemberStatusEvent',
@@ -706,7 +732,7 @@ describe('Members API', function () {
             email: 'compedtest4@test.com',
             subscribed: true,
             newsletters: [newsletters[0]],
-            products: [
+            tiers: [
                 {
                     id: product.id
                 }
@@ -725,7 +751,7 @@ describe('Members API', function () {
                     updated_at: anyISODateTime,
                     labels: anyArray,
                     subscriptions: anyArray,
-                    products: new Array(1).fill({
+                    tiers: new Array(1).fill({
                         id: anyObjectId,
                         monthly_price_id: anyObjectId,
                         yearly_price_id: anyObjectId,
@@ -846,7 +872,7 @@ describe('Members API', function () {
                     updated_at: anyISODateTime,
                     labels: anyArray,
                     subscriptions: anyArray,
-                    products: anyArray,
+                    tiers: anyArray,
                     newsletters: new Array(1).fill(newsletterSnapshot)
                 })
             })
@@ -974,7 +1000,7 @@ describe('Members API', function () {
                     updated_at: anyISODateTime,
                     labels: anyArray,
                     subscriptions: anyArray,
-                    products: anyArray,
+                    tiers: anyArray,
                     newsletters: new Array(1).fill(newsletterSnapshot)
                 })
             })
@@ -1047,8 +1073,8 @@ describe('Members API', function () {
         assert.equal(readBody.members.length, 1, 'The member was not found in read');
         const readMember = readBody.members[0];
 
-        // Note that we explicitly need to ask to include products while browsing
-        const {body: browseBody} = await agent.get(`/members/?search=${memberWithPaidSubscription.email}&include=products`);
+        // Note that we explicitly need to ask to include tiers while browsing
+        const {body: browseBody} = await agent.get(`/members/?search=${memberWithPaidSubscription.email}&include=tiers`);
         assert.equal(browseBody.members.length, 1, 'The member was not found in browse');
         const browseMember = browseBody.members[0];
 
@@ -1141,7 +1167,11 @@ describe('Members API', function () {
         });
     });
 
+<<<<<<< HEAD
     // Internally a different error is thrown for newsletters/products changes
+=======
+    // Internally a different error is thrown for newsletters/tiers changes
+>>>>>>> v5.0.0
     it('Cannot edit a non-existing id with newsletters', async function () {
         const memberChanged = {
             name: 'changed',
@@ -1231,7 +1261,7 @@ describe('Members API', function () {
 
         const after = new Date();
         after.setMilliseconds(0);
-       
+
         await agent
             .put(`/members/${newMember.id}/`)
             .body({members: [memberChanged]})
@@ -1417,16 +1447,7 @@ describe('Members API', function () {
                     created_at: anyISODateTime,
                     updated_at: anyISODateTime,
                     labels: anyArray,
-                    subscriptions: [{
-                        start_date: anyString,
-                        current_period_end: anyString,
-                        price: {
-                            price_id: anyObjectId,
-                            product: {
-                                product_id: anyObjectId
-                            }
-                        }
-                    }],
+                    subscriptions: [subscriptionSnapshot],
                     newsletters: anyArray
                 })
             })
@@ -1445,16 +1466,7 @@ describe('Members API', function () {
                     created_at: anyISODateTime,
                     updated_at: anyISODateTime,
                     labels: anyArray,
-                    subscriptions: [{
-                        start_date: anyString,
-                        current_period_end: anyString,
-                        price: {
-                            price_id: anyObjectId,
-                            product: {
-                                product_id: anyObjectId
-                            }
-                        }
-                    }],
+                    subscriptions: [subscriptionSnapshot],
                     newsletters: anyArray
                 })
             })
@@ -1554,13 +1566,15 @@ describe('Members API', function () {
                 'content-disposition': anyString
             });
 
-        res.text.should.match(/id,email,name,note,subscribed_to_emails,complimentary_plan,stripe_customer_id,created_at,deleted_at/);
+        res.text.should.match(/id,email,name,note,subscribed_to_emails,complimentary_plan,stripe_customer_id,created_at,deleted_at,labels,products/);
 
         const csv = Papa.parse(res.text, {header: true});
         should.exist(csv.data.find(row => row.name === 'Mr Egg'));
         should.exist(csv.data.find(row => row.name === 'Winston Zeddemore'));
         should.exist(csv.data.find(row => row.name === 'Ray Stantz'));
         should.exist(csv.data.find(row => row.email === 'member2@test.com'));
+        should.exist(csv.data.find(row => row.products.length > 0));
+        should.exist(csv.data.find(row => row.labels.length > 0));
     });
 
     it('Can export a filtered CSV', async function () {
@@ -1573,13 +1587,15 @@ describe('Members API', function () {
                 'content-disposition': anyString
             });
 
-        res.text.should.match(/id,email,name,note,subscribed_to_emails,complimentary_plan,stripe_customer_id,created_at,deleted_at/);
+        res.text.should.match(/id,email,name,note,subscribed_to_emails,complimentary_plan,stripe_customer_id,created_at,deleted_at,labels,products/);
 
         const csv = Papa.parse(res.text, {header: true});
         should.exist(csv.data.find(row => row.name === 'Mr Egg'));
         should.not.exist(csv.data.find(row => row.name === 'Egon Spengler'));
         should.not.exist(csv.data.find(row => row.name === 'Ray Stantz'));
         should.not.exist(csv.data.find(row => row.email === 'member2@test.com'));
+        // note that this member doesn't have products
+        should.exist(csv.data.find(row => row.labels.length > 0));
     });
 
     // Get stats
@@ -1618,6 +1634,18 @@ describe('Members API', function () {
             .expectStatus(200)
             .matchBodySnapshot({
                 members: new Array(4).fill(memberMatcherShallowIncludes)
+            })
+            .matchHeaderSnapshot({
+                etag: anyEtag
+            });
+    });
+
+    it('Can filter on tier slug', async function () {
+        const res = await agent
+            .get('/members/?include=tiers&filter=tier:default-product')
+            .expectStatus(200)
+            .matchBodySnapshot({
+                members: new Array(7).fill(memberMatcherShallowIncludesWithTiers)
             })
             .matchHeaderSnapshot({
                 etag: anyEtag
@@ -1965,5 +1993,291 @@ describe('Members API', function () {
                 };
             })
         });
+    });
+});
+
+describe('Members API Bulk operations', function () {
+    beforeEach(async function () {
+        agent = await agentProvider.getAdminAPIAgent();
+        await fixtureManager.init('newsletters', 'members:newsletters');
+        await agent.loginAsOwner();
+
+        mockManager.mockStripe();
+        mockManager.mockMail();
+    });
+
+    afterEach(function () {
+        mockManager.restore();
+    });
+
+    it('Can bulk unsubscribe members with filter', async function () {
+        // This member has 2 subscriptions
+        const member = fixtureManager.get('members', 4);
+        const newsletterCount = 2;
+
+        const model = await models.Member.findOne({id: member.id}, {withRelated: 'newsletters'});
+        should(model.relations.newsletters.models.length).equal(newsletterCount, 'This test requires a member with 2 or more newsletters');
+
+        await agent
+            .put(`/members/bulk/?filter=id:${member.id}`)
+            .body({bulk: {
+                action: 'unsubscribe'
+            }})
+            .expectStatus(200)
+            .matchBodySnapshot({
+                bulk: {
+                    meta: {
+                        stats: {
+                            // Should contain the count of members, not the newsletter count!
+                            successful: 1,
+                            unsuccessful: 0
+                        },
+                        unsuccessfulData: [],
+                        errors: []
+                    }
+                }
+            })
+            .matchHeaderSnapshot({
+                etag: anyEtag
+            });
+        
+        const updatedModel = await models.Member.findOne({id: member.id}, {withRelated: 'newsletters'});
+        should(updatedModel.relations.newsletters.models.length).equal(0, 'This member should be unsubscribed from all newsletters');
+
+        // When we do it again, we should still receive a count of 1, because we unsubcribed one member (who happens to be already unsubscribed)
+        await agent
+            .put(`/members/bulk/?filter=id:${member.id}`)
+            .body({bulk: {
+                action: 'unsubscribe'
+            }})
+            .expectStatus(200)
+            .matchBodySnapshot({
+                bulk: {
+                    meta: {
+                        stats: {
+                            // Should contain the count of members, not the newsletter count!
+                            successful: 1,
+                            unsuccessful: 0
+                        },
+                        unsuccessfulData: [],
+                        errors: []
+                    }
+                }
+            })
+            .matchHeaderSnapshot({
+                etag: anyEtag
+            });
+    });
+
+    it('Can bulk unsubscribe members with deprecated subscribed filter', async function () {
+        await agent
+            .put(`/members/bulk/?filter=subscribed:false`)
+            .body({bulk: {
+                action: 'unsubscribe'
+            }})
+            .expectStatus(200)
+            .matchBodySnapshot({
+                bulk: {
+                    meta: {
+                        stats: {
+                            successful: 2, // We have two members who are subscribed to an inactive newsletter
+                            unsuccessful: 0
+                        },
+                        unsuccessfulData: [],
+                        errors: []
+                    }
+                }
+            })
+            .matchHeaderSnapshot({
+                etag: anyEtag
+            });
+    });
+
+    it('Can bulk unsubscribe members with deprecated subscribed filter (actual)', async function () {
+        // This member is subscribed to an inactive newsletter
+        const ignoredMember = fixtureManager.get('members', 6);
+
+        await agent
+            .put(`/members/bulk/?filter=subscribed:true`)
+            .body({bulk: {
+                action: 'unsubscribe'
+            }})
+            .expectStatus(200)
+            .matchBodySnapshot({
+                bulk: {
+                    meta: {
+                        stats: {
+                            successful: 6, // not 7 because members subscribed to an inactive newsletter aren't subscribed (newsletter fixture[2])
+                            unsuccessful: 0
+                        },
+                        unsuccessfulData: [],
+                        errors: []
+                    }
+                }
+            })
+            .matchHeaderSnapshot({
+                etag: anyEtag
+            });
+
+        const allMembers = await models.Member.findAll({withRelated: 'newsletters'});
+        for (const model of allMembers) {
+            if (model.id === ignoredMember.id) {
+                continue;
+            }
+            should(model.relations.newsletters.models.length).equal(0, 'This member should be unsubscribed from all newsletters');
+        }
+    });
+
+    it('Can bulk delete a label from members', async function () {
+        await agent
+            .put(`/members/bulk/?all=true`)
+            .body({bulk: {
+                action: 'removeLabel',
+                meta: {
+                    label: {
+                        // Note! this equals DataGenerator.Content.labels[2]
+                        // the index is different in the fixtureManager
+                        id: fixtureManager.get('labels', 1).id
+                    }
+                }
+            }})
+            .expectStatus(200)
+            .matchBodySnapshot({
+                bulk: {
+                    meta: {
+                        stats: {
+                            successful: 2,
+                            unsuccessful: 0
+                        },
+                        unsuccessfulData: [],
+                        errors: []
+                    }
+                }
+            })
+            .matchHeaderSnapshot({
+                etag: anyEtag
+            });
+
+        await agent
+            .put(`/members/bulk/?all=true`)
+            .body({bulk: {
+                action: 'removeLabel',
+                meta: {
+                    label: {
+                        id: fixtureManager.get('labels', 0).id
+                    }
+                }
+            }})
+            .expectStatus(200)
+            .matchBodySnapshot({
+                bulk: {
+                    meta: {
+                        stats: {
+                            successful: 1,
+                            unsuccessful: 0
+                        },
+                        unsuccessfulData: [],
+                        errors: []
+                    }
+                }
+            })
+            .matchHeaderSnapshot({
+                etag: anyEtag
+            });
+    });
+
+    it(`Doesn't delete labels apart from the passed label id`, async function () {
+        const member = fixtureManager.get('members', 1);
+
+        // Manually add 2 labels to a member
+        await models.Member.edit({labels: [{name: 'first-tag'}, {name: 'second-tag'}]}, {id: member.id});
+        const model = await models.Member.findOne({id: member.id}, {withRelated: 'labels'});
+        should(model.relations.labels.models.map(m => m.get('name'))).match(['first-tag', 'second-tag']);
+
+        const firstId = model.relations.labels.models[0].id;
+        const secondId = model.relations.labels.models[1].id;
+
+        // Delete first label only
+        await agent
+            .put(`/members/bulk/?all=true`)
+            .body({bulk: {
+                action: 'removeLabel',
+                meta: {
+                    label: {
+                        id: secondId
+                    }
+                }
+            }})
+            .expectStatus(200)
+            .matchBodySnapshot({
+                bulk: {
+                    meta: {
+                        stats: {
+                            successful: 1,
+                            unsuccessful: 0
+                        },
+                        unsuccessfulData: [],
+                        errors: []
+                    }
+                }
+            })
+            .matchHeaderSnapshot({
+                etag: anyEtag
+            });
+
+        const updatedModel = await models.Member.findOne({id: member.id}, {withRelated: 'labels'});
+        should(updatedModel.relations.labels.models.map(m => m.id)).match([firstId]);
+    });
+
+    it('Can bulk delete a label from members with filters', async function () {
+        const member1 = fixtureManager.get('members', 0);
+        const member2 = fixtureManager.get('members', 1);
+
+        // Manually add 2 labels to a member
+        await models.Member.edit({labels: [{name: 'first-tag'}, {name: 'second-tag'}]}, {id: member1.id});
+        const model1 = await models.Member.findOne({id: member1.id}, {withRelated: 'labels'});
+        should(model1.relations.labels.models.map(m => m.get('name'))).match(['first-tag', 'second-tag']);
+
+        const firstId = model1.relations.labels.models[0].id;
+        const secondId = model1.relations.labels.models[1].id;
+
+        await models.Member.edit({labels: [{name: 'first-tag'}, {name: 'second-tag'}]}, {id: member2.id});
+        const model2 = await models.Member.findOne({id: member2.id}, {withRelated: 'labels'});
+        should(model2.relations.labels.models.map(m => m.id)).match([firstId, secondId]);
+
+        await agent
+            .put(`/members/bulk/?filter=id:${member1.id}`)
+            .body({bulk: {
+                action: 'removeLabel',
+                meta: {
+                    label: {
+                        // Note! this equals DataGenerator.Content.labels[2]
+                        // the index is different in the fixtureManager
+                        id: firstId
+                    }
+                }
+            }})
+            .expectStatus(200)
+            .matchBodySnapshot({
+                bulk: {
+                    meta: {
+                        stats: {
+                            successful: 1,
+                            unsuccessful: 0
+                        },
+                        unsuccessfulData: [],
+                        errors: []
+                    }
+                }
+            })
+            .matchHeaderSnapshot({
+                etag: anyEtag
+            });
+
+        const updatedModel1 = await models.Member.findOne({id: member1.id}, {withRelated: 'labels'});
+        should(updatedModel1.relations.labels.models.map(m => m.id)).match([secondId]);
+
+        const updatedModel2 = await models.Member.findOne({id: member2.id}, {withRelated: 'labels'});
+        should(updatedModel2.relations.labels.models.map(m => m.id)).match([firstId, secondId]);
     });
 });

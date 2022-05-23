@@ -14,7 +14,7 @@ const renderer = require('../../rendering');
 module.exports = function emailPostController(req, res, next) {
     debug('emailPostController');
 
-    const api = require('../../proxy').api[res.locals.apiVersion];
+    const api = require('../../proxy').api;
 
     const params = {
         uuid: req.params.uuid,
@@ -51,12 +51,7 @@ module.exports = function emailPostController(req, res, next) {
                 return urlUtils.redirect301(res, routerManager.getUrlByResourceId(post.id, {withSubdirectory: true}));
             }
 
-            if (res.locals.apiVersion !== 'v0.1' && res.locals.apiVersion !== 'v2') {
-                post.access = !!post.html;
-            }
-
-            // @TODO: See renderer/secure
-            renderer.secure(req, post);
+            post.access = !!post.html;
 
             return renderer.renderEntry(req, res)(post);
         })

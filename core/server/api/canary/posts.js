@@ -2,14 +2,14 @@ const models = require('../../models');
 const tpl = require('@tryghost/tpl');
 const errors = require('@tryghost/errors');
 const getPostServiceInstance = require('../../services/posts/posts-service');
-const allowedIncludes = ['tags', 'authors', 'authors.roles', 'email', 'tiers'];
+const allowedIncludes = ['tags', 'authors', 'authors.roles', 'email', 'tiers', 'newsletter'];
 const unsafeAttrs = ['status', 'authors', 'visibility'];
 
 const messages = {
     postNotFound: 'Post not found.'
 };
 
-const postsService = getPostServiceInstance('canary');
+const postsService = getPostServiceInstance();
 
 module.exports = {
     docName: 'posts',
@@ -128,9 +128,8 @@ module.exports = {
             'id',
             'formats',
             'source',
-            'email_recipient_filter',
-            'newsletter_id',
-            'send_email_when_published',
+            'email_segment',
+            'newsletter',
             'force_rerender',
             // NOTE: only for internal context
             'forUpdate',
@@ -146,9 +145,6 @@ module.exports = {
                 },
                 source: {
                     values: ['html']
-                },
-                send_email_when_published: {
-                    values: [true, false]
                 }
             }
         },

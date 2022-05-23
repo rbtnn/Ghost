@@ -347,10 +347,10 @@ describe('Authentication API', function () {
                 password: ownerUser.get('password')
             });
 
-            await agent.put('authentication/passwordreset')
+            await agent.put('authentication/password_reset')
                 .header('Accept', 'application/json')
                 .body({
-                    passwordreset: [{
+                    password_reset: [{
                         token: token,
                         newPassword: 'thisissupersafe',
                         ne2Password: 'thisissupersafe'
@@ -365,10 +365,10 @@ describe('Authentication API', function () {
 
         it('reset password: invalid token', async function () {
             await agent
-                .put('authentication/passwordreset')
+                .put('authentication/password_reset')
                 .header('Accept', 'application/json')
                 .body({
-                    passwordreset: [{
+                    password_reset: [{
                         token: 'invalid',
                         newPassword: 'thisissupersafe',
                         ne2Password: 'thisissupersafe'
@@ -397,10 +397,10 @@ describe('Authentication API', function () {
             });
 
             await agent
-                .put('authentication/passwordreset')
+                .put('authentication/password_reset')
                 .header('Accept', 'application/json')
                 .body({
-                    passwordreset: [{
+                    password_reset: [{
                         token: token,
                         newPassword: 'thisissupersafe',
                         ne2Password: 'thisissupersafe'
@@ -426,10 +426,10 @@ describe('Authentication API', function () {
             });
 
             await agent
-                .put('authentication/passwordreset')
+                .put('authentication/password_reset')
                 .header('Accept', 'application/json')
                 .body({
-                    passwordreset: [{
+                    password_reset: [{
                         token: token,
                         newPassword: 'thisissupersafe',
                         ne2Password: 'thisissupersafe'
@@ -448,10 +448,10 @@ describe('Authentication API', function () {
 
         it('reset password: generate reset token', async function () {
             await agent
-                .post('authentication/passwordreset')
+                .post('authentication/password_reset')
                 .header('Accept', 'application/json')
                 .body({
-                    passwordreset: [{
+                    password_reset: [{
                         email: email
                     }]
                 })
@@ -478,12 +478,11 @@ describe('Authentication API', function () {
             mockManager.restore();
         });
 
-        it('reset all passwords returns 200', async function () {
-            await agent.post('authentication/reset_all_passwords')
+        it('reset all passwords returns 204', async function () {
+            await agent.post('authentication/global_password_reset')
                 .header('Accept', 'application/json')
                 .body({})
-                // @TODO: change to a 204 in 5.0
-                .expectStatus(200)
+                .expectStatus(204)
                 .expectEmptyBody()
                 .matchHeaderSnapshot({
                     etag: anyEtag

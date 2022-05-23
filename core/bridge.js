@@ -15,11 +15,14 @@ const errors = require('@tryghost/errors');
 const logging = require('@tryghost/logging');
 const tpl = require('@tryghost/tpl');
 const themeEngine = require('./frontend/services/theme-engine');
+const appService = require('./frontend/services/apps');
 const cardAssetService = require('./frontend/services/card-assets');
 const routerManager = require('./frontend/services/routing').routerManager;
 const settingsCache = require('./shared/settings-cache');
+const urlService = require('./server/services/url');
+const routeSettings = require('./server/services/route-settings');
 
-// Listen to settings.lang.edited, similar to the member service and models/base/listeners
+// Listen to settings.locale.edited, similar to the member service and models/base/listeners
 const events = require('./server/lib/common/events');
 
 const messages = {
@@ -30,9 +33,8 @@ class Bridge {
     init() {
         /**
          * When locale changes, we reload theme translations
-         * @deprecated: the term "lang" was deprecated in favor of "locale" publicly in 4.0
          */
-        events.on('settings.lang.edited', (model) => {
+        events.on('settings.locale.edited', (model) => {
             debug('Active theme init18n');
             this.getActiveTheme().initI18n({locale: model.get('value')});
         });
@@ -51,24 +53,12 @@ class Bridge {
 
     async activateTheme(loadedTheme, checkedTheme) {
         let settings = {
-            locale: settingsCache.get('lang')
+            locale: settingsCache.get('locale')
         };
         // no need to check the score, activation should be used in combination with validate.check
         // Use the two theme objects to set the current active theme
         try {
-            let previousGhostAPI;
-
-            if (this.getActiveTheme()) {
-                previousGhostAPI = this.getActiveTheme().engine('ghost-api');
-            }
-
             themeEngine.setActive(settings, loadedTheme, checkedTheme);
-            const currentGhostAPI = this.getActiveTheme().engine('ghost-api');
-
-            if (previousGhostAPI !== undefined && (previousGhostAPI !== currentGhostAPI)) {
-                events.emit('services.themes.api.changed');
-                await this.reloadFrontend();
-            }
 
             const cardAssetConfig = this.getCardAssetConfig();
             debug('reload card assets config', cardAssetConfig);
@@ -81,11 +71,6 @@ class Bridge {
         }
     }
 
-    getFrontendApiVersion() {
-        // @NOTE: we've pinned the frontend to canary in a step towards removing API versions
-        return 'canary';
-    }
-
     getCardAssetConfig() {
         if (this.getActiveTheme()) {
             return this.getActiveTheme().config('card_assets');
@@ -95,11 +80,25 @@ class Bridge {
     }
 
     async reloadFrontend() {
-        const apiVersion = this.getFrontendApiVersion();
-
-        debug('reload frontend', apiVersion);
+        debug('reload frontend');
         const siteApp = require('./frontend/web/site');
-        await siteApp.reload({apiVersion});
+
+        const routerConfig = {
+            routeSettings: await routeSettings.loadRouteSettings(),
+            urlService
+        };
+
+        await siteApp.reload(routerConfig);
+
+        // re-initialize apps (register app routers, because we have re-initialized the site routers)
+        appService.init();
+
+        // connect routers and resources again
+        urlService.queue.start({
+            event: 'init',
+            tolerance: 100,
+            requiredSubscriberCount: 1
+        });
     }
 }
 

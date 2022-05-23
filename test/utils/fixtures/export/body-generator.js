@@ -141,14 +141,24 @@ const exportedBodyLatest = () => {
                 version: '4.1.2'
             },
             data: {
+                benefits: [],
                 custom_theme_settings: [],
+                newsletters: [],
+                offers: [],
+                offer_redemptions: [],
                 posts: [],
                 posts_authors: [],
                 posts_meta: [],
+                posts_products: [],
                 posts_tags: [],
+                products: [],
+                products_benefits: [],
                 roles: [],
                 roles_users: [],
                 settings: [],
+                snippets: [],
+                stripe_prices: [],
+                stripe_products: [],
                 tags: [],
                 users: []
             }

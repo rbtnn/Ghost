@@ -1,5 +1,6 @@
 const express = require('../../../../../shared/express');
-const api = require('../../../../api').canary;
+const api = require('../../../../api').endpoints;
+const http = require('../../../../api').shared.http;
 const apiMw = require('../../middleware');
 const mw = require('./middleware');
 
@@ -12,8 +13,6 @@ module.exports = function apiRoutes() {
     router.del = router.delete;
 
     router.use(apiMw.cors);
-
-    const http = api.http;
 
     // ## Public
     router.get('/site', mw.publicAdminApi, http(api.site.read));
@@ -59,7 +58,6 @@ module.exports = function apiRoutes() {
     );
 
     router.get('/settings', mw.authAdminApi, http(api.settings.browse));
-    router.get('/settings/:key', mw.authAdminApi, http(api.settings.read));
     router.put('/settings', mw.authAdminApi, http(api.settings.edit));
     router.get('/settings/members/email', http(api.settings.validateMembersEmailUpdate));
     router.post('/settings/members/email', mw.authAdminApi, http(api.settings.updateMembersEmail));
@@ -86,13 +84,6 @@ module.exports = function apiRoutes() {
     router.post('/tags', mw.authAdminApi, http(api.tags.add));
     router.put('/tags/:id', mw.authAdminApi, http(api.tags.edit));
     router.del('/tags/:id', mw.authAdminApi, http(api.tags.destroy));
-
-    // Products
-    // TODO Remove
-    router.get('/products', mw.authAdminApi, http(api.products.browse));
-    router.post('/products', mw.authAdminApi, http(api.products.add));
-    router.get('/products/:id', mw.authAdminApi, http(api.products.read));
-    router.put('/products/:id', mw.authAdminApi, http(api.products.edit));
 
     // Tiers
     router.get('/tiers', mw.authAdminApi, http(api.tiers.browse));
@@ -123,8 +114,6 @@ module.exports = function apiRoutes() {
         apiMw.upload.validation({type: 'members'}),
         http(api.members.importCSV)
     );
-
-    router.get('/members/hasActiveStripeSubscriptions', mw.authAdminApi, http(api.members.hasActiveStripeSubscriptions));
 
     router.get('/members/stripe_connect', mw.authAdminApi, http(api.membersStripeConnect.auth));
 
@@ -202,10 +191,6 @@ module.exports = function apiRoutes() {
         http(api.db.backupContent)
     );
 
-    // ## Mail
-    router.post('/mail', mw.authAdminApi, http(api.mail.send));
-    router.post('/mail/test', mw.authAdminApi, http(api.mail.sendTest));
-
     // ## Slack
     router.post('/slack/test', mw.authAdminApi, http(api.slack.sendTest));
 
@@ -223,18 +208,18 @@ module.exports = function apiRoutes() {
     router.get('/identities', mw.authAdminApi, http(api.identities.read));
 
     // ## Authentication
-    router.post('/authentication/passwordreset',
+    router.post('/authentication/password_reset',
         shared.middleware.brute.globalReset,
         shared.middleware.brute.userReset,
         http(api.authentication.generateResetToken)
     );
-    router.put('/authentication/passwordreset', shared.middleware.brute.globalBlock, http(api.authentication.resetPassword));
+    router.put('/authentication/password_reset', shared.middleware.brute.globalBlock, http(api.authentication.resetPassword));
     router.post('/authentication/invitation', http(api.authentication.acceptInvitation));
     router.get('/authentication/invitation', http(api.authentication.isInvitation));
     router.post('/authentication/setup', http(api.authentication.setup));
     router.put('/authentication/setup', mw.authAdminApi, http(api.authentication.updateSetup));
     router.get('/authentication/setup', http(api.authentication.isSetup));
-    router.post('/authentication/reset_all_passwords', mw.authAdminApi, http(api.authentication.resetAllPasswords));
+    router.post('/authentication/global_password_reset', mw.authAdminApi, http(api.authentication.resetAllPasswords));
 
     // ## Images
     router.post('/images/upload',
@@ -293,9 +278,8 @@ module.exports = function apiRoutes() {
     router.get('/actions', mw.authAdminApi, http(api.actions.browse));
 
     // ## Email Preview
-    // @TODO: rename to email_previews in 5.0
-    router.get('/email_preview/posts/:id', mw.authAdminApi, http(api.email_preview.read));
-    router.post('/email_preview/posts/:id', mw.authAdminApi, http(api.email_preview.sendTestEmail));
+    router.get('/email_previews/posts/:id', mw.authAdminApi, http(api.email_previews.read));
+    router.post('/email_previews/posts/:id', mw.authAdminApi, http(api.email_previews.sendTestEmail));
 
     // ## Emails
     router.get('/emails', mw.authAdminApi, http(api.emails.browse));

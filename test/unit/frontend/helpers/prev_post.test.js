@@ -3,20 +3,17 @@ const sinon = require('sinon');
 const Promise = require('bluebird');
 const markdownToMobiledoc = require('../../../utils/fixtures/data-generator').markdownToMobiledoc;
 const prev_post = require('../../../../core/frontend/helpers/prev_post');
-const api = require('../../../../core/server/api');
+const api = require('../../../../core/frontend/services/proxy').api;
 const should = require('should');
 
 describe('{{prev_post}} helper', function () {
-    const apiVersion = 'canary';
     let browsePostsStub;
     let locals;
 
     beforeEach(function () {
         locals = {
             root: {
-                _locals: {
-                    apiVersion: apiVersion
-                },
+                _locals: {},
                 context: ['post']
             }
         };
@@ -131,9 +128,7 @@ describe('{{prev_post}} helper', function () {
         beforeEach(function () {
             locals = {
                 root: {
-                    _locals: {
-                        apiVersion: apiVersion
-                    },
+                    _locals: {},
                     context: ['page']
                 }
             };
@@ -171,9 +166,7 @@ describe('{{prev_post}} helper', function () {
         beforeEach(function () {
             locals = {
                 root: {
-                    _locals: {
-                        apiVersion: apiVersion
-                    },
+                    _locals: {},
                     context: ['preview', 'post']
                 }
             };
@@ -416,9 +409,7 @@ describe('{{prev_post}} helper', function () {
             });
             locals = {
                 root: {
-                    _locals: {
-                        apiVersion: apiVersion
-                    },
+                    _locals: {},
                     context: ['post']
                 },
                 member
@@ -449,7 +440,7 @@ describe('{{prev_post}} helper', function () {
             fn.firstCall.args[1].should.be.an.Object().and.have.property('data');
             browsePostsStub.calledOnce.should.be.true();
             browsePostsStub.firstCall.args[0].include.should.eql('author,authors,tags,tiers');
-            
+
             // Check context passed
             browsePostsStub.firstCall.args[0].context.member.should.eql(member);
         });

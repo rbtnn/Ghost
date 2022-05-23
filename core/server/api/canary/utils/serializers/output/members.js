@@ -4,8 +4,6 @@ const {unparse} = require('@tryghost/members-csv');
 const labsService = require('../../../../../../shared/labs');
 
 module.exports = {
-    hasActiveStripeSubscriptions: createSerializer('hasActiveStripeSubscriptions', passthrough),
-
     browse: createSerializer('browse', paginatedMembers),
     read: createSerializer('read', singleMember),
     edit: createSerializer('edit', singleMember),
@@ -79,18 +77,13 @@ function bulkAction(bulkActionResult, _apiConfig, frame) {
 /**
  * @template PageMeta
  *
- * @param {{data: import('bookshelf').Model[], meta: PageMeta}} page
- * @param {APIConfig} _apiConfig
- * @param {Frame} frame
+ * @param {{data: any[]}} data
  *
  * @returns {string} - A CSV string
  */
-function exportCSV(page, _apiConfig, frame) {
+function exportCSV(data) {
     debug('exportCSV');
-
-    const members = page.data.map(model => serializeMember(model, frame.options));
-
-    return unparse(members);
+    return unparse(data.data);
 }
 
 /**
@@ -129,7 +122,24 @@ function serializeMember(member, options) {
     };
 
     if (json.products) {
-        serialized.products = json.products;
+        serialized.tiers = json.products;
+    }
+
+    // Rename subscriptions.price.product to subscriptions.price.tier
+    for (const subscription of serialized.subscriptions) {
+        if (!subscription.price) {
+            continue;
+        }
+        
+        if (!subscription.price.tier && subscription.price.product) {
+            subscription.price.tier = subscription.price.product;
+            
+            if (!subscription.price.tier.tier_id) {
+                subscription.price.tier.tier_id = subscription.price.tier.product_id;
+            }
+            delete subscription.price.tier.product_id;
+        }
+        delete subscription.price.product;
     }
 
     if (labsService.isSet('multipleNewsletters')) {

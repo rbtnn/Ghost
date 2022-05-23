@@ -3,14 +3,12 @@ const {BadRequestError} = require('@tryghost/errors');
 const tpl = require('@tryghost/tpl');
 
 const messages = {
-    invalidEmailRecipientFilter: 'Invalid filter in email_recipient_filter param.',
     invalidVisibilityFilter: 'Invalid visibility filter.',
-    invalidNewsletterId: 'The newsletter_id parameter doesn\'t match any active newsletter.'
+    invalidEmailSegment: 'The email segment parameter doesn\'t contain a valid filter'
 };
 
 class PostsService {
-    constructor({mega, apiVersion, urlUtils, models, isSet}) {
-        this.apiVersion = apiVersion;
+    constructor({mega, urlUtils, models, isSet}) {
         this.mega = mega;
         this.urlUtils = urlUtils;
         this.models = models;
@@ -18,6 +16,7 @@ class PostsService {
     }
 
     async editPost(frame) {
+<<<<<<< HEAD
         let model;
 
         // Make sure the newsletter_id is matching an active newsletter
@@ -70,24 +69,39 @@ class PostsService {
         const emailRecipientFilter = model.get('email_recipient_filter');
         if (emailRecipientFilter !== 'none') {
             if (emailRecipientFilter !== 'all') {
+=======
+        // Make sure the newsletter is matching an active newsletter
+        // Note that this option is simply ignored if the post isn't published or scheduled
+        if (frame.options.newsletter && frame.options.email_segment) {
+            if (frame.options.email_segment !== 'all') {
+>>>>>>> v5.0.0
                 // check filter is valid
                 try {
-                    await this.models.Member.findPage({filter: `subscribed:true+${emailRecipientFilter}`, limit: 1});
+                    await this.models.Member.findPage({filter: frame.options.email_segment, limit: 1});
                 } catch (err) {
                     return Promise.reject(new BadRequestError({
-                        message: tpl(messages.invalidEmailRecipientFilter),
+                        message: tpl(messages.invalidEmailSegment),
                         context: err.message
                     }));
                 }
             }
+        }
 
+        const model = await this.models.Post.edit(frame.data.posts[0], frame.options);
+
+        /**Handle newsletter email */
+        if (model.get('newsletter_id')) {
             const sendEmail = model.wasChanged() && this.shouldSendEmail(model.get('status'), model.previous('status'));
 
             if (sendEmail) {
                 let postEmail = model.relations.email;
 
                 if (!postEmail) {
+<<<<<<< HEAD
                     const email = await this.mega.addEmail(model, {...frame.options, apiVersion: this.apiVersion});
+=======
+                    const email = await this.mega.addEmail(model, frame.options);
+>>>>>>> v5.0.0
                     model.set('email', email);
                 } else if (postEmail && postEmail.get('status') === 'failed') {
                     const email = await this.mega.retryFailedEmail(postEmail);
@@ -159,17 +173,15 @@ class PostsService {
 }
 
 /**
- * @param {string} apiVersion - API version to use within the service
  * @returns {PostsService} instance of the PostsService
  */
-const getPostServiceInstance = (apiVersion) => {
+const getPostServiceInstance = () => {
     const urlUtils = require('../../../shared/url-utils');
     const {mega} = require('../mega');
     const labs = require('../../../shared/labs');
     const models = require('../../models');
 
     return new PostsService({
-        apiVersion: apiVersion,
         mega: mega,
         urlUtils: urlUtils,
         models: models,

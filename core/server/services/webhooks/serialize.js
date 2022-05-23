@@ -1,9 +1,8 @@
 module.exports = (event, model) => {
     const _ = require('lodash');
     const {sequence} = require('@tryghost/promise');
-    const api = require('../../api');
-
-    const apiVersion = model.get('api_version') || 'v4';
+    const api = require('../../api').endpoints;
+    const apiShared = require('../../api').shared;
 
     const resourceName = event.match(/(\w+)\./)[1];
     const docName = `${resourceName}s`;
@@ -19,10 +18,10 @@ module.exports = (event, model) => {
                 frame.options.withRelated = ['tags', 'authors'];
             }
 
-            return api.shared
+            return apiShared
                 .serializers
                 .handle
-                .output(model, {docName: docName, method: 'read'}, api[apiVersion].serializers.output, frame)
+                .output(model, {docName: docName, method: 'read'}, api.serializers.output, frame)
                 .then(() => {
                     return frame.response[docName][0];
                 });
@@ -42,10 +41,10 @@ module.exports = (event, model) => {
                 frame.options.withRelated = ['tags', 'authors'];
             }
 
-            return api.shared
+            return apiShared
                 .serializers
                 .handle
-                .output(model, {docName: docName, method: 'read'}, api[apiVersion].serializers.output, frame)
+                .output(model, {docName: docName, method: 'read'}, api.serializers.output, frame)
                 .then(() => {
                     return frame.response[docName][0];
                 });

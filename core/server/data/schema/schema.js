@@ -51,7 +51,7 @@ module.exports = {
         feature_image: {type: 'string', maxlength: 2000, nullable: true},
         featured: {type: 'bool', nullable: false, defaultTo: false},
         type: {type: 'string', maxlength: 50, nullable: false, defaultTo: 'post', validations: {isIn: [['post', 'page']]}},
-        status: {type: 'string', maxlength: 50, nullable: false, defaultTo: 'draft'},
+        status: {type: 'string', maxlength: 50, nullable: false, defaultTo: 'draft', validations: {isIn: [['published', 'draft', 'scheduled', 'sent']]}},
         // NOTE: unused at the moment and reserved for future features
         locale: {type: 'string', maxlength: 6, nullable: true},
         visibility: {
@@ -63,14 +63,8 @@ module.exports = {
         email_recipient_filter: {
             type: 'text',
             maxlength: 1000000000,
-            nullable: false,
-            defaultTo: 'none'
+            nullable: false
         },
-        /**
-         * @deprecated: single authors was superceded by multiple authors in Ghost 1.22.0
-         * If we keep it, then only, because you can easier query post.author_id than posts_authors[*].sort_order.
-         */
-        author_id: {type: 'string', maxlength: 24, nullable: false},
         created_at: {type: 'dateTime', nullable: false},
         /**
          * @deprecated: https://github.com/TryGhost/Ghost/issues/10286
@@ -109,6 +103,7 @@ module.exports = {
         feature_image_caption: {type: 'text', maxlength: 65535, nullable: true},
         email_only: {type: 'bool', nullable: false, defaultTo: false}
     },
+    // NOTE: this is the staff table
     users: {
         id: {type: 'string', maxlength: 24, nullable: false, primary: true},
         name: {type: 'string', maxlength: 191, nullable: false},
@@ -123,10 +118,23 @@ module.exports = {
         facebook: {type: 'string', maxlength: 2000, nullable: true},
         twitter: {type: 'string', maxlength: 2000, nullable: true},
         accessibility: {type: 'text', maxlength: 65535, nullable: true},
-        // TODO: would be good to add validation here to control for all possible status values.
-        //       The ones that come up by reviewing the user model are:
-        //       'active', 'inactive', 'locked', 'warn-1', 'warn-2', 'warn-3', 'warn-4'
-        status: {type: 'string', maxlength: 50, nullable: false, defaultTo: 'active'},
+        status: {
+            type: 'string',
+            maxlength: 50,
+            nullable: false,
+            defaultTo: 'active',
+            validations: {
+                isIn: [[
+                    'active',
+                    'inactive',
+                    'locked',
+                    'warn-1',
+                    'warn-2',
+                    'warn-3',
+                    'warn-4'
+                ]]
+            }
+        },
         // NOTE: unused at the moment and reserved for future features
         locale: {type: 'string', maxlength: 6, nullable: true},
         visibility: {
@@ -144,16 +152,6 @@ module.exports = {
         created_by: {type: 'string', maxlength: 24, nullable: false},
         updated_at: {type: 'dateTime', nullable: true},
         updated_by: {type: 'string', maxlength: 24, nullable: true}
-    },
-    oauth: {
-        id: {type: 'string', maxlength: 24, nullable: false, primary: true},
-        provider: {type: 'string', maxlength: 50, nullable: false},
-        provider_id: {type: 'string', maxlength: 191, nullable: false},
-        access_token: {type: 'text', maxlength: 65535, nullable: true},
-        refresh_token: {type: 'text', maxlength: 2000, nullable: true},
-        created_at: {type: 'dateTime', nullable: false},
-        updated_at: {type: 'dateTime', nullable: true},
-        user_id: {type: 'string', maxlength: 24, nullable: false, references: 'users.id'}
     },
     posts_authors: {
         id: {type: 'string', maxlength: 24, nullable: false, primary: true},
@@ -337,13 +335,12 @@ module.exports = {
         target_url: {type: 'string', maxlength: 2000, nullable: false},
         name: {type: 'string', maxlength: 191, nullable: true},
         secret: {type: 'string', maxlength: 191, nullable: true},
-        // NOTE: the defaultTo does not make sense to set on DB layer as it leads to unnecessary maintenance every major release
-        //       it might make sense to introduce "isIn" validation checking if it's a valid version e.g: 'v3', 'v4', 'canary'
+        // @NOTE: the defaultTo does not make sense to set on DB layer as it leads to unnecessary maintenance every major release
+        //       would be ideal if we can remove the default and instead have "isIn" validation checking if it's a valid version e.g: 'v3', 'v4', 'canary'
         api_version: {type: 'string', maxlength: 50, nullable: false, defaultTo: 'v2'},
         // NOTE: integration_id column needs "nullable: true" -> "nullable: false" migration (recreate table with nullable: false)
         // CASE: Ghost instances initialized pre 4.0 will have this column set to nullable: true in db schema
         integration_id: {type: 'string', maxlength: 24, nullable: false, references: 'integrations.id', cascadeDelete: true},
-        status: {type: 'string', maxlength: 50, nullable: false, defaultTo: 'available'},
         last_triggered_at: {type: 'dateTime', nullable: true},
         last_triggered_status: {type: 'string', maxlength: 50, nullable: true},
         last_triggered_error: {type: 'string', maxlength: 50, nullable: true},
@@ -397,7 +394,6 @@ module.exports = {
         name: {type: 'string', maxlength: 191, nullable: true},
         note: {type: 'string', maxlength: 2000, nullable: true},
         geolocation: {type: 'string', maxlength: 2000, nullable: true},
-        subscribed: {type: 'bool', nullable: true, defaultTo: true},
         email_count: {type: 'integer', unsigned: true, nullable: false, defaultTo: 0},
         email_opened_count: {type: 'integer', unsigned: true, nullable: false, defaultTo: 0},
         email_open_rate: {type: 'integer', unsigned: true, nullable: true, index: true},
@@ -407,10 +403,12 @@ module.exports = {
         updated_at: {type: 'dateTime', nullable: true},
         updated_by: {type: 'string', maxlength: 24, nullable: true}
     },
+    // NOTE: this is the tiers table
     products: {
         id: {type: 'string', maxlength: 24, nullable: false, primary: true},
         name: {type: 'string', maxlength: 191, nullable: false},
         slug: {type: 'string', maxlength: 191, nullable: false, unique: true},
+        // @deprecated: use a status enum with isIn validation, not aan ctive boolean
         active: {type: 'boolean', nullable: false, defaultTo: true},
         welcome_page_url: {type: 'string', maxlength: 2000, nullable: true},
         visibility: {
@@ -429,6 +427,7 @@ module.exports = {
     },
     offers: {
         id: {type: 'string', maxlength: 24, nullable: false, primary: true},
+        // @deprecated: use a status enum with isIn validation, not aan ctive boolean
         active: {type: 'boolean', nullable: false, defaultTo: true},
         name: {type: 'string', maxlength: 191, nullable: false, unique: true},
         code: {type: 'string', maxlength: 191, nullable: false, unique: true},
@@ -651,8 +650,7 @@ module.exports = {
         recipient_filter: {
             type: 'text',
             maxlength: 1000000000,
-            nullable: false,
-            defaultTo: 'status:-free'
+            nullable: false
         },
         error: {type: 'string', maxlength: 2000, nullable: true},
         error_data: {type: 'text', maxlength: 1000000000, fieldtype: 'long', nullable: true},
@@ -719,16 +717,6 @@ module.exports = {
         created_by: {type: 'string', maxlength: 24, nullable: false},
         updated_at: {type: 'dateTime', nullable: true},
         updated_by: {type: 'string', maxlength: 24, nullable: true}
-    },
-    temp_member_analytic_events: {
-        id: {type: 'string', maxlength: 24, nullable: false, primary: true},
-        event_name: {type: 'string', maxlength: 50, nullable: false},
-        created_at: {type: 'dateTime', nullable: false},
-        member_id: {type: 'string', maxlength: 24, nullable: false},
-        member_status: {type: 'string', maxlength: 50, nullable: false},
-        entry_id: {type: 'string', maxlength: 24, nullable: true},
-        source_url: {type: 'string', maxlength: 2000, nullable: true},
-        metadata: {type: 'string', maxlength: 191, nullable: true}
     },
     custom_theme_settings: {
         id: {type: 'string', maxlength: 24, nullable: false, primary: true},

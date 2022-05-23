@@ -60,29 +60,6 @@ describe('Post Model', function () {
                     });
             });
 
-            describe('findOne', function () {
-                it('transforms legacy email_recipient_filter values on read', function (done) {
-                    const postId = testUtils.DataGenerator.Content.posts[0].id;
-
-                    db.knex('posts').where({id: postId}).update({
-                        email_recipient_filter: 'paid'
-                    }).then(() => {
-                        return db.knex('posts').where({id: postId});
-                    }).then((knexResult) => {
-                        const [knexPost] = knexResult;
-                        knexPost.email_recipient_filter.should.equal('paid');
-
-                        return models.Post.findOne({id: postId});
-                    }).then((result) => {
-                        should.exist(result);
-                        const post = result.toJSON();
-                        post.email_recipient_filter.should.equal('status:-free');
-
-                        done();
-                    }).catch(done);
-                });
-            });
-
             describe('findPage', function () {
                 describe('with more posts/tags', function () {
                     beforeEach(function () {
@@ -717,62 +694,6 @@ describe('Post Model', function () {
                     done();
                 }).catch(done);
             });
-
-            it('transforms legacy email_recipient_filter values on save', function (done) {
-                const postId = testUtils.DataGenerator.Content.posts[3].id;
-
-                models.Post.findOne({id: postId}).then(() => {
-                    return models.Post.edit({
-                        email_recipient_filter: 'free'
-                    }, _.extend({}, context, {id: postId}));
-                }).then((edited) => {
-                    edited.attributes.email_recipient_filter.should.equal('status:free');
-                    return db.knex('posts').where({id: edited.id});
-                }).then((knexResult) => {
-                    const [knexPost] = knexResult;
-                    knexPost.email_recipient_filter.should.equal('status:free');
-
-                    done();
-                }).catch(done);
-            });
-
-            it('transforms special-case visibility values on save', function (done) {
-                // status:-free === paid
-                // status:-free,status:free (+variations) === members
-
-                const postId = testUtils.DataGenerator.Content.posts[3].id;
-
-                models.Post.findOne({id: postId}).then(() => {
-                    return models.Post.edit({
-                        visibility: 'status:-free'
-                    }, _.extend({}, context, {id: postId}));
-                }).then((edited) => {
-                    edited.attributes.visibility.should.equal('paid');
-                    return db.knex('posts').where({id: edited.id});
-                }).then((knexResult) => {
-                    const [knexPost] = knexResult;
-                    knexPost.visibility.should.equal('paid');
-                }).then(() => {
-                    return models.Post.edit({
-                        visibility: 'status:-free,status:free'
-                    }, _.extend({}, context, {id: postId}));
-                }).then((edited) => {
-                    edited.attributes.visibility.should.equal('members');
-
-                    return models.Post.edit({
-                        visibility: 'status:free,status:-free'
-                    }, _.extend({}, context, {id: postId}));
-                }).then((edited) => {
-                    edited.attributes.visibility.should.equal('members');
-
-                    return models.Post.edit({
-                        visibility: 'status:free,status:-free,label:vip'
-                    }, _.extend({}, context, {id: postId}));
-                }).then((edited) => {
-                    edited.attributes.visibility.should.equal('members');
-                    done();
-                }).catch(done);
-            });
         });
 
         describe('add', function () {
@@ -808,8 +729,8 @@ describe('Post Model', function () {
                 const newPost = testUtils.DataGenerator.forModel.posts[2];
                 const newPostDB = testUtils.DataGenerator.Content.posts[2];
 
-                models.Post.add(newPost, _.merge({withRelated: ['author']}, context)).then(function (createdPost) {
-                    return models.Post.findOne({id: createdPost.id, status: 'all'});
+                models.Post.add(newPost, _.merge({withRelated: ['authors']}, context)).then(function (createdPost) {
+                    return models.Post.findOne({id: createdPost.id, status: 'all'}, {withRelated: ['authors']});
                 }).then(function (createdPost) {
                     should.exist(createdPost);
                     createdPost.has('uuid').should.equal(true);
@@ -832,9 +753,8 @@ describe('Post Model', function () {
 
                     createdPost.get('created_at').should.be.above(new Date(0).getTime());
                     createdPost.get('created_by').should.equal(testUtils.DataGenerator.Content.users[0].id);
-                    createdPost.get('author_id').should.equal(testUtils.DataGenerator.Content.users[0].id);
-                    createdPost.has('author').should.equal(false);
-                    createdPost.get('created_by').should.equal(createdPost.get('author_id'));
+                    createdPost.relations.authors.models[0].id.should.equal(testUtils.DataGenerator.Content.users[0].id);
+                    createdPost.get('created_by').should.equal(testUtils.DataGenerator.Content.users[0].id);
                     createdPost.get('updated_at').should.be.above(new Date(0).getTime());
                     createdPost.get('updated_by').should.equal(testUtils.DataGenerator.Content.users[0].id);
                     should.equal(createdPost.get('published_at'), null);
@@ -882,8 +802,8 @@ describe('Post Model', function () {
                 const newPost = testUtils.DataGenerator.forModel.posts[2];
                 const newPostDB = testUtils.DataGenerator.Content.posts[2];
 
-                models.Post.add(newPost, _.merge({withRelated: ['author']}, context)).then(function (createdPost) {
-                    return models.Post.findOne({id: createdPost.id, status: 'all'});
+                models.Post.add(newPost, _.merge({withRelated: ['authors']}, context)).then(function (createdPost) {
+                    return models.Post.findOne({id: createdPost.id, status: 'all'}, {withRelated: ['authors']});
                 }).then(function (createdPost) {
                     should.exist(createdPost);
                     createdPost.has('uuid').should.equal(true);
@@ -906,9 +826,8 @@ describe('Post Model', function () {
 
                     createdPost.get('created_at').should.be.above(new Date(0).getTime());
                     createdPost.get('created_by').should.equal(testUtils.DataGenerator.Content.users[0].id);
-                    createdPost.get('author_id').should.equal(testUtils.DataGenerator.Content.users[0].id);
-                    createdPost.has('author').should.equal(false);
-                    createdPost.get('created_by').should.equal(createdPost.get('author_id'));
+                    createdPost.relations.authors.models[0].id.should.equal(testUtils.DataGenerator.Content.users[0].id);
+                    createdPost.get('created_by').should.equal(testUtils.DataGenerator.Content.users[0].id);
                     createdPost.get('updated_at').should.be.above(new Date(0).getTime());
                     createdPost.get('updated_by').should.equal(testUtils.DataGenerator.Content.users[0].id);
                     should.equal(createdPost.get('published_at'), null);
@@ -986,7 +905,7 @@ describe('Post Model', function () {
                     }]
                 }, _.merge({withRelated: ['authors']}, context)).then(function (newPost) {
                     should.exist(newPost);
-                    newPost.toJSON().author.should.eql(testUtils.DataGenerator.forKnex.users[0].id);
+                    newPost.toJSON().primary_author.id.should.eql(testUtils.DataGenerator.forKnex.users[0].id);
                     newPost.toJSON().authors.length.should.eql(1);
                     newPost.toJSON().authors[0].id.should.eql(testUtils.DataGenerator.forKnex.users[0].id);
                     done();
@@ -1227,7 +1146,7 @@ describe('Post Model', function () {
                 models.Post.add(post, context).then((createdPost) => {
                     createdPost.get('mobiledoc').should.equal('{"version":"0.3.1","atoms":[],"cards":[["image",{"src":"http://127.0.0.1:2369/content/images/card.jpg"}]],"markups":[["a",["href","http://127.0.0.1:2369/test"]]],"sections":[[1,"p",[[0,[0],1,"Testing"]]],[10,0]]}');
                     createdPost.get('html').should.equal('<p><a href="http://127.0.0.1:2369/test">Testing</a></p><figure class="kg-card kg-image-card"><img src="http://127.0.0.1:2369/content/images/card.jpg" class="kg-image" alt loading="lazy"></figure>');
-                    createdPost.get('plaintext').should.containEql('Testing [http://127.0.0.1:2369/test]');
+                    createdPost.get('plaintext').should.containEql('Testing');
                     createdPost.get('custom_excerpt').should.equal('Testing <a href="http://127.0.0.1:2369/internal">links</a> in custom excerpts');
                     createdPost.get('codeinjection_head').should.equal('<script src="http://127.0.0.1:2369/assets/head.js"></script>');
                     createdPost.get('codeinjection_foot').should.equal('<script src="http://127.0.0.1:2369/assets/foot.js"></script>');
@@ -1256,7 +1175,7 @@ describe('Post Model', function () {
                     const [knexPost] = knexResult;
                     knexPost.mobiledoc.should.equal('{"version":"0.3.1","atoms":[],"cards":[["image",{"src":"__GHOST_URL__/content/images/card.jpg"}]],"markups":[["a",["href","__GHOST_URL__/test"]]],"sections":[[1,"p",[[0,[0],1,"Testing"]]],[10,0]]}');
                     knexPost.html.should.equal('<p><a href="__GHOST_URL__/test">Testing</a></p><figure class="kg-card kg-image-card"><img src="__GHOST_URL__/content/images/card.jpg" class="kg-image" alt loading="lazy"></figure>');
-                    knexPost.plaintext.should.containEql('Testing [__GHOST_URL__/test]');
+                    knexPost.plaintext.should.containEql('Testing');
                     knexPost.custom_excerpt.should.equal('Testing <a href="__GHOST_URL__/internal">links</a> in custom excerpts');
                     knexPost.codeinjection_head.should.equal('<script src="__GHOST_URL__/assets/head.js"></script>');
                     knexPost.codeinjection_foot.should.equal('<script src="__GHOST_URL__/assets/foot.js"></script>');
@@ -1660,34 +1579,120 @@ describe('Post Model', function () {
     describe('Multiauthor Posts', function () {
         before(testUtils.teardownDb);
 
-        after(function () {
-            return testUtils.teardownDb()
-                .then(function () {
-                    return testUtils.setup('users:roles')();
-                });
+        after(async function () {
+            await testUtils.teardownDb();
+            await testUtils.setup('users:roles')();
         });
 
         before(testUtils.setup('posts:mu'));
 
-        it('can destroy multiple posts by author', function (done) {
+        it('can reassign multiple posts by author', async function () {
             // We're going to delete all posts by user 1
-            const authorData = {id: testUtils.DataGenerator.Content.users[0].id};
+            const authorData = {id: testUtils.DataGenerator.Content.users[1].id};
+            const ownerData = {
+                id: testUtils.DataGenerator.Content.users[0].id,
+                slug: testUtils.DataGenerator.Content.users[0].slug
+            };
 
-            models.Post.findAll({context: {internal: true}}).then(function (found) {
-                // There are 10 posts created by posts:mu fixture
-                found.length.should.equal(10);
-                return models.Post.destroyByAuthor(authorData);
-            }).then(function (results) {
-                // User 1 has 2 posts in the database (each user has proportionate amount)
-                // 2 = 10 / 5 (posts / users)
-                results.length.should.equal(2);
-                return models.Post.findAll({context: {internal: true}});
-            }).then(function (found) {
-                // Only 8 should remain
-                // 8 = 10 - 2
-                found.length.should.equal(8);
-                done();
-            }).catch(done);
+            const preReassignPosts = await models.Post.findAll({context: {internal: true}});
+            // There are 10 posts created by posts:mu fixture
+            preReassignPosts.length.should.equal(10);
+
+            const preReassignOwnerWithPosts = await models.Post.findAll({
+                filter: `authors:${ownerData.slug}`,
+                context: {internal: true}
+            });
+            preReassignOwnerWithPosts.length.should.equal(2);
+
+            await models.Post.reassignByAuthor(authorData);
+
+            const postReassignPosts = await models.Post.findAll({context: {internal: true}});
+            // All 10 should remain
+            postReassignPosts.length.should.equal(10);
+
+            const postReassignOwnerWithPosts = await models.Post.findAll({
+                filter: `authors:${ownerData.slug}`,
+                context: {internal: true}
+            });
+            // 2 own and 2 reassigned from the other author
+            postReassignOwnerWithPosts.length.should.equal(4);
+        });
+
+        it('can reassign posts with mixed primary and secondary authors', async function () {
+            const authorData = {
+                id: testUtils.DataGenerator.Content.users[2].id,
+                slug: testUtils.DataGenerator.Content.users[2].slug
+            };
+            const ownerData = {
+                id: testUtils.DataGenerator.Content.users[0].id,
+                slug: testUtils.DataGenerator.Content.users[0].slug
+            };
+            const otherAuthorDate = {
+                id: testUtils.DataGenerator.Content.users[3].id,
+                slug: testUtils.DataGenerator.Content.users[3].slug
+            };
+
+            await testUtils.fixtures.insertPosts([{
+                title: 'primary_author',
+                authors: [{
+                    id: authorData.id
+                }, {
+                    id: ownerData.id
+                }]
+            }, {
+                title: 'secondary_author',
+                authors: [{
+                    id: ownerData.id
+                }, {
+                    id: authorData.id
+                }]
+            }, {
+                title: 'multiple_authors',
+                authors: [{
+                    id: ownerData.id
+                }, {
+                    id: authorData.id
+                }, {
+                    id: otherAuthorDate.id
+                }]
+            }]);
+
+            const preReassignAuthorWithPosts = await models.Post.findAll({
+                filter: `authors:${authorData.slug}`,
+                context: {internal: true}
+            });
+            // 2 from 'posts:mu' fixtures and 3 inserted in the test case
+            preReassignAuthorWithPosts.length.should.equal(5);
+
+            const preReassignOtherAuthorWithPosts = await models.Post.findAll({
+                filter: `authors:${otherAuthorDate.slug}`,
+                context: {internal: true}
+            });
+            // 2 from 'posts:mu' fixtures and 1 inserted in the test case
+            preReassignOtherAuthorWithPosts.length.should.equal(3);
+
+            await models.Post.reassignByAuthor(authorData);
+
+            const postReassignAuthorWithPosts = await models.Post.findAll({
+                filter: `authors:${authorData.slug}`,
+                context: {internal: true}
+            });
+            // author under test should own nothing after reassignment
+            postReassignAuthorWithPosts.length.should.equal(0);
+
+            const postReassignOtherAuthorWithPosts = await models.Post.findAll({
+                filter: `authors:${otherAuthorDate.slug}`,
+                context: {internal: true}
+            });
+            // should stay the same as preassignment for another author
+            postReassignOtherAuthorWithPosts.length.should.equal(3);
+
+            const postReassignOwnerWithPosts = await models.Post.findAll({
+                filter: `authors:${ownerData.slug}`,
+                context: {internal: true}
+            });
+            // 5 from this test case's author under test + 4 from the test above (if executed exclusively will fail)
+            postReassignOwnerWithPosts.length.should.equal(9);
         });
     });
 

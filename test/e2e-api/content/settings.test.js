@@ -1,4 +1,9 @@
 const {agentProvider, fixtureManager, matchers} = require('../../utils/e2e-framework');
+const {anyEtag, anyContentLength} = matchers;
+
+const settingsMatcher = {
+    version: matchers.anyString
+};
 
 describe('Settings Content API', function () {
     let agent;
@@ -12,7 +17,12 @@ describe('Settings Content API', function () {
     it('Can request settings', async function () {
         await agent.get('settings/')
             .expectStatus(200)
-            .matchHeaderSnapshot()
-            .matchBodySnapshot();
+            .matchHeaderSnapshot({
+                etag: anyEtag,
+                'content-length': anyContentLength
+            })
+            .matchBodySnapshot({
+                settings: settingsMatcher
+            });
     });
 });

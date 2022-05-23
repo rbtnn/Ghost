@@ -27,8 +27,13 @@ describe('Posts Content API', function () {
 
     before(async function () {
         agent = await agentProvider.getContentAPIAgent();
-        await fixtureManager.init('owner:post', 'users:no-owner', 'user:inactive', 'posts', 'tags:extra', 'api_keys');
+        await fixtureManager.init('owner:post', 'users:no-owner', 'user:inactive', 'posts', 'tags:extra', 'api_keys', 'newsletters', 'members:newsletters');
         agent.authenticate();
+
+        // Assign a newsletter to one of the posts
+        const newsletterId = testUtils.DataGenerator.Content.newsletters[0].id;
+        const postId = testUtils.DataGenerator.Content.posts[0].id;
+        await models.Post.edit({newsletter_id: newsletterId}, {id: postId});
     });
 
     it('Can request posts', async function () {
@@ -280,11 +285,11 @@ describe('Posts Content API', function () {
 
     it('Can include specific tier for post with tiers visibility', async function () {
         const res = await agent
-            .get(`products/`)
+            .get(`tiers/`)
             .expectStatus(200);
 
         const jsonResponse = res.body;
-        const paidTier = jsonResponse.products.find(p => p.type === 'paid');
+        const paidTier = jsonResponse.tiers.find(p => p.type === 'paid');
 
         const tiersPost = testUtils.DataGenerator.forKnex.createPost({
             slug: 'thou-shalt-be-for-specific-tiers',

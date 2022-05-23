@@ -94,11 +94,6 @@ describe('Front-end members behaviour', function () {
                 .expect(204);
         });
 
-        it('should serve member site endpoint', async function () {
-            await request.get('/members/api/site')
-                .expect(200);
-        });
-
         it('should error for invalid data on member magic link endpoint', async function () {
             await request.post('/members/api/send-magic-link')
                 .expect(400);
@@ -107,6 +102,23 @@ describe('Front-end members behaviour', function () {
         it('should error for invalid data on members create checkout session endpoint', async function () {
             await request.post('/members/api/create-stripe-checkout-session')
                 .expect(400);
+        });
+
+        //TODO: Remove 500 expect once tests are wired up with Stripe
+        it('should not throw 400 for using offer id on members create checkout session endpoint', async function () {
+            await request.post('/members/api/create-stripe-checkout-session')
+                .send({
+                    offerId: '62826b1b6dccb3e3e997ebd4',
+                    identity: null,
+                    metadata: {
+                        name: 'Jamie Larsen'
+                    },
+                    cancelUrl: 'https://example.com/blog/?stripe=cancel',
+                    customerEmail: 'jamie@example.com',
+                    tierId: null,
+                    cadence: null
+                })
+                .expect(500);
         });
 
         it('should error for invalid data on members create update session endpoint', async function () {
@@ -203,22 +215,6 @@ describe('Front-end members behaviour', function () {
         it('should reject when missing a uuid', async function () {
             await request.get('/unsubscribe/')
                 .expect(400);
-        });
-    });
-
-    describe('Price data', function () {
-        it('Can be used as a number, and with the price helper', async function () {
-            // Check out test/utils/fixtures/themes/price-data-test-theme/index.hbs
-            // To see where this is coming from.
-            //
-            const legacyUse = /You can use the price data as a number and currency: £12/;
-            const withPriceHelper = /You can pass price data to the price helper: £12/;
-
-            await request.get('/')
-                .expect((res) => {
-                    should.exist(res.text.match(legacyUse));
-                    should.exist(res.text.match(withPriceHelper));
-                });
         });
     });
 

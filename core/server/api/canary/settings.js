@@ -4,7 +4,7 @@ const models = require('../../models');
 const routeSettings = require('../../services/route-settings');
 const tpl = require('@tryghost/tpl');
 const {BadRequestError} = require('@tryghost/errors');
-const settingsService = require('../../services/settings');
+const settingsService = require('../../services/settings/settings-service');
 const membersService = require('../../services/members');
 const stripeService = require('../../services/stripe');
 
@@ -12,8 +12,22 @@ const settingsBREADService = settingsService.getSettingsBREADServiceInstance();
 
 const messages = {
     failedSendingEmail: 'Failed Sending Email'
-    
+
 };
+
+async function getStripeConnectData(frame) {
+    const stripeConnectIntegrationToken = frame.data.settings.find(setting => setting.key === 'stripe_connect_integration_token');
+
+    if (stripeConnectIntegrationToken && stripeConnectIntegrationToken.value) {
+        const getSessionProp = prop => frame.original.session[prop];
+
+        return await settingsBREADService.getStripeConnectData(
+            stripeConnectIntegrationToken,
+            getSessionProp,
+            membersService.stripeConnect.getStripeConnectTokenData
+        );
+    }
+}
 
 module.exports = {
     docName: 'settings',
@@ -57,7 +71,7 @@ module.exports = {
                     required: true
                 },
                 action: {
-                    values: ['fromaddressupdate', 'supportaddressupdate']
+                    values: ['supportaddressupdate']
                 }
             }
         },
@@ -68,7 +82,6 @@ module.exports = {
                     const {token, action} = frame.options;
                     const updatedEmailAddress = await membersService.settings.getEmailFromToken({token});
                     const actionToKeyMapping = {
-                        fromAddressUpdate: 'members_from_address',
                         supportAddressUpdate: 'members_support_address'
                     };
                     if (updatedEmailAddress) {
@@ -96,6 +109,7 @@ module.exports = {
     },
 
     updateMembersEmail: {
+        statusCode: 204,
         permissions: {
             method: 'edit'
         },
@@ -122,12 +136,13 @@ module.exports = {
     },
 
     disconnectStripeConnectIntegration: {
+        statusCode: 204,
         permissions: {
             method: 'edit'
         },
         async query(frame) {
-            const hasActiveStripeSubscriptions = await membersService.api.hasActiveStripeSubscriptions();
-            if (hasActiveStripeSubscriptions) {
+            const paidMembers = await membersService.api.memberBREADService.browse({limit: 0, filter: 'status:paid'});
+            if (_.get(paidMembers, 'meta.pagination.total') !== 0) {
                 throw new BadRequestError({
                     message: 'Cannot disconnect Stripe whilst you have active subscriptions.'
                 });
@@ -170,20 +185,17 @@ module.exports = {
             }
         },
         async query(frame) {
-            let stripeConnectData;
-            const stripeConnectIntegrationToken = frame.data.settings.find(setting => setting.key === 'stripe_connect_integration_token');
+            let stripeConnectData = await getStripeConnectData(frame);
 
-            if (stripeConnectIntegrationToken && stripeConnectIntegrationToken.value) {
-                const getSessionProp = prop => frame.original.session[prop];
+            let result = await settingsBREADService.edit(frame.data.settings, frame.options, stripeConnectData);
 
-                stripeConnectData = await settingsBREADService.getStripeConnectData(
-                    stripeConnectIntegrationToken,
-                    getSessionProp,
-                    membersService.stripeConnect.getStripeConnectTokenData
-                );
+            if (_.isEmpty(result)) {
+                this.headers.cacheInvalidate = false;
+            } else {
+                this.headers.cacheInvalidate = true;
             }
 
-            return await settingsBREADService.edit(frame.data.settings, frame.options, stripeConnectData);
+            return result;
         }
     },
 

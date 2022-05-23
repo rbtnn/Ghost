@@ -10,25 +10,16 @@ const BACKUP_TABLES = [
     'members',
     'members_labels',
     'members_products',
-    'posts_products',
     'members_stripe_customers',
     'members_stripe_customers_subscriptions',
     'migrations',
     'migrations_lock',
-    'newsletters',
-    'oauth',
     'permissions',
     'permissions_roles',
     'permissions_users',
-    'products',
-    'benefits',
-    'products_benefits',
     'webhooks',
-    'snippets',
     'tokens',
     'sessions',
-    'stripe_products',
-    'stripe_prices',
     'mobiledoc_revisions',
     'email_batches',
     'email_recipients',
@@ -40,9 +31,8 @@ const BACKUP_TABLES = [
     'members_paid_subscription_events',
     'members_subscribe_events',
     'members_product_events',
-    'members_newsletters',
-    'offers',
-    'offer_redemptions'
+    'members_newsletters'
+
 ];
 
 // NOTE: exposing only tables which are going to be included in a "default" export file
@@ -58,7 +48,17 @@ const TABLES_ALLOWLIST = [
     'settings',
     'custom_theme_settings',
     'tags',
-    'users'
+    'users',
+    'products',
+    'stripe_products',
+    'stripe_prices',
+    'posts_products',
+    'newsletters',
+    'benefits',
+    'products_benefits',
+    'offers',
+    'offer_redemptions',
+    'snippets'
 ];
 
 // NOTE: these are settings keys which should never end up in the export file
@@ -70,8 +70,6 @@ const SETTING_KEYS_BLOCKLIST = [
     'stripe_publishable_key',
     'members_stripe_webhook_id',
     'members_stripe_webhook_secret',
-    'oauth_client_id',
-    'oauth_client_secret',
     'email_verification_required'
 ];
 

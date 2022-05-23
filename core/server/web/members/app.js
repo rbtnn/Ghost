@@ -38,13 +38,14 @@ module.exports = function setupMembersApp() {
     membersApp.get('/api/member/newsletters', middleware.getMemberNewsletters);
     membersApp.put('/api/member/newsletters', bodyParser.json({limit: '1mb'}), middleware.updateMemberNewsletters);
 
+    // Get and update member data
     membersApp.get('/api/member', middleware.getMemberData);
     membersApp.put('/api/member', bodyParser.json({limit: '1mb'}), middleware.updateMemberData);
     membersApp.post('/api/member/email', bodyParser.json({limit: '1mb'}), (req, res) => membersService.api.middleware.updateEmailAddress(req, res));
+
+    // Manage session
     membersApp.get('/api/session', middleware.getIdentityToken);
-    membersApp.get('/api/offers/:id', middleware.getOfferData);
     membersApp.delete('/api/session', middleware.deleteSession);
-    membersApp.get('/api/site', middleware.getMemberSiteData);
 
     // NOTE: this is wrapped in a function to ensure we always go via the getter
     membersApp.post('/api/send-magic-link', bodyParser.json(), shared.middleware.brute.membersAuth, (req, res, next) => membersService.api.middleware.sendMagicLink(req, res, next));
@@ -55,11 +56,11 @@ module.exports = function setupMembersApp() {
 
     // API error handling
     membersApp.use('/api', errorHandler.resourceNotFound);
-    membersApp.use('/api', errorHandler.handleJSONResponseV2(sentry));
+    membersApp.use('/api', errorHandler.handleJSONResponse(sentry));
 
     // Webhook error handling
     membersApp.use('/webhooks', errorHandler.resourceNotFound);
-    membersApp.use('/webhooks', errorHandler.handleJSONResponseV2(sentry));
+    membersApp.use('/webhooks', errorHandler.handleJSONResponse(sentry));
 
     debug('Members App setup end');
 

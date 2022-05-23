@@ -391,7 +391,6 @@ describe('Importer', function () {
                 })
                 .catch(function (response) {
                     response.length.should.equal(6);
-
                     // NOTE: a duplicated tag.slug is a warning
                     response[0].errorType.should.equal('ValidationError');
                     response[0].message.should.eql('Value in [users.bio] exceeds maximum length of 200 characters.');
@@ -402,14 +401,14 @@ describe('Importer', function () {
                     response[2].errorType.should.equal('ValidationError');
                     response[2].message.should.eql('Value in [tags.meta_title] exceeds maximum length of 300 characters.');
 
-                    response[3].message.should.eql('Value in [posts.title] cannot be blank.');
-                    response[3].errorType.should.eql('ValidationError');
+                    response[3].errorType.should.equal('ValidationError');
+                    response[3].message.should.eql('Value in [settings.key] cannot be blank.');
 
-                    response[4].errorType.should.equal('ValidationError');
-                    response[4].message.should.eql('Value in [posts.title] exceeds maximum length of 255 characters.');
+                    response[4].message.should.eql('Value in [posts.title] cannot be blank.');
+                    response[4].errorType.should.eql('ValidationError');
 
                     response[5].errorType.should.equal('ValidationError');
-                    response[5].message.should.eql('Value in [settings.key] cannot be blank.');
+                    response[5].message.should.eql('Value in [posts.title] exceeds maximum length of 255 characters.');
                 });
         });
 
@@ -437,7 +436,10 @@ describe('Importer', function () {
                     // Grab the data from tables
                     return Promise.all([
                         models.User.findPage(testUtils.context.internal),
-                        models.Post.findPage(testUtils.context.internal)
+                        models.Post.findPage({
+                            context: testUtils.context.internal,
+                            withRelated: ['authors']
+                        })
                     ]);
                 })
                 .then(function (importedData) {
@@ -457,7 +459,7 @@ describe('Importer', function () {
                     users[1].updated_by.should.eql(testUtils.DataGenerator.Content.users[0].id);
 
                     posts[0].slug.should.eql(exportData.data.posts[0].slug);
-                    posts[0].author.should.eql(testUtils.DataGenerator.Content.users[0].id);
+                    posts[0].primary_author.id.should.eql(testUtils.DataGenerator.Content.users[0].id);
                     posts[0].published_by.should.eql(testUtils.DataGenerator.Content.users[0].id);
                     posts[0].created_by.should.eql(users[1].id);
                 });
@@ -563,7 +565,9 @@ describe('Importer', function () {
             exportData.data.posts[0] = testUtils.DataGenerator.forKnex.createPost({
                 slug: 'post1',
                 title: 'title1',
-                author_id: exportData.data.users[0].id,
+                authors: [{
+                    id: exportData.data.users[0].id
+                }],
                 created_by: exportData.data.users[0].id,
                 updated_by: exportData.data.users[1].id,
                 published_by: exportData.data.users[1].id
@@ -571,7 +575,9 @@ describe('Importer', function () {
             exportData.data.posts[1] = testUtils.DataGenerator.forKnex.createPost({
                 slug: 'post2',
                 title: 'title2',
-                author_id: exportData.data.users[3].id,
+                authors: [{
+                    id: exportData.data.users[3].id
+                }],
                 created_by: exportData.data.users[2].id,
                 updated_by: exportData.data.users[0].id,
                 published_by: exportData.data.users[1].id
@@ -579,7 +585,9 @@ describe('Importer', function () {
             exportData.data.posts[2] = testUtils.DataGenerator.forKnex.createPost({
                 slug: 'post3',
                 title: 'title3',
-                author_id: exportData.data.users[0].id,
+                authors: [{
+                    id: exportData.data.users[0].id
+                }],
                 created_by: exportData.data.users[3].id,
                 updated_by: exportData.data.users[3].id,
                 published_by: exportData.data.users[3].id
@@ -601,7 +609,7 @@ describe('Importer', function () {
                 updated_by: exportData.data.users[2].id
             });
 
-            const postOptions = Object.assign({withRelated: ['tags']}, testUtils.context.internal);
+            const postOptions = Object.assign({withRelated: ['tags', 'authors']}, testUtils.context.internal);
             const tagOptions = Object.assign({order: 'slug ASC'}, testUtils.context.internal);
             const userOptions = Object.assign({withRelated: ['roles']}, testUtils.context.internal);
 
@@ -628,9 +636,9 @@ describe('Importer', function () {
                     posts[1].slug.should.equal(exportData.data.posts[1].slug);
                     posts[2].slug.should.equal(exportData.data.posts[0].slug);
 
-                    posts[0].author.should.equal(users[1].id);
-                    posts[1].author.should.equal(users[4].id);
-                    posts[2].author.should.equal(users[1].id);
+                    posts[0].primary_author.id.should.equal(users[1].id);
+                    posts[1].primary_author.id.should.equal(users[4].id);
+                    posts[2].primary_author.id.should.equal(users[1].id);
 
                     posts[0].created_by.should.equal(users[4].id);
                     posts[1].created_by.should.equal(users[3].id);
@@ -891,7 +899,7 @@ describe('Importer', function () {
                 });
         });
 
-        it('imports settings fields deprecated in v2 and removed in v3: slack hook, permalinks', function () {
+        it('can import default_locale and active_timezone', function () {
             // Prevent events from being fired to avoid side-effects
             const EventRegistry = require('../../../core/server/lib/common/events');
             sinon.stub(EventRegistry, 'emit').callsFake(() => {});
@@ -908,15 +916,10 @@ describe('Importer', function () {
                 value: 'Pacific/Auckland'
             });
 
-            exportData.data.settings[2] = testUtils.DataGenerator.forKnex.createSetting({
-                key: 'ghost_foot',
-                value: 'AVADA KEDAVRA'
-            });
-
             return dataImporter.doImport(exportData, importOptions)
                 .then(function (imported) {
                     imported.problems.length.should.eql(0);
-                    return models.Settings.findOne(_.merge({key: 'lang'}, testUtils.context.internal));
+                    return models.Settings.findOne(_.merge({key: 'locale'}, testUtils.context.internal));
                 })
                 .then(function (result) {
                     result.attributes.value.should.eql('ua');
@@ -926,12 +929,28 @@ describe('Importer', function () {
                 })
                 .then(function (result) {
                     result.attributes.value.should.eql('Pacific/Auckland');
-                })
-                .then(function () {
-                    return models.Settings.findOne(_.merge({key: 'codeinjection_foot'}, testUtils.context.internal));
+                });
+        });
+
+        it('can import lang', function () {
+            // Prevent events from being fired to avoid side-effects
+            const EventRegistry = require('../../../core/server/lib/common/events');
+            sinon.stub(EventRegistry, 'emit').callsFake(() => {});
+
+            const exportData = exportedBodyV2().db[0];
+
+            exportData.data.settings[0] = testUtils.DataGenerator.forKnex.createSetting({
+                key: 'lang',
+                value: 'ua'
+            });
+
+            return dataImporter.doImport(exportData, importOptions)
+                .then(function (imported) {
+                    imported.problems.length.should.eql(0);
+                    return models.Settings.findOne(_.merge({key: 'locale'}, testUtils.context.internal));
                 })
                 .then(function (result) {
-                    result.attributes.value.should.eql('AVADA KEDAVRA');
+                    result.attributes.value.should.eql('ua');
                 });
         });
 
@@ -1067,17 +1086,17 @@ describe('Importer', function () {
                     posts[0].slug.should.eql(exportData.data.posts[2].slug);
                     posts[0].authors.length.should.eql(1);
                     posts[0].authors[0].id.should.eql(users[4].id);
-                    posts[0].author.should.eql(users[4].id);
+                    posts[0].primary_author.id.should.eql(users[4].id);
 
                     // no valid authors reference, use owner author_id
                     posts[1].slug.should.eql(exportData.data.posts[1].slug);
                     posts[1].authors.length.should.eql(1);
-                    posts[1].author.should.eql(testUtils.DataGenerator.Content.users[0].id);
+                    posts[1].primary_author.id.should.eql(testUtils.DataGenerator.Content.users[0].id);
                     posts[1].authors[0].id.should.eql(testUtils.DataGenerator.Content.users[0].id);
 
                     posts[2].slug.should.eql(exportData.data.posts[0].slug);
                     posts[2].authors.length.should.eql(3);
-                    posts[2].author.should.eql(users[2].id);
+                    posts[2].primary_author.id.should.eql(users[2].id);
                     posts[2].authors.length.should.eql(3);
                     posts[2].authors[0].id.should.eql(users[2].id);
                     posts[2].authors[1].id.should.eql(users[1].id);

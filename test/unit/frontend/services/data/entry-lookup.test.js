@@ -1,8 +1,7 @@
 const should = require('should');
 const sinon = require('sinon');
 
-const API_VERSION = 'canary';
-const api = require('../../../../../core/server/api')[API_VERSION];
+const api = require('../../../../../core/frontend/services/proxy').api;
 const data = require('../../../../../core/frontend/services/data');
 const testUtils = require('../../../../utils');
 
@@ -48,7 +47,7 @@ describe('Unit - frontend/data/entry-lookup', function () {
                 };
             });
 
-            locals = {apiVersion: API_VERSION};
+            locals = {};
         });
 
         it('ensure pages controller is triggered', function () {
@@ -99,7 +98,7 @@ describe('Unit - frontend/data/entry-lookup', function () {
                 };
             });
 
-            locals = {apiVersion: API_VERSION};
+            locals = {};
         });
 
         it('ensure posts controller is triggered', function () {

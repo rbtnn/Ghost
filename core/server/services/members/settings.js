@@ -52,16 +52,12 @@ function createSettingsInstance(config) {
             return updateEmailTemplate({url, email, siteTitle});
         },
         getSigninURL(token, type) {
-            const signinURL = new URL(getApiUrl({version: 'v4', type: 'admin'}));
+            const signinURL = new URL(urlUtils.urlFor('api', {type: 'admin'}, true));
             signinURL.pathname = path.join(signinURL.pathname, '/settings/members/email/');
             signinURL.searchParams.set('token', token);
             signinURL.searchParams.set('action', type);
             return signinURL.href;
         }
-    };
-
-    const getApiUrl = ({version, type}) => {
-        return urlUtils.urlFor('api', {version: version, versionType: type}, true);
     };
 
     const magicLinkService = new MagicLink({
@@ -73,7 +69,7 @@ function createSettingsInstance(config) {
         getSubject
     });
 
-    const sendEmailAddressUpdateMagicLink = ({email, type = 'fromAddressUpdate'}) => {
+    const sendEmailAddressUpdateMagicLink = ({email, type = 'supportAddressUpdate'}) => {
         const [,toDomain] = email.split('@');
         let fromEmail = `noreply@${toDomain}`;
         if (fromEmail === email) {
@@ -103,9 +99,7 @@ function createSettingsInstance(config) {
 
     const getAdminRedirectLink = ({type}) => {
         const adminUrl = urlUtils.urlFor('admin', true);
-        if (type === 'fromAddressUpdate') {
-            return urlUtils.urlJoin(adminUrl, `#/settings/members-email/?${type}=success`);
-        } else if (type === 'supportAddressUpdate') {
+        if (type === 'supportAddressUpdate') {
             return urlUtils.urlJoin(adminUrl, `#/settings/members/?${type}=success`);
         } else {
             return urlUtils.urlJoin(adminUrl, `#/site/`);

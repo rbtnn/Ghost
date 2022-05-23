@@ -30,10 +30,11 @@ const boot = require('../../core/boot');
 const AdminAPITestAgent = require('./admin-api-test-agent');
 const MembersAPITestAgent = require('./members-api-test-agent');
 const ContentAPITestAgent = require('./content-api-test-agent');
+const GhostAPITestAgent = require('./ghost-api-test-agent');
 const db = require('./db-utils');
 
 // Services that need resetting
-const settingsService = require('../../core/server/services/settings');
+const settingsService = require('../../core/server/services/settings/settings-service');
 
 /**
  * @param {Object} [options={}]
@@ -220,6 +221,32 @@ const getMembersAPIAgent = async () => {
 };
 
 /**
+ * Creates a GhostAPITestAgent, which is a drop-in substitution for supertest
+ * It is automatically hooked up to the Ghost API so you can make requests to e.g.
+ * agent.get('/well-known/jwks.json') without having to worry about URL paths
+ *
+ * @returns {Promise<GhostAPITestAgent>} agent
+ */
+const getGhostAPIAgent = async () => {
+    const bootOptions = {
+        frontend: false
+    };
+
+    try {
+        const app = await startGhost(bootOptions);
+        const originURL = configUtils.config.get('url');
+
+        return new GhostAPITestAgent(app, {
+            apiURL: '/ghost/',
+            originURL
+        });
+    } catch (error) {
+        error.message = `Unable to create test agent. ${error.message}`;
+        throw error;
+    }
+};
+
+/**
  *
  * @returns {Promise<{adminAgent: AdminAPITestAgent, membersAgent: MembersAPITestAgent}>} agents
  */
@@ -260,7 +287,8 @@ module.exports = {
         getAdminAPIAgent,
         getMembersAPIAgent,
         getContentAPIAgent,
-        getAgentsForMembers
+        getAgentsForMembers,
+        getGhostAPIAgent
     },
 
     // Mocks and Stubs
@@ -279,10 +307,14 @@ module.exports = {
     matchers: {
         anyString: any(String),
         anyArray: any(Array),
+        anyNumber: any(Number),
+        anyStringNumber: stringMatching(/\d+/),
         anyISODateTime: stringMatching(/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.000Z/),
         anyISODate: stringMatching(/\d{4}-\d{2}-\d{2}/),
         anyISODateTimeWithTZ: stringMatching(/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.000\+\d{2}:\d{2}/),
         anyEtag: stringMatching(/(?:W\/)?"(?:[ !#-\x7E\x80-\xFF]*|\r\n[\t ]|\\.)*"/),
+        anyContentLength: stringMatching(/\d+/),
+        anyContentVersion: stringMatching(/v\d+\.\d+/),
         anyObjectId: stringMatching(/[a-f0-9]{24}/),
         anyErrorId: stringMatching(/[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}/),
         anyUuid: stringMatching(/[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}/),
@@ -290,5 +322,10 @@ module.exports = {
             return stringMatching(new RegExp(`https?://.*?/${resource}/[a-f0-9]{24}/`));
         },
         stringMatching
-    }
+    },
+
+    // utilities
+    configUtils: require('./configUtils'),
+    dbUtils: require('./db-utils'),
+    urlUtils: require('./urlUtils')
 };

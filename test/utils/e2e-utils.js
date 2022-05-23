@@ -15,7 +15,7 @@ const boot = require('../../core/boot');
 const db = require('../../core/server/data/db');
 const models = require('../../core/server/models');
 const urlService = require('../../core/server/services/url');
-const settingsService = require('../../core/server/services/settings');
+const settingsService = require('../../core/server/services/settings/settings-service');
 const routeSettingsService = require('../../core/server/services/route-settings');
 const themeService = require('../../core/server/services/themes');
 const limits = require('../../core/server/services/limits');
@@ -41,7 +41,7 @@ let totalBoots = 0;
 const exposeFixtures = async () => {
     const fixturePromises = {
         roles: models.Role.findAll({columns: ['id']}),
-        users: models.User.findAll({columns: ['id', 'email']}),
+        users: models.User.findAll({columns: ['id', 'email', 'slug']}),
         tags: models.Tag.findAll({columns: ['id']}),
         apiKeys: models.ApiKey.findAll({withRelated: 'integration'})
     };

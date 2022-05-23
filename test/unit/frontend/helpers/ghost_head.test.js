@@ -13,13 +13,16 @@ const routing = require('../../../../core/frontend/services/routing');
 const urlService = require('../../../../core/server/services/url');
 
 const ghost_head = require('../../../../core/frontend/helpers/ghost_head');
-const {settingsCache} = require('../../../../core/frontend/services/proxy');
+const proxy = require('../../../../core/frontend/services/proxy');
+const {settingsCache} = proxy;
 
 describe('{{ghost_head}} helper', function () {
     let posts = [];
     let tags = [];
     let authors = [];
     let users = [];
+
+    let keyStub;
 
     const makeFixtures = () => {
         const {createPost, createUser, createTag} = testUtils.DataGenerator.forKnex;
@@ -193,6 +196,7 @@ describe('{{ghost_head}} helper', function () {
         posts.push(createPost({// Post 4
             title: 'Welcome to Ghost',
             mobiledoc: testUtils.DataGenerator.markdownToMobiledoc('This is a short post'),
+            excerpt: 'This is a short post',
             authors: [
                 authors[3]
             ],
@@ -263,6 +267,7 @@ describe('{{ghost_head}} helper', function () {
         posts.push(createPost({// Post 9
             title: 'Welcome to Ghost',
             mobiledoc: testUtils.DataGenerator.markdownToMobiledoc('This is a short post'),
+            excerpt: 'This is a short post',
             tags: [
                 createTag({name: 'tag1'}),
                 createTag({name: 'tag2'}),
@@ -278,6 +283,12 @@ describe('{{ghost_head}} helper', function () {
     before(function () {
         // @TODO: remove when visibility is refactored out of models
         models.init();
+
+        keyStub = sinon.stub().resolves('xyz');
+        const dataService = {
+            getFrontendKey: keyStub
+        };
+        proxy.init({dataService});
     });
 
     beforeEach(function () {
@@ -286,11 +297,8 @@ describe('{{ghost_head}} helper', function () {
         // @TODO: this is a LOT of mocking :/
         sinon.stub(routing.registry, 'getRssUrl').returns('http://localhost:65530/rss/');
         sinon.stub(imageLib.imageSize, 'getImageSizeFromUrl').resolves();
-        sinon.stub(themeEngine, 'getActive').returns({
-            engine: () => 'canary'
-        });
-
         sinon.stub(settingsCache, 'get');
+
         settingsCache.get.withArgs('title').returns('Ghost');
         settingsCache.get.withArgs('description').returns('site description');
         settingsCache.get.withArgs('cover_image').returns('/content/images/site-cover.png');
@@ -1660,6 +1668,7 @@ describe('{{ghost_head}} helper', function () {
             })).then(function (rendered) {
                 should.exist(rendered);
                 rendered.string.should.containEql('<script defer src="https://unpkg.com/@tryghost/portal');
+                rendered.string.should.containEql('data-ghost="http://127.0.0.1:2369/" data-key="xyz" data-api="http://127.0.0.1:2369/ghost/api/content/"');
                 rendered.string.should.containEql('<style id="gh-members-styles">');
                 done();
             }).catch(done);
@@ -1677,6 +1686,7 @@ describe('{{ghost_head}} helper', function () {
             })).then(function (rendered) {
                 should.exist(rendered);
                 rendered.string.should.containEql('<script defer src="https://unpkg.com/@tryghost/portal');
+                rendered.string.should.containEql('data-ghost="http://127.0.0.1:2369/" data-key="xyz" data-api="http://127.0.0.1:2369/ghost/api/content/"');
                 rendered.string.should.containEql('<style id="gh-members-styles">');
                 done();
             }).catch(done);
@@ -1697,6 +1707,7 @@ describe('{{ghost_head}} helper', function () {
             })).then(function (rendered) {
                 should.exist(rendered);
                 rendered.string.should.containEql('<script defer src="https://unpkg.com/@tryghost/portal');
+                rendered.string.should.containEql('data-ghost="http://127.0.0.1:2369/" data-key="xyz" data-api="http://127.0.0.1:2369/ghost/api/content/"');
                 rendered.string.should.containEql('<style id="gh-members-styles">');
                 rendered.string.should.containEql('<script async src="https://js.stripe.com');
                 done();
@@ -1718,6 +1729,7 @@ describe('{{ghost_head}} helper', function () {
             })).then(function (rendered) {
                 should.exist(rendered);
                 rendered.string.should.containEql('<script defer src="https://unpkg.com/@tryghost/portal');
+                rendered.string.should.containEql('data-ghost="http://127.0.0.1:2369/" data-key="xyz" data-api="http://127.0.0.1:2369/ghost/api/content/"');
                 rendered.string.should.containEql('<style id="gh-members-styles">');
                 rendered.string.should.containEql('<script async src="https://js.stripe.com');
                 done();
@@ -1737,6 +1749,7 @@ describe('{{ghost_head}} helper', function () {
             })).then(function (rendered) {
                 should.exist(rendered);
                 rendered.string.should.not.containEql('<script defer src="https://unpkg.com/@tryghost/portal');
+                rendered.string.should.not.containEql('data-ghost="http://127.0.0.1:2369/" data-key="xyz" data-api="http://127.0.0.1:2369/ghost/api/content/"');
                 rendered.string.should.not.containEql('<style id="gh-members-styles">');
                 rendered.string.should.not.containEql('<script async src="https://js.stripe.com');
                 done();
@@ -1758,6 +1771,7 @@ describe('{{ghost_head}} helper', function () {
             })).then(function (rendered) {
                 should.exist(rendered);
                 rendered.string.should.containEql('<script defer src="https://unpkg.com/@tryghost/portal');
+                rendered.string.should.containEql('data-ghost="http://127.0.0.1:2369/" data-key="xyz" data-api="http://127.0.0.1:2369/ghost/api/content/"');
                 rendered.string.should.containEql('<style id="gh-members-styles">');
                 rendered.string.should.not.containEql('<script async src="https://js.stripe.com');
                 done();
