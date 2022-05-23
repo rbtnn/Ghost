@@ -13,15 +13,8 @@ module.exports = function setupApiApp() {
         apiApp.use(require('./testmode')());
     }
 
-<<<<<<< HEAD
-    apiApp.use(APIVersionCompatibilityService.contentVersion);
-
-    apiApp.lazyUse(urlUtils.getVersionPath({version: 'v2', type: 'content'}), require('./v2/content/app'));
-    apiApp.lazyUse(urlUtils.getVersionPath({version: 'v2', type: 'admin'}), require('./v2/admin/app'));
-=======
     apiApp.use(APIVersionCompatibilityService.versionRewrites);
     apiApp.use(APIVersionCompatibilityService.contentVersion);
->>>>>>> v5.0.0
 
     apiApp.lazyUse('/content/', require('./canary/content/app'));
     apiApp.lazyUse('/admin/', require('./canary/admin/app'));

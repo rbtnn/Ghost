@@ -53,11 +53,7 @@ const getReplyToAddress = (fromAddress, replyAddressOption) => {
  * @param {Object} options
  */
 const getEmailData = async (postModel, options) => {
-<<<<<<< HEAD
-    let newsletter = postModel.relations.newsletter ? postModel.relations.newsletter : (await postModel.related('newsletter').fetch());
-=======
     let newsletter = postModel.relations.newsletter ?? await postModel.related('newsletter').fetch();
->>>>>>> v5.0.0
     if (!newsletter) {
         // The postModel doesn't have a newsletter in test emails
         newsletter = await models.Newsletter.getDefaultNewsletter();
@@ -201,10 +197,6 @@ const addEmail = async (postModel, options) => {
     const knexOptions = _.pick(options, ['transacting', 'forUpdate']);
     const filterOptions = {...knexOptions, limit: 1};
 
-<<<<<<< HEAD
-    const newsletter = postModel.relations.newsletter ? postModel.relations.newsletter : (await postModel.related('newsletter').fetch({require: true, ..._.pick(options, ['transacting'])}));
-
-=======
     // TODO: this is a hack for https://github.com/TryGhost/Team/issues/1626
     const newsletter = postModel.relations.newsletter ?? await postModel.related('newsletter').fetch({require: true, ..._.pick(options, ['transacting'])});
 
@@ -216,7 +208,6 @@ const addEmail = async (postModel, options) => {
         });
     }
 
->>>>>>> v5.0.0
     const emailRecipientFilter = postModel.get('email_recipient_filter');
     filterOptions.filter = transformEmailRecipientFilter(newsletter, emailRecipientFilter, 'email_segment');
 
@@ -425,16 +416,8 @@ async function getEmailMemberRows({emailModel, memberSegment, options}) {
     const knexOptions = _.pick(options, ['transacting', 'forUpdate']);
     const filterOptions = Object.assign({}, knexOptions);
 
-<<<<<<< HEAD
-    let newsletter = null;
-    if (labsService.isSet('multipleNewsletters')) {
-        newsletter = emailModel.relations.newsletter ? emailModel.relations.newsletter : (await emailModel.related('newsletter').fetch(Object.assign({}, {require: false}, _.pick(options, ['transacting']))));
-    }
-    const recipientFilter = transformEmailRecipientFilter(emailModel.get('recipient_filter'), {errorProperty: 'recipient_filter'}, newsletter);
-=======
     const newsletter = emailModel.relations.newsletter ?? await emailModel.related('newsletter').fetch(Object.assign({}, {require: true}, _.pick(options, ['transacting'])));
     const recipientFilter = transformEmailRecipientFilter(newsletter, emailModel.get('recipient_filter'), 'recipient_filter');
->>>>>>> v5.0.0
     filterOptions.filter = recipientFilter;
 
     if (memberSegment) {
@@ -613,8 +596,7 @@ module.exports = {
     _partitionMembersBySegment: partitionMembersBySegment,
     _getEmailMemberRows: getEmailMemberRows,
     _getFromAddress: getFromAddress,
-    _getReplyToAddress: getReplyToAddress,
-    _sendEmailJob: sendEmailJob
+    _getReplyToAddress: getReplyToAddress
 };
 
 /**

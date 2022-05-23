@@ -1167,11 +1167,7 @@ describe('Members API', function () {
         });
     });
 
-<<<<<<< HEAD
-    // Internally a different error is thrown for newsletters/products changes
-=======
     // Internally a different error is thrown for newsletters/tiers changes
->>>>>>> v5.0.0
     it('Cannot edit a non-existing id with newsletters', async function () {
         const memberChanged = {
             name: 'changed',

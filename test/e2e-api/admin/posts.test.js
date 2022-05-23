@@ -22,14 +22,11 @@ describe('Posts API', function () {
          * can't be overwritten after an email record is created.
          */
         await localUtils.doAuth(request, 'users:extra', 'posts', 'emails', 'newsletters', 'members:newsletters');
-<<<<<<< HEAD
-=======
 
         // Assign a newsletter to one of the posts
         const newsletterId = testUtils.DataGenerator.Content.newsletters[0].id;
         const postId = testUtils.DataGenerator.Content.posts[0].id;
         await models.Post.edit({newsletter_id: newsletterId}, {id: postId});
->>>>>>> v5.0.0
     });
 
     afterEach(function () {
@@ -546,10 +543,6 @@ describe('Posts API', function () {
         should(model.get('newsletter_id')).eql(null);
     });
 
-<<<<<<< HEAD
-    it('Can change the newsletter_id of a post when publishing', async function () {
-        const newsletterId = testUtils.DataGenerator.Content.newsletters[1].id;
-=======
     it('Cannot change the newsletter via body when adding', async function () {
         const post = {
             title: 'My newsletter post',
@@ -636,7 +629,6 @@ describe('Posts API', function () {
     it('Can change the newsletter of a post when publishing', async function () {
         const newsletterId = testUtils.DataGenerator.Content.newsletters[1].id;
         const newsletterSlug = testUtils.DataGenerator.Content.newsletters[1].slug;
->>>>>>> v5.0.0
 
         const post = {
             title: 'My newsletter_id post',
@@ -695,99 +687,6 @@ describe('Posts API', function () {
         should.exist(email);
         should(email.get('newsletter_id')).eql(newsletterId);
         should(email.get('status')).eql('pending');
-<<<<<<< HEAD
-    });
-
-    it('Can publish a scheduled post', async function () {
-        const newsletterId = testUtils.DataGenerator.Content.newsletters[1].id;
-
-        const post = {
-            title: 'My scheduled post',
-            status: 'draft',
-            feature_image_alt: 'Testing newsletter_id in scheduled posts',
-            feature_image_caption: 'Testing <b>feature image caption</b>',
-            mobiledoc: testUtils.DataGenerator.markdownToMobiledoc('my post'),
-            created_at: moment().subtract(2, 'days').toDate(),
-            updated_at: moment().subtract(2, 'days').toDate(),
-            created_by: ObjectId().toHexString(),
-            updated_by: ObjectId().toHexString()
-        };
-
-        const res = await request.post(localUtils.API.getApiQuery('posts'))
-            .set('Origin', config.get('url'))
-            .send({posts: [post]})
-            .expect('Content-Type', /json/)
-            .expect('Cache-Control', testUtils.cacheRules.private)
-            .expect(201);
-
-        const id = res.body.posts[0].id;
-
-        const updatedPost = res.body.posts[0];
-
-        updatedPost.status = 'scheduled';
-        updatedPost.published_at = moment().add(2, 'days').toDate();
-
-        const scheduledRes = await request
-            .put(localUtils.API.getApiQuery('posts/' + id + '/?email_recipient_filter=all&newsletter_id=' + newsletterId))
-            .set('Origin', config.get('url'))
-            .send({posts: [updatedPost]})
-            .expect('Content-Type', /json/)
-            .expect('Cache-Control', testUtils.cacheRules.private)
-            .expect(200);
-
-        const scheduledPost = scheduledRes.body.posts[0];
-        
-        // TODO: on 5.x branch, we should check the newsletter property in the response
-        // scheduledPost.newsletter.id.should.eql(newsletterId);
-        // should.not.exist(scheduledPost.newsletter_id);
-
-        let model = await models.Post.findOne({
-            id,
-            status: 'scheduled'
-        }, testUtils.context.internal);
-
-        should(model.get('newsletter_id')).eql(newsletterId);
-
-        // We should not have an email
-        let email = await models.Email.findOne({
-            post_id: id
-        }, testUtils.context.internal);
-
-        should.not.exist(email);
-
-        // Publish now, without passing the newsletter_id or other options again!
-        scheduledPost.status = 'published';
-        scheduledPost.published_at = moment().toDate();
-
-        const publishedRes = await request
-            .put(localUtils.API.getApiQuery('posts/' + id + '/'))
-            .set('Origin', config.get('url'))
-            .send({posts: [scheduledPost]})
-            .expect('Content-Type', /json/)
-            .expect('Cache-Control', testUtils.cacheRules.private)
-            .expect(200);
-        
-        const publishedPost = publishedRes.body.posts[0];
-
-        model = await models.Post.findOne({
-            id
-        }, testUtils.context.internal);
-
-        should(model.get('newsletter_id')).eql(newsletterId);
-
-        // TODO: on 5.x branch, we should check the newsletter property in the response
-        // publishedPost.newsletter.id.should.eql(newsletterId);
-        // should.not.exist(publishedPost.newsletter_id);
-
-        // Check email is sent to the correct newsletter
-        email = await models.Email.findOne({
-            post_id: id
-        }, testUtils.context.internal);
-
-        should(email.get('newsletter_id')).eql(newsletterId);
-        should(email.get('status')).eql('pending');
-=======
->>>>>>> v5.0.0
     });
 
     it('Can publish an email_only post', async function () {
@@ -882,17 +781,12 @@ describe('Posts API', function () {
 
         const updatedPost = res.body.posts[0];
 
-<<<<<<< HEAD
-        const res2 = await request
-            .put(localUtils.API.getApiQuery('posts/' + id + '/?email_recipient_filter=status:-free&send_email_when_published=true&newsletter_id=' + newsletterId))
-=======
         updatedPost.status = 'published';
         //updatedPost.published_at = moment().add(2, 'days').toDate();
         updatedPost.email_only = true;
 
         const publishedRes = await request
             .put(localUtils.API.getApiQuery('posts/' + id + '/?newsletter=' + newsletterSlug + '&email_segment=status%3Afree'))
->>>>>>> v5.0.0
             .set('Origin', config.get('url'))
             .send({posts: [updatedPost]})
             .expect('Content-Type', /json/)
@@ -915,22 +809,12 @@ describe('Posts API', function () {
         should(model.get('newsletter_id')).eql(newsletterId);
         should(model.get('email_recipient_filter')).eql('status:free');
 
-<<<<<<< HEAD
-        // Check email is sent to the correct newsletter
-        let email = await models.Email.findOne({
-=======
         // We should have an email
         const email = await models.Email.findOne({
->>>>>>> v5.0.0
             post_id: id
         }, testUtils.context.internal);
 
         should(email.get('newsletter_id')).eql(newsletterId);
-<<<<<<< HEAD
-        should(email.get('status')).eql('pending');
-
-        const unpublished = {
-=======
         should(email.get('recipient_filter')).eql('status:free');
         should(email.get('status')).eql('pending');
     });
@@ -941,7 +825,6 @@ describe('Posts API', function () {
 
         const post = {
             title: 'My scheduled post',
->>>>>>> v5.0.0
             status: 'draft',
             feature_image_alt: 'Testing newsletter_id in scheduled posts',
             feature_image_caption: 'Testing <b>feature image caption</b>',
@@ -961,20 +844,7 @@ describe('Posts API', function () {
 
         const id = res.body.posts[0].id;
 
-<<<<<<< HEAD
-        should(model.get('newsletter_id')).eql(newsletterId);
-
-        // Check email
-        // Note: we only create an email if we have members susbcribed to the newsletter
-        email = await models.Email.findOne({
-            post_id: id
-        }, testUtils.context.internal);
-
-        should.exist(email);
-        should(email.get('newsletter_id')).eql(newsletterId);
-=======
         const updatedPost = res.body.posts[0];
->>>>>>> v5.0.0
 
         updatedPost.status = 'scheduled';
         updatedPost.published_at = moment().add(2, 'days').toDate();
@@ -997,10 +867,6 @@ describe('Posts API', function () {
             id,
             status: 'scheduled'
         }, testUtils.context.internal);
-<<<<<<< HEAD
-        should(model.get('newsletter_id')).eql(newsletterId);
-=======
->>>>>>> v5.0.0
 
         should(model.get('newsletter_id')).eql(newsletterId);
         should(model.get('email_recipient_filter')).eql('all');
@@ -1030,14 +896,8 @@ describe('Posts API', function () {
             id
         }, testUtils.context.internal);
 
-<<<<<<< HEAD
-        // Test if the newsletter_id option was ignored
-        should(model.get('newsletter_id')).eql(newsletterId);
-    });
-=======
         should(model.get('newsletter_id')).eql(newsletterId);
         should(model.get('email_recipient_filter')).eql('all');
->>>>>>> v5.0.0
 
         publishedPost.newsletter.id.should.eql(newsletterId);
         should.not.exist(publishedPost.newsletter_id);

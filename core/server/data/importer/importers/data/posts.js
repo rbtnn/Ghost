@@ -6,7 +6,6 @@ const mobiledocLib = require('../../../../lib/mobiledoc');
 const validator = require('@tryghost/validator');
 const postsMetaSchema = require('../../../schema').tables.posts_meta;
 const metaAttrs = _.keys(_.omit(postsMetaSchema, ['id']));
-const ignoredColumns = ['newsletter_id'];
 
 class PostsImporter extends BaseImporter {
     constructor(allDataFromFile) {
@@ -50,10 +49,6 @@ class PostsImporter extends BaseImporter {
                 }
                 delete obj.send_email_when_published;
             }
-
-            ignoredColumns.forEach((column) => {
-                delete obj[column];
-            });
         });
     }
 

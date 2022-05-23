@@ -205,16 +205,6 @@ module.exports = {
         return shared.pipeline(require('./authors-public'), localUtils, 'content');
     },
 
-<<<<<<< HEAD
-    get productsPublic() {
-        return shared.pipeline(require('./products-public'), localUtils, 'content');
-    },
-    get tiersPublic() {
-        return shared.pipeline(require('./tiers-public'), localUtils, 'content');
-    },
-    get bsmPodcast() {
-        return shared.pipeline(require('./bsm-podcast'), localUtils, 'content');
-=======
     get tiersPublic() {
         return shared.pipeline(require('./tiers-public'), localUtils, 'content');
     },
@@ -225,6 +215,9 @@ module.exports = {
 
     get offersPublic() {
         return shared.pipeline(require('./offers-public'), localUtils, 'content');
->>>>>>> v5.0.0
+    },
+
+    get bsmPodcast() {
+        return shared.pipeline(require('./bsm-podcast'), localUtils, 'content');
     }
 };

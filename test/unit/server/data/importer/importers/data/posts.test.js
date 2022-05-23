@@ -88,11 +88,7 @@ describe('PostsImporter', function () {
             pageTrueTypePost.type.should.equal('post', 'pageTrueTypePost.type');
         });
 
-<<<<<<< HEAD
-        it('Removes the newsletter_id column', function () {
-=======
         it('Does not remove the newsletter_id column', function () {
->>>>>>> v5.0.0
             const fakePosts = [{
                 slug: 'post-with-newsletter',
                 newsletter_id: 'bananas'
@@ -104,9 +100,6 @@ describe('PostsImporter', function () {
 
             const postWithoutNewsletter = find(importer.dataToImport, {slug: 'post-with-newsletter'});
             should.exist(postWithoutNewsletter);
-<<<<<<< HEAD
-            should.not.exist(postWithoutNewsletter.newsletter_id);
-=======
             should.exist(postWithoutNewsletter.newsletter_id);
         });
 
@@ -126,7 +119,6 @@ describe('PostsImporter', function () {
             should.not.exist(post.send_email_when_published);
             // @TODO: need to check this mapping
             //post.newsletter_id.should.eql();
->>>>>>> v5.0.0
         });
     });
 });

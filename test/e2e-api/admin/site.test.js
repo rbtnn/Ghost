@@ -1,9 +1,5 @@
 const {agentProvider, matchers} = require('../../utils/e2e-framework');
-<<<<<<< HEAD
-const {anyEtag, stringMatching} = matchers;
-=======
 const {anyEtag, stringMatching, anyContentLength} = matchers;
->>>>>>> v5.0.0
 
 describe('Site API', function () {
     let agent;
@@ -21,12 +17,8 @@ describe('Site API', function () {
                 }
             })
             .matchHeaderSnapshot({
-<<<<<<< HEAD
-                etag: anyEtag
-=======
                 etag: anyEtag,
                 'content-length': anyContentLength
->>>>>>> v5.0.0
             });
     });
 });

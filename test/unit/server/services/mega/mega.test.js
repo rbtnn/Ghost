@@ -15,11 +15,7 @@ describe('MEGA', function () {
         // via transformEmailRecipientFilter
         it('throws when "none" is used as a email_recipient_filter', async function () {
             const postModel = {
-<<<<<<< HEAD
-                get: sinon.stub().returns('free'),
-=======
                 get: sinon.stub().returns('none'),
->>>>>>> v5.0.0
                 relations: {},
                 related: sinon.stub().returns({
                     fetch: sinon.stub().returns({
@@ -39,11 +35,7 @@ describe('MEGA', function () {
 
         it('throws when sending to an archived newsletter', async function () {
             const postModel = {
-<<<<<<< HEAD
-                get: sinon.stub().returns('none'),
-=======
                 get: sinon.stub().returns('all'),
->>>>>>> v5.0.0
                 relations: {},
                 related: sinon.stub().returns({
                     fetch: sinon.stub().returns({
@@ -70,17 +62,11 @@ describe('MEGA', function () {
             const postModel = {
                 get: sinon.stub().returns('status:free'),
                 relations: {},
-<<<<<<< HEAD
-                fetch: sinon.stub().returns(Promise.resolve({
-                    get: () => 'public'
-                }))
-=======
                 related: sinon.stub().returns({
                     fetch: sinon.stub().returns({
                         get: newsletterGetter
                     })
                 })
->>>>>>> v5.0.0
             };
             sinon.stub(labs, 'isSet').returns(true);
 
@@ -153,32 +139,10 @@ describe('MEGA', function () {
     });
 
     describe('getEmailMemberRows', function () {
-<<<<<<< HEAD
-        it('addEmail throws when "free" or "paid" strings are used as a recipient_filter', async function () {
-            const emailModel = {
-                get: sinon.stub().returns('paid'),
-                relations: {},
-                related: sinon.stub().returns({
-                    fetch: sinon.stub().returns({
-                        id: 'test'
-                    })
-                })
-            };
-
-            try {
-                await _getEmailMemberRows({emailModel});
-                should.fail('getEmailMemberRows did not throw');
-            } catch (err) {
-                should.equal(errors.utils.isGhostError(err), true);
-                err.message.should.equal('Unexpected recipient_filter value "paid", expected an NQL equivalent');
-            }
-        });
-=======
         it('getEmailMemberRows throws when "none" is used as a recipient_filter', async function () {
             const newsletterGetter = sinon.stub();
             newsletterGetter.withArgs('status').returns('active');
             newsletterGetter.withArgs('visibility').returns('members');
->>>>>>> v5.0.0
 
             const emailModel = {
                 get: sinon.stub().returns('none'),

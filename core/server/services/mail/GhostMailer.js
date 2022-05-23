@@ -24,8 +24,6 @@ function getDomain() {
 function getFromAddress(requestedFromAddress) {
     const configAddress = config.get('mail') && config.get('mail').from;
 
-    return config.get('mail').from;
-
     const address = requestedFromAddress || configAddress;
     // If we don't have a from address at all
     if (!address) {

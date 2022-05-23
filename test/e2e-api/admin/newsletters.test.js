@@ -1,16 +1,3 @@
-<<<<<<< HEAD
-const DatabaseInfo = require('@tryghost/database-info');
-const {agentProvider, mockManager, fixtureManager, matchers} = require('../../utils/e2e-framework');
-const {anyEtag, anyObjectId, anyUuid, anyISODateTime, anyLocationFor} = matchers;
-const configUtils = require('../../utils/configUtils');
-const uuid = require('uuid');
-const urlUtils = require('../../../core/shared/url-utils');
-const db = require('../../../core/server/data/db');
-const knex = db.knex;
-require('should');
-
-=======
->>>>>>> v5.0.0
 const assert = require('assert');
 const {agentProvider, mockManager, fixtureManager, configUtils, dbUtils, matchers} = require('../../utils/e2e-framework');
 const {anyEtag, anyObjectId, anyUuid, anyISODateTime, anyLocationFor, anyNumber} = matchers;
@@ -104,11 +91,7 @@ describe('Newsletters API', function () {
     });
 
     it('Can add a newsletter', async function () {
-<<<<<<< HEAD
-        const siteUrl = urlUtils.getSiteUrl();
-=======
         const siteUrl = configUtils.config.getSiteUrl();
->>>>>>> v5.0.0
         const relativePath = 'content/images/2022/05/cover-image.jpg';
         const absolutePath = siteUrl + relativePath;
         const transformReadyPath = '__GHOST_URL__/' + relativePath;
@@ -126,12 +109,6 @@ describe('Newsletters API', function () {
             show_badge: true,
             sort_order: 0,
             header_image: absolutePath
-<<<<<<< HEAD
-        };
-
-        const {body: body2} = await agent
-            .post(`newsletters/`)
-=======
         };
 
         const {body: body2} = await agent
@@ -175,26 +152,15 @@ describe('Newsletters API', function () {
 
         await agent
             .post(`newsletters/?include=count.members,count.posts`)
->>>>>>> v5.0.0
             .body({newsletters: [newsletter]})
             .expectStatus(201)
             .matchBodySnapshot({
                 newsletters: [newsletterSnapshot]
             })
-            .expect(({body}) => {
-                // Should still be absolute
-                body.newsletters[0].header_image.should.equal(absolutePath);
-            })
             .matchHeaderSnapshot({
                 etag: anyEtag,
                 location: anyLocationFor('newsletters')
             });
-
-        const id = body2.newsletters[0].id;
-
-        // Check with a database query if the header_image is saved correctly with a 'transformReady' path
-        const [header_image] = await knex('newsletters').where('id', id).pluck('header_image');
-        header_image.should.equal(transformReadyPath);
     });
 
     it('Can add multiple newsletters', async function () {
@@ -666,12 +632,8 @@ describe('Newsletters API', function () {
     });
 
     it('Can add a newsletter - with custom sender_email and subscribe existing members', async function () {
-<<<<<<< HEAD
-        if (DatabaseInfo.isSQLite(db.knex)) {
-=======
         if (dbUtils.isSQLite()) {
             // This breaks snapshot tests if you don't update snapshot tests on MySQL + make sure this is the last ADD test
->>>>>>> v5.0.0
             return;
         }
 
