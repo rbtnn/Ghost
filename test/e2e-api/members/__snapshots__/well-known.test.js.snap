@@ -1,6 +1,6 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`.well-known GET /jwks.json should return a JWKS 1: [body] 1`] = `
+exports[`Members .well-known GET /jwks.json should return a JWKS 1: [body] 1`] = `
 Object {
   "keys": Array [
     Object {
@@ -8,18 +8,20 @@ Object {
       "kid": Any<String>,
       "kty": "RSA",
       "n": Any<String>,
-      "use": "sig",
     },
   ],
 }
 `;
 
-exports[`.well-known GET /jwks.json should return a JWKS 2: [headers] 1`] = `
+exports[`Members .well-known GET /jwks.json should return a JWKS 2: [headers] 1`] = `
 Object {
-  "content-length": "277",
+  "access-control-allow-credentials": "true",
+  "access-control-allow-origin": "http://127.0.0.1:2369",
+  "cache-control": "public, max-age=86400",
+  "content-length": "265",
   "content-type": "application/json; charset=utf-8",
   "etag": StringMatching /\\(\\?:W\\\\/\\)\\?"\\(\\?:\\[ !#-\\\\x7E\\\\x80-\\\\xFF\\]\\*\\|\\\\r\\\\n\\[\\\\t \\]\\|\\\\\\\\\\.\\)\\*"/,
-  "vary": "Accept-Encoding",
+  "vary": "Origin, Accept-Encoding",
   "x-powered-by": "Express",
 }
 `;

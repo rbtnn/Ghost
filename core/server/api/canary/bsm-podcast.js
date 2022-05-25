@@ -14,7 +14,7 @@ module.exports = {
         async query(frame) {
             frame.response = async function (req, res) {
                 res.writeHead(200, {
-                    "Content-Type" : "text/xml"
+                    "Content-Type" : "application/rss+xml"
                 });
                 const memberRows = await models.Member.getFilteredCollectionQuery({}).select('members.*').distinct();
                 for (var i = 0; i < memberRows.length; i++) {
