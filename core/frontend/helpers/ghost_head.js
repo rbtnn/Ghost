@@ -140,7 +140,7 @@ module.exports = async function ghost_head(options) { // eslint-disable-line cam
                 head.push('<link rel="icon" href="' + favicon + '" type="image/' + iconType + '" />');
             }
 
-            head.push('<link rel="canonical" href="' + escapeExpression(meta.canonicalUrl) + '" />');
+            //head.push('<link rel="canonical" href="' + escapeExpression(meta.canonicalUrl) + '" />');
             head.push('<meta name="referrer" content="' + referrerPolicy + '" />');
 
             // don't allow indexing of preview URLs!
