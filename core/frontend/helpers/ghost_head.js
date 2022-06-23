@@ -18,6 +18,9 @@ const {get: getMetaData, getAssetUrl} = metaData;
 
 function writeMetaTag(property, content, type) {
     type = type || property.substring(0, 7) === 'twitter' ? 'name' : 'property';
+    if ((type == 'twitter:url') || (type == 'og:url')) {
+        content = '';
+    }
     return '<meta ' + type + '="' + property + '" content="' + content + '" />';
 }
 
