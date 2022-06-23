@@ -18,9 +18,6 @@ const {get: getMetaData, getAssetUrl} = metaData;
 
 function writeMetaTag(property, content, type) {
     type = type || property.substring(0, 7) === 'twitter' ? 'name' : 'property';
-    if ((type == 'twitter:url') || (type == 'og:url')) {
-        content = '';
-    }
     return '<meta ' + type + '="' + property + '" content="' + content + '" />';
 }
 
@@ -31,15 +28,19 @@ function finaliseStructuredData(meta) {
         if (property === 'article:tag') {
             _.each(meta.keywords, function (keyword) {
                 if (keyword !== '') {
-                    keyword = escapeExpression(keyword);
-                    head.push(writeMetaTag(property,
-                        escapeExpression(keyword)));
+                    if ((property != 'twitter:url') && (property != 'og:url')) {
+                        keyword = escapeExpression(keyword);
+                        head.push(writeMetaTag(property,
+                            escapeExpression(keyword)));
+                    }
                 }
             });
             head.push('');
         } else if (content !== null && content !== undefined) {
-            head.push(writeMetaTag(property,
-                escapeExpression(content)));
+            if ((property != 'twitter:url') && (property != 'og:url')) {
+                head.push(writeMetaTag(property,
+                    escapeExpression(content)));
+            }
         }
     });
 
