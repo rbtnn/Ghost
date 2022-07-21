@@ -10,10 +10,10 @@ describe('Helpers', function () {
     const ghostHelpers = [
         'asset', 'authors', 'body_class', 'cancel_link', 'concat', 'content', 'date', 'encode', 'excerpt', 'facebook_url', 'foreach', 'get',
         'ghost_foot', 'ghost_head', 'has', 'img_url', 'is', 'lang', 'link', 'link_class', 'meta_description', 'meta_title', 'navigation',
-        'next_post', 'page_url', 'pagination', 'plural', 'post_class', 'prev_post', 'price', 'raw', 'reading_time', 't', 'tags', 'title', 'twitter_url',
-        'url'
+        'next_post', 'page_url', 'pagination', 'plural', 'post_class', 'prev_post', 'price', 'raw', 'reading_time', 't', 'tags', 'title','total_members', 'total_paid_members', 'twitter_url',
+        'url', 'comment_count'
     ];
-    const experimentalHelpers = ['match', 'tiers'];
+    const experimentalHelpers = ['match', 'tiers', 'comments'];
 
     const expectedHelpers = _.concat(hbsHelpers, ghostHelpers, experimentalHelpers);
 

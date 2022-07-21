@@ -8,7 +8,7 @@
   ],
   "statements": 57,
   "branches": 85,
-  "functions": 53,
+  "functions": 52,
   "lines": 57,
   "include": [
     "core/{*.js,frontend,server,shared}"
@@ -26,7 +26,7 @@
     "!core/server/web/parent/middleware/**",
     "core/server/web/shared/**",
     "!core/server/web/shared/middleware/**",
-    "core/server/api/canary/**",
-    "!core/server/api/canary/utils"
+    "core/server/api/endpoints/**",
+    "!core/server/api/endpoints/utils"
   ]
 }

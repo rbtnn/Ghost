@@ -23,7 +23,7 @@ function getExpressSessionMiddleware() {
                 maxAge: constants.SIX_MONTH_MS,
                 httpOnly: true,
                 path: urlUtils.getSubdir() + '/ghost',
-                sameSite: 'lax',
+                sameSite: urlUtils.isSSL(config.get('url')) ? 'none' : 'lax',
                 secure: urlUtils.isSSL(config.get('url'))
             }
         });

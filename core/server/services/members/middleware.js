@@ -75,7 +75,7 @@ const getMemberNewsletters = async function (req, res) {
             return res.end('Email address not found.');
         }
 
-        const data = _.pick(memberData.toJSON(), 'uuid', 'email', 'name', 'newsletters', 'status');
+        const data = _.pick(memberData.toJSON(), 'uuid', 'email', 'name', 'newsletters', 'enable_comment_notifications', 'status');
         return res.json(data);
     } catch (err) {
         res.writeHead(400);
@@ -91,7 +91,7 @@ const updateMemberNewsletters = async function (req, res) {
             return res.end('Invalid member uuid');
         }
 
-        const data = _.pick(req.body, 'newsletters');
+        const data = _.pick(req.body, 'newsletters', 'enable_comment_notifications');
         const memberData = await membersService.api.members.get({
             uuid: memberUuid
         });
@@ -106,7 +106,7 @@ const updateMemberNewsletters = async function (req, res) {
         };
 
         const updatedMember = await membersService.api.members.update(data, options);
-        const updatedMemberData = _.pick(updatedMember.toJSON(), ['uuid', 'email', 'name', 'newsletters', 'status']);
+        const updatedMemberData = _.pick(updatedMember.toJSON(), ['uuid', 'email', 'name', 'newsletters', 'enable_comment_notifications', 'status']);
         res.json(updatedMemberData);
     } catch (err) {
         res.writeHead(400);
@@ -116,7 +116,7 @@ const updateMemberNewsletters = async function (req, res) {
 
 const updateMemberData = async function (req, res) {
     try {
-        const data = _.pick(req.body, 'name', 'subscribed', 'newsletters');
+        const data = _.pick(req.body, 'name', 'subscribed', 'newsletters', 'enable_comment_notifications');
         const member = await membersService.ssr.getMemberDataFromSession(req, res);
         if (member) {
             const options = {
@@ -143,8 +143,8 @@ const createSessionFromMagicLink = async function (req, res, next) {
     // req.query is a plain object, copy it to a URLSearchParams object so we can call toString()
     const searchParams = new URLSearchParams('');
     Object.keys(req.query).forEach((param) => {
-        // don't copy the token param
-        if (param !== 'token') {
+        // don't copy the "token" or "r" params
+        if (param !== 'token' && param !== 'r') {
             searchParams.set(param, req.query[param]);
         }
     });
@@ -179,6 +179,18 @@ const createSessionFromMagicLink = async function (req, res, next) {
                 const redirectUrl = new URL(removeLeadingSlash(ensureEndsWith(customRedirect, '/')), ensureEndsWith(baseUrl, '/'));
 
                 return res.redirect(redirectUrl.href);
+            }
+        }
+
+        if (action === 'signin') {
+            const referrer = req.query.r;
+            const siteUrl = urlUtils.getSiteUrl();
+
+            if (referrer && referrer.startsWith(siteUrl)) {
+                const redirectUrl = new URL(referrer);
+                redirectUrl.searchParams.set('success', true);
+                redirectUrl.searchParams.set('action', 'signin');
+                return res.redirect(redirectUrl.pathname + redirectUrl.search);
             }
         }
 

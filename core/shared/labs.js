@@ -24,7 +24,8 @@ const BETA_FEATURES = [
 
 const ALPHA_FEATURES = [
     'urlCache',
-    'beforeAfterCard'
+    'beforeAfterCard',
+    'comments'
 ];
 
 module.exports.GA_KEYS = [...GA_FEATURES];

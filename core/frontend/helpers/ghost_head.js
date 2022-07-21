@@ -61,6 +61,14 @@ function getMembersHelper(data, frontendKey) {
     return membersHelper;
 }
 
+function getSearchHelper(frontendKey) {
+    const adminUrl = urlUtils.getAdminUrl() || urlUtils.getSiteUrl();
+
+    let helper = `<script defer src="${config.get('sodoSearch:url')}" data-sodo-search="${adminUrl}" data-version="${config.get('sodoSearch:version')}" data-key="${frontendKey}" crossorigin="anonymous"></script>`;
+
+    return helper;
+}
+
 /**
  * **NOTE**
  * Express adds `_locals`, see https://github.com/expressjs/express/blob/4.15.4/lib/response.js#L962.
@@ -197,6 +205,7 @@ module.exports = async function ghost_head(options) { // eslint-disable-line cam
         // no code injection for amp context!!!
         if (!_.includes(context, 'amp')) {
             head.push(getMembersHelper(options.data, frontendKey));
+            head.push(getSearchHelper(frontendKey));
 
             // @TODO do this in a more "frameworky" way
             if (cardAssetService.hasFile('js')) {
@@ -204,6 +213,10 @@ module.exports = async function ghost_head(options) { // eslint-disable-line cam
             }
             if (cardAssetService.hasFile('css')) {
                 head.push(`<link rel="stylesheet" type="text/css" href="${getAssetUrl('public/cards.min.css')}">`);
+            }
+
+            if (labs.isSet('comments') && settingsCache.get('enable_comments') !== 'off') {
+                head.push(`<script defer src="${getAssetUrl('public/comment-counts.min.js')}" data-ghost-comments-counts-api="${urlUtils.getSiteUrl(true)}members/api/comments/counts/"></script>`);
             }
 
             if (!_.isEmpty(globalCodeinjection)) {
