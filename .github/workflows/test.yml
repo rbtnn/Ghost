@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - main
-      - '5.0'
       - 'v5.*'
       - 3.x
       - 2.x
@@ -38,6 +37,9 @@ jobs:
 
   migrations:
     runs-on: ubuntu-18.04
+    defaults:
+      run:
+        working-directory: ghost/core
     if: github.event_name == 'push' || (github.event_name == 'pull_request' && !startsWith(github.head_ref, 'renovate/'))
     strategy:
       matrix:
@@ -123,12 +125,7 @@ jobs:
           cache: yarn
 
       - run: yarn
-
-      - run: yarn test:unit
-        if: matrix.node == '16.13.0'
-
-      - run: yarn test:unit:base
-        if: matrix.node != '16.13.0'
+      - run: yarn test
 
       - uses: codecov/codecov-action@v2
 
@@ -141,6 +138,9 @@ jobs:
 
   database-tests:
     runs-on: ubuntu-18.04
+    defaults:
+      run:
+        working-directory: ghost/core
     if: github.event_name == 'push' || (github.event_name == 'pull_request' && !startsWith(github.head_ref, 'renovate/'))
     strategy:
       matrix:
@@ -248,8 +248,11 @@ jobs:
 
   ghost-cli:
     name: Ghost-CLI
-    if: github.event_name == 'push' || (github.event_name == 'pull_request' && !startsWith(github.head_ref, 'renovate/'))
+    if: false
     runs-on: ubuntu-18.04
+    defaults:
+      run:
+        working-directory: ghost/core
     steps:
       - uses: actions/checkout@v2
         with:
@@ -269,19 +272,19 @@ jobs:
       - name: Clean Install
         run: |
           DIR=$(mktemp -d)
-          ghost install local -d $DIR --zip $GITHUB_WORKSPACE/ghost.zip
+          ghost install local -d $DIR --zip $(pwd)/ghost.zip
 
       - name: Latest Release
         run: |
           DIR=$(mktemp -d)
           ghost install local -d $DIR
-          ghost update -d $DIR --zip $GITHUB_WORKSPACE/ghost.zip
+          ghost update -d $DIR --zip $(pwd)/ghost.zip
 
       - name: Update from latest v3
         run: |
           DIR=$(mktemp -d)
           ghost install v3 --local -d $DIR
-          ghost update -f -d $DIR --zip $GITHUB_WORKSPACE/ghost.zip
+          ghost update -f -d $DIR --zip $(pwd)/ghost.zip
 
       - name: Print debug logs
         if: failure()
@@ -297,7 +300,7 @@ jobs:
 
   canary:
     runs-on: ubuntu-18.04
-    needs: [lint, migrations, unit-tests, database-tests, ghost-cli]
+    needs: [lint, migrations, unit-tests, database-tests]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     name: Canary
     steps:
