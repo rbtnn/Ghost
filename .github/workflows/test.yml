@@ -19,8 +19,8 @@ jobs:
     if: github.event_name == 'push' || (github.event_name == 'pull_request' && !startsWith(github.head_ref, 'renovate/'))
     name: Lint
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-node@v2
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
         env:
           FORCE_COLOR: 0
         with:
@@ -28,6 +28,62 @@ jobs:
           cache: yarn
       - run: yarn
       - run: yarn lint
+      - uses: daniellockyer/action-slack-build@master
+        if: failure() && github.event_name == 'push' && github.ref == 'refs/heads/main'
+        with:
+          status: ${{ job.status }}
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+  admin-prod-build:
+    runs-on: ubuntu-18.04
+    if: github.event_name == 'push' || (github.event_name == 'pull_request' && !startsWith(github.head_ref, 'renovate/'))
+    name: Admin - Production Build
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: "14.17.0"
+
+      - run: yarn
+      - run: yarn workspace ghost-admin run build:prod
+
+      - uses: daniellockyer/action-slack-build@master
+        if: failure() && github.event_name == 'push' && github.ref == 'refs/heads/main'
+        with:
+          status: ${{ job.status }}
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+  admin-tests:
+    runs-on: ubuntu-18.04
+    if: github.event_name == 'push' || (github.event_name == 'pull_request' && !startsWith(github.head_ref, 'renovate/'))
+    strategy:
+      matrix:
+        browser: ["Firefox", "Chrome"]
+    name: Admin - ${{ matrix.browser }}
+    env:
+      MOZ_HEADLESS: 1
+      JOBS: 1
+      CI: true
+      COVERAGE: true
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: "14.17.0"
+
+      - run: yarn
+      - run: yarn test
+        working-directory: ghost/admin
+        env:
+          BROWSER: ${{ matrix.browser }}
+
+      # Merge coverage reports and upload
+      - run: yarn ember coverage-merge
+        working-directory: ghost/admin
+      - uses: codecov/codecov-action@v3
+
       - uses: daniellockyer/action-slack-build@master
         if: failure() && github.event_name == 'push' && github.ref == 'refs/heads/main'
         with:
@@ -54,11 +110,11 @@ jobs:
       database__client: ${{ matrix.env.DB_CLIENT }}
     name: Migrations (${{ matrix.env.DB }})
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           fetch-depth: 0
           submodules: true
-      - uses: actions/setup-node@v2
+      - uses: actions/setup-node@v3
         env:
           FORCE_COLOR: 0
         with:
@@ -116,8 +172,8 @@ jobs:
         node: [ '14.17.0', '16.13.0' ]
     name: Unit Tests (Node ${{ matrix.node }})
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-node@v2
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
         env:
           FORCE_COLOR: 0
         with:
@@ -157,8 +213,8 @@ jobs:
       NODE_ENV: ${{ matrix.env.NODE_ENV }}
     name: Database Tests (Node ${{ matrix.node }}, ${{ matrix.env.DB }})
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-node@v2
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
         env:
           FORCE_COLOR: 0
         with:
@@ -254,11 +310,11 @@ jobs:
       run:
         working-directory: ghost/core
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           fetch-depth: 0
           submodules: true
-      - uses: actions/setup-node@v2
+      - uses: actions/setup-node@v3
         env:
           FORCE_COLOR: 0
         with:
@@ -299,13 +355,7 @@ jobs:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
 
   canary:
-    runs-on: ubuntu-18.04
-    needs: [lint, migrations, unit-tests, database-tests]
+    needs: [lint, admin-tests, admin-prod-build, migrations, unit-tests, database-tests]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     name: Canary
-    steps:
-      - name: Invoke Canary Build
-        uses: benc-uk/workflow-dispatch@v1
-        with:
-          workflow: Canary Build
-          token: ${{ secrets.RELEASE_TOKEN }}
+    uses: tryghost/actions/.github/workflows/canary.yml@main

@@ -1,4 +1,5 @@
 const debug = require('@tryghost/debug')('web:admin:app');
+const path = require('path');
 const express = require('../../../shared/express');
 const serveStatic = express.static;
 const config = require('../../../shared/config');
@@ -17,7 +18,7 @@ module.exports = function setupAdminApp() {
     // @TODO ensure this gets a local 404 error handler
     const configMaxAge = config.get('caching:admin:maxAge');
     adminApp.use('/assets', serveStatic(
-        config.get('paths').adminAssets,
+        path.join(config.get('paths').adminAssets, 'assets'),
         {maxAge: (configMaxAge || configMaxAge === 0) ? configMaxAge : constants.ONE_YEAR_MS, fallthrough: false}
     ));
 

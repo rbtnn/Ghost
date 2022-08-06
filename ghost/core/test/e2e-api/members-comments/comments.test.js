@@ -5,8 +5,9 @@ const should = require('should');
 const models = require('../../../core/server/models');
 const moment = require('moment-timezone');
 const settingsCache = require('../../../core/shared/settings-cache');
+const sinon = require('sinon');
 
-let membersAgent, membersAgent2, member, postId, commentId;
+let membersAgent, membersAgent2, member, postId, postTitle, commentId;
 
 const commentMatcherNoMember = {
     id: anyObjectId,
@@ -54,6 +55,7 @@ describe('Comments API', function () {
         await fixtureManager.init('posts', 'members', 'comments');
 
         postId = fixtureManager.get('posts', 0).id;
+        postTitle = fixtureManager.get('posts', 0).title;
     });
 
     beforeEach(function () {
@@ -64,7 +66,21 @@ describe('Comments API', function () {
         mockManager.restore();
     });
 
-    describe('when not authenticated', function () {
+    describe('when not authenticated but enabled', function () {
+        beforeEach(function () {
+            const getStub = sinon.stub(settingsCache, 'get');
+            getStub.callsFake((key, options) => {
+                if (key === 'comments_enabled') {
+                    return 'all';
+                }
+                return getStub.wrappedMethod.call(settingsCache, key, options);
+            });
+        });
+
+        after(async function () {
+            sinon.restore();
+        });
+
         it('Can browse all comments of a post', async function () {
             const {body} = await membersAgent
                 .get(`/api/comments/?filter=post_id:${postId}`)
@@ -95,11 +111,51 @@ describe('Comments API', function () {
         });
     });
 
+    describe('when not enabled', function () {
+        beforeEach(async function () {
+            await membersAgent.loginAs('member@example.com');
+            const getStub = sinon.stub(settingsCache, 'get');
+            getStub.callsFake((key, options) => {
+                if (key === 'comments_enabled') {
+                    return 'off';
+                }
+                return getStub.wrappedMethod.call(settingsCache, key, options);
+            });
+        });
+
+        afterEach(async function () {
+            sinon.restore();
+        });
+
+        it('Can comment on a post', async function () {
+            const {body} = await membersAgent
+                .post(`/api/comments/`)
+                .body({comments: [{
+                    post_id: postId,
+                    html: '<p>This is a <strong>message</strong></p><p>New line</p>'
+                }]})
+                .expectStatus(405);
+        });
+    });
+
     describe('when authenticated', function () {
         before(async function () {
             await membersAgent.loginAs('member@example.com');
             member = await models.Member.findOne({email: 'member@example.com'}, {require: true});
             await membersAgent2.loginAs('member2@example.com');
+        });
+        beforeEach(function () {
+            const getStub = sinon.stub(settingsCache, 'get');
+            getStub.callsFake((key, options) => {
+                if (key === 'comments_enabled') {
+                    return 'all';
+                }
+                return getStub.wrappedMethod.call(settingsCache, key, options);
+            });
+        });
+
+        afterEach(async function () {
+            sinon.restore();
         });
 
         it('Can comment on a post', async function () {
@@ -109,7 +165,7 @@ describe('Comments API', function () {
                 .post(`/api/comments/`)
                 .body({comments: [{
                     post_id: postId,
-                    html: '<p>This is a <strong>message</strong></p><p>New line</p>'
+                    html: '<div></div><p></p><p>This is a <strong>message</strong></p><p></p><p></p><p>New line</p><p></p>'
                 }]})
                 .expectStatus(201)
                 .matchHeaderSnapshot({
@@ -125,10 +181,10 @@ describe('Comments API', function () {
             // Check if author got an email
             mockManager.assert.sentEmailCount(1);
             mockManager.assert.sentEmail({
-                subject: '💬 You have a new comment on one of your posts',
+                subject: '💬 New comment on your post: ' + postTitle,
                 to: fixtureManager.get('users', 0).email,
                 // Note that the <strong> tag is removed by the sanitizer
-                html: new RegExp(escapeRegExp('<p>This is a message</p><p>New line</p>'))
+                html: new RegExp(escapeRegExp('<p>This is a message</p><p></p><p>New line</p>'))
             });
 
             // Wait for the dispatched events (because this happens async)
@@ -179,7 +235,7 @@ describe('Comments API', function () {
             // Check only the author got an email (because we are the author of this parent comment)
             mockManager.assert.sentEmailCount(1);
             mockManager.assert.sentEmail({
-                subject: '💬 You have a new comment on one of your posts',
+                subject: '💬 New comment on your post: ' + postTitle,
                 to: fixtureManager.get('users', 0).email
             });
 
@@ -216,12 +272,12 @@ describe('Comments API', function () {
 
             mockManager.assert.sentEmailCount(2);
             mockManager.assert.sentEmail({
-                subject: '💬 You have a new comment on one of your posts',
+                subject: '💬 New comment on your post: ' + postTitle,
                 to: fixtureManager.get('users', 0).email
             });
 
             mockManager.assert.sentEmail({
-                subject: '💬 You have a new reply on one of your comments',
+                subject: '↪️ New reply to your comment on Ghost',
                 to: fixtureManager.get('members', 0).email
             });
 
@@ -231,7 +287,7 @@ describe('Comments API', function () {
             // Check last_updated_at changed?
             member = await models.Member.findOne({id: member.id});
             should.notEqual(member.get('last_seen_at').getTime(), date.getTime(), 'Should update `last_seen_at` property after posting a comment.');
- 
+
             // Check last_commented_at changed?
             should.notEqual(member.get('last_commented_at').getTime(), date.getTime(), 'Should update `last_commented_at` property after posting a comment.');
         });
@@ -335,7 +391,7 @@ describe('Comments API', function () {
             mockManager.assert.sentEmail({
                 subject: '🚩 A comment has been reported on your post',
                 to: fixtureManager.get('users', 0).email,
-                html: new RegExp(escapeRegExp('<p>This is a message</p><p>New line</p>')),
+                html: new RegExp(escapeRegExp('<p>This is a message</p><p></p><p>New line</p>')),
                 text: new RegExp(escapeRegExp('This is a message\n\nNew line'))
             });
         });
@@ -361,7 +417,7 @@ describe('Comments API', function () {
         });
 
         it('Can edit a comment on a post', async function () {
-            await membersAgent
+            const {body} = await await membersAgent
                 .put(`/api/comments/${commentId}`)
                 .body({comments: [{
                     html: 'Updated comment'
@@ -371,8 +427,13 @@ describe('Comments API', function () {
                     etag: anyEtag
                 })
                 .matchBodySnapshot({
-                    comments: [commentMatcherWithReply]
+                    comments: [{
+                        ...commentMatcherWithReply,
+                        edited_at: anyISODateTime
+                    }]
                 });
+
+            assert(body.comments[0].edited_at, 'The edited_at field should be populated');
         });
 
         it('Can not edit a comment post_id', async function () {
@@ -428,7 +489,10 @@ describe('Comments API', function () {
                     etag: anyEtag
                 })
                 .matchBodySnapshot({
-                    comments: [commentMatcherWithReply]
+                    comments: [{
+                        ...commentMatcherWithReply,
+                        edited_at: anyISODateTime
+                    }]
                 });
 
             assert(comment.member.id !== memberId);
@@ -533,6 +597,23 @@ describe('Comments API', function () {
             const {body: {comments: [comment]}} = await membersAgent.get(`api/comments/${newParentId}`);
 
             assert(comment.replies.length === 0, 'The parent comment should not have changed');
+        });
+
+        it('Can fetch counts', async function () {
+            await membersAgent
+                .post(`api/comments/counts`)
+                .body({
+                    ids: [
+                        postId = fixtureManager.get('posts', 0).id,
+                        postId = fixtureManager.get('posts', 1).id,
+                        postId = fixtureManager.get('posts', 2).id
+                    ]
+                })
+                .expectStatus(200)
+                .matchHeaderSnapshot({
+                    etag: anyEtag
+                })
+                .matchBodySnapshot();
         });
     });
 });

@@ -72,3 +72,6 @@ typings/
 .build/
 .dist/
 
+# Caddyfile - for local development with ssl + caddy
+Caddyfile
+

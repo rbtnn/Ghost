@@ -148,10 +148,15 @@ module.exports = {
             }
         })();
 
-        try {
-            await stripeService.migrations.execute();
-        } catch (err) {
-            logging.error(err);
+        const membersMigrationJobName = 'members-migrations';
+        if (!(await jobsService.hasExecutedSuccessfully(membersMigrationJobName))) {
+            jobsService.addOneOffJob({
+                name: membersMigrationJobName,
+                offloaded: false,
+                job: stripeService.migrations.execute.bind(stripeService.migrations)
+            });
+
+            await jobsService.awaitCompletion(membersMigrationJobName);
         }
     },
     contentGating: require('./content-gating'),

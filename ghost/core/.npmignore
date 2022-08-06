@@ -45,7 +45,6 @@ core/server/lib/members/static/auth/node_modules/**
 core/built/**/*.map
 core/built/**/test-*
 core/built/**/tests-*
-core/admin/**
 test/**
 CONTRIBUTING.md
 content/themes/casper/SECURITY.md
@@ -53,9 +52,8 @@ SECURITY.md
 renovate.json
 *.html
 !core/frontend/src/admin-auth/*.html
+!core/built/admin/**/*.html
 !core/server/views/**
-!core/server/web/admin/views/**
-core/server/web/admin/views/.gitkeep
 !core/server/services/mail/templates/**
 bower_components/**
 .editorconfig

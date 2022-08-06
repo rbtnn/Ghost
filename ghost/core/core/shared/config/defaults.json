@@ -23,6 +23,9 @@
     "adapters": {
         "sso": {
             "active": "Default"
+        },
+        "cache": {
+            "active": "Memory"
         }
     },
     "storage": {
@@ -134,7 +137,7 @@
     },
     "portal": {
         "url": "https://cdn.jsdelivr.net/npm/@tryghost/portal@~{version}/umd/portal.min.js",
-        "version": "2.3"
+        "version": "2.5"
     },
     "sodoSearch": {
         "url": "https://cdn.jsdelivr.net/npm/@tryghost/sodo-search@~{version}/umd/sodo-search.min.js",
@@ -144,13 +147,13 @@
     "comments": {
         "url": "https://cdn.jsdelivr.net/npm/@tryghost/comments-ui@~{version}/umd/comments-ui.min.js",
         "styles": "https://cdn.jsdelivr.net/npm/@tryghost/comments-ui@~{version}/umd/main.css",
-        "version": "0.2"
+        "version": "0.4"
     },
     "editor": {
-        "url": ""
+        "url": "https://unpkg.com/@tryghost/koenig-react/dist/umd/koenig-react.min.js"
     },
     "tenor": {
-        "publicReadOnlyApiKey": null,
+        "googleApiKey": null,
         "contentFilter": "off"
     },
     "opensea": {

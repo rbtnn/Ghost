@@ -4,14 +4,21 @@ const _ = require('lodash');
 const events = require('../../../core/server/lib/common/events');
 
 // Testing  the Private API
-let cache = require('../../../core/shared/settings-cache/cache');
+let CacheManager = require('../../../core/shared/settings-cache/cache');
 const publicSettings = require('../../../core/shared/settings-cache/public');
+const InMemoryCache = require('../../../core/server/adapters/cache/Memory');
 
 should.equal(true, true);
 
 describe('UNIT: settings cache', function () {
+    let cache;
+
     beforeEach(function () {
-        cache.init(events, {}, []);
+        let cacheStore = new InMemoryCache();
+        cache = new CacheManager({
+            publicSettings
+        });
+        cache.init(events, {}, [], cacheStore);
     });
 
     afterEach(function () {
@@ -23,7 +30,7 @@ describe('UNIT: settings cache', function () {
         (typeof cache.get('key1')).should.eql('string');
     });
 
-    it('.get() oes not auto convert string into number: float', function () {
+    it('.get() does not auto convert string into number: float', function () {
         cache.set('key1', {value: '1.4'});
         (typeof cache.get('key1')).should.eql('string');
     });
@@ -123,7 +130,8 @@ describe('UNIT: settings cache', function () {
             }]
         };
 
-        cache.init(events, settingsCollection);
+        let cacheStore = new InMemoryCache();
+        cache.init(events, settingsCollection, [], cacheStore);
         cache.get('key1').should.equal('init value');
 
         // check handler only called once on settings.edit
@@ -136,7 +144,8 @@ describe('UNIT: settings cache', function () {
         cache.get('key1').should.equal('first edit');
 
         // init does a reset by default
-        cache.init(events, settingsCollection);
+        let cacheStoreForReset = new InMemoryCache();
+        cache.init(events, settingsCollection, [], cacheStoreForReset);
         setSpy.callCount.should.equal(3);
         cache.get('key1').should.equal('init value');
 

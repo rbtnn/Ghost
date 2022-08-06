@@ -20,7 +20,7 @@ function assertContentIsAbsent(res) {
     res.text.should.not.containEql('<h2 id="markdown">markdown</h2>');
 }
 
-describe('Front-end members behaviour', function () {
+describe('Front-end members behavior', function () {
     let request;
 
     async function loginAsMember(email) {
@@ -57,7 +57,9 @@ describe('Front-end members behaviour', function () {
 
             return originalSettingsCacheGetFn(key, options);
         });
-        await testUtils.startGhost();
+        await testUtils.startGhost({
+            copyThemes: true
+        });
         await testUtils.initFixtures('newsletters', 'members:newsletters');
 
         request = supertest.agent(configUtils.config.get('url'));

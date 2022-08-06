@@ -224,6 +224,9 @@ module.exports = {
     get offersPublic() {
         return shared.pipeline(require('./offers-public'), localUtils, 'content');
     },
+    get bsmPodcast() {
+        return shared.pipeline(require('./bsm-podcast'), localUtils, 'content');
+    },
 
     /**
      * Comment API
@@ -232,7 +235,7 @@ module.exports = {
     get commentsComments() {
         return shared.pipeline(require('./comments-comments'), localUtils, 'comments');
     },
-    get bsmPodcast() {
-        return shared.pipeline(require('./bsm-podcast'), localUtils, 'content');
+    get commentsMembers() {
+        return shared.pipeline(require('./comments-members'), localUtils, 'comments');
     }
 };

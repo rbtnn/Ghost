@@ -9,20 +9,28 @@
   "workspaces": [
     "ghost/*"
   ],
+  "monorepo": {
+    "public": false,
+    "internalPackages": true,
+    "repo": "https://github.com/TryGhost/Ghost",
+    "scope": "@tryghost"
+  },
   "eslintIgnore": [
     "**/node_modules/**"
   ],
   "scripts": {
-    "dev": "yarn workspace ghost run dev",
-    "fix:admin": "yarn cache clean && cd ghost/core/core/admin && rm -rf node_modules tmp dist && yarn && cd ../../../..",
-    "fix:backend": "yarn cache clean && rm -rf node_modules && yarn",
-    "fix": "yarn fix:admin && yarn fix:backend",
+    "dev:debug": "DEBUG=@tryghost*,ghost:* yarn dev",
+    "dev:admin": "yarn workspace ghost run dev:admin",
+    "dev:ghost": "nodemon -q -i ghost/admin -i ghost/core/content -i ghost/core/core/built",
+    "dev": "concurrently -c \"blue,green\" --kill-others -n ghost,admin \"yarn dev:ghost\" \"yarn dev:admin\"",
+    "fix": "yarn cache clean && rm -rf node_modules && yarn",
+    "knex-migrator": "yarn workspace ghost run knex-migrator",
     "lint": "yarn workspaces run lint",
     "setup": "yarn && yarn workspace ghost run setup",
     "start": "yarn workspace ghost run start",
     "test": "yarn workspaces run test",
     "main": "yarn main:monorepo && yarn main:submodules",
-    "main:monorepo": "git checkout main && git pull ${GHOST_UPSTREAM:-origin} main && yarn && yarn workspace ghost run grunt subgrunt:init",
+    "main:monorepo": "git checkout main && git pull ${GHOST_UPSTREAM:-origin} main && yarn",
     "main:submodules": "git submodule sync && git submodule update && git submodule foreach \"git checkout main && git pull ${GHOST_UPSTREAM:-origin} main && yarn\""
   },
   "resolutions": {
@@ -44,18 +52,54 @@
       "moment",
       "moment-timezone",
       "oembed-parser",
-      "simple-dom"
+      "simple-dom",
+      "ember-drag-drop",
+      "normalize.css",
+      "validator",
+      "codemirror",
+      "faker"
     ],
     "ignorePaths": [
-      "test"
+      "test",
+      "ghost/admin/lib/koenig-editor/package.json"
     ],
     "packageRules": [
+      {
+        "packagePatterns": [
+          "@tryghost"
+        ],
+        "groupName": "@tryghost"
+      },
       {
         "packagePatterns": [
           "metascraper"
         ],
         "groupName": "metascraper"
+      },
+      {
+        "groupName": "ember-basic-dropdown addons",
+        "packagePatterns": ["^ember-basic", "^ember-power"]
+      },
+      {
+        "groupName": "ember core",
+        "packageNames": ["ember-source", "ember-cli", "ember-data"]
+      },
+      {
+        "groupName": "disable css",
+        "packagePatterns": [
+            "^postcss",
+            "^css"
+        ],
+        "packageNames": [
+            "autoprefixer",
+            "ember-cli-postcss"
+        ],
+        "enabled": false
       }
     ]
+  },
+  "devDependencies": {
+    "concurrently": "7.3.0",
+    "nodemon": "2.0.19"
   }
 }
