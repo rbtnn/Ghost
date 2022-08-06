@@ -1,5 +1,6 @@
 import Component from '@glimmer/component';
 import {htmlSafe} from '@ember/template';
+import {isNonCurrencies} from 'ghost-admin/utils/currency';
 import {inject as service} from '@ember/service';
 import {task} from 'ember-concurrency';
 
@@ -19,8 +20,8 @@ export default class GhLaunchWizardFinaliseComponent extends Component {
         const data = this.args.getData();
         this.tier = data?.tier;
         if (this.tier) {
-            const monthlyAmount = Math.round(data.monthlyAmount * 100);
-            const yearlyAmount = Math.round(data.yearlyAmount * 100);
+            const monthlyAmount = isNonCurrencies(currency) ? data.monthlyAmount : Math.round(data.monthlyAmount * 100);
+            const yearlyAmount = isNonCurrencies(currency) ? data.yearlyAmount : Math.round(data.yearlyAmount * 100);
             const currency = data.currency;
             this.tier.set('monthlyPrice', monthlyAmount);
             this.tier.set('yearlyPrice', yearlyAmount);

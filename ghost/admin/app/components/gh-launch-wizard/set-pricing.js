@@ -1,7 +1,7 @@
 import Component from '@glimmer/component';
 import envConfig from 'ghost-admin/config/environment';
 import {action} from '@ember/object';
-import {currencies, getCurrencyOptions, getSymbol} from 'ghost-admin/utils/currency';
+import {currencies, getCurrencyOptions, getNonDecimal, getSymbol, isNonCurrencies} from 'ghost-admin/utils/currency';
 import {inject as service} from '@ember/service';
 import {task} from 'ember-concurrency';
 import {tracked} from '@glimmer/tracking';
@@ -181,11 +181,11 @@ export default class GhLaunchWizardSetPricingComponent extends Component {
             const monthlyPrice = this.tier.get('monthlyPrice');
             const yearlyPrice = this.tier.get('yearlyPrice');
             if (monthlyPrice && monthlyPrice.amount) {
-                this.stripeMonthlyAmount = (monthlyPrice.amount / 100);
                 this.currency = monthlyPrice.currency;
+                this.stripeMonthlyAmount = getNonDecimal(monthlyPrice.amount, this.currency);
             }
             if (yearlyPrice && yearlyPrice.amount) {
-                this.stripeYearlyAmount = (yearlyPrice.amount / 100);
+                this.stripeYearlyAmount = getNonDecimal(yearlyPrice.amount, this.currency);
             }
         }
         this.updatePreviewUrl();
@@ -195,8 +195,8 @@ export default class GhLaunchWizardSetPricingComponent extends Component {
         const options = {
             disableBackground: true,
             currency: this.selectedCurrency.value,
-            monthlyPrice: Math.round(this.stripeMonthlyAmount * 100),
-            yearlyPrice: Math.round(this.stripeYearlyAmount * 100),
+            monthlyPrice: isNonCurrencies(this.selectedCurrency.value) ? this.stripeMonthlyAmount : Math.round(this.stripeMonthlyAmount * 100),
+            yearlyPrice: isNonCurrencies(this.selectedCurrency.value) ? this.stripeYearlyAmount : Math.round(this.stripeYearlyAmount * 100),
             isMonthlyChecked: this.isMonthlyChecked,
             isYearlyChecked: this.isYearlyChecked,
             isFreeChecked: this.isFreeChecked,

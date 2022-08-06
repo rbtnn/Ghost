@@ -1,7 +1,7 @@
 import Controller from '@ember/controller';
 import envConfig from 'ghost-admin/config/environment';
 import {action} from '@ember/object';
-import {currencies, getCurrencyOptions, getSymbol} from 'ghost-admin/utils/currency';
+import {currencies, getCurrencyOptions, getNonDecimal, getSymbol, isNonCurrencies} from 'ghost-admin/utils/currency';
 import {inject as service} from '@ember/service';
 import {task} from 'ember-concurrency';
 import {tracked} from '@glimmer/tracking';
@@ -72,17 +72,17 @@ export default class MembersAccessController extends Controller {
     }
 
     get hasChangedPrices() {
-        if (this.tier) {
-            const monthlyPrice = this.tier.get('monthlyPrice');
-            const yearlyPrice = this.tier.get('yearlyPrice');
+        //if (this.tier) {
+        //    const monthlyPrice = this.tier.get('monthlyPrice');
+        //    const yearlyPrice = this.tier.get('yearlyPrice');
 
-            if (monthlyPrice?.amount && parseFloat(this.stripeMonthlyAmount) !== (monthlyPrice.amount / 100)) {
-                return true;
-            }
-            if (yearlyPrice?.amount && parseFloat(this.stripeYearlyAmount) !== (yearlyPrice.amount / 100)) {
-                return true;
-            }
-        }
+        //    if (monthlyPrice?.amount && parseFloat(this.stripeMonthlyAmount) !== getNonDecimal(monthlyPrice.amount, this.currency)) {
+        //        return true;
+        //    }
+        //    if (yearlyPrice?.amount && parseFloat(this.stripeYearlyAmount) !== getNonDecimal(yearlyPrice.amount, this.currency)) {
+        //        return true;
+        //    }
+        //}
 
         return false;
     }
@@ -260,8 +260,8 @@ export default class MembersAccessController extends Controller {
     @action
     updatePortalPreview({forceRefresh} = {forceRefresh: false}) {
         // TODO: can these be worked out from settings in membersUtils?
-        const monthlyPrice = Math.round(this.stripeMonthlyAmount * 100);
-        const yearlyPrice = Math.round(this.stripeYearlyAmount * 100);
+        const monthlyPrice = isNonCurrencies(this.currency) ? this.stripeMonthlyAmount : Math.round(this.stripeMonthlyAmount * 100);
+        const yearlyPrice = isNonCurrencies(this.currency) ? this.stripeYearlyAmount : Math.round(this.stripeYearlyAmount * 100);
         let portalPlans = this.settings.get('portalPlans') || [];
 
         let isMonthlyChecked = portalPlans.includes('monthly');
@@ -341,11 +341,14 @@ export default class MembersAccessController extends Controller {
             const monthlyPrice = tier.get('monthlyPrice');
             const yearlyPrice = tier.get('yearlyPrice');
             this.currency = tier.get('currency');
-            if (monthlyPrice) {
-                this.stripeMonthlyAmount = (monthlyPrice / 100);
+            if (monthlyPrice && monthlyPrice.currency) {
+                this.currency = monthlyPrice.currency;
             }
-            if (yearlyPrice) {
-                this.stripeYearlyAmount = (yearlyPrice / 100);
+            if (monthlyPrice && monthlyPrice.amount) {
+                this.stripeMonthlyAmount = getNonDecimal(monthlyPrice.amount, this.currency);
+            }
+            if (yearlyPrice && yearlyPrice.amount) {
+                this.stripeYearlyAmount = getNonDecimal(yearlyPrice.amount, this.currency);
             }
             this.updatePortalPreview();
         }
@@ -378,8 +381,8 @@ export default class MembersAccessController extends Controller {
     async saveTier() {
         const paidMembersEnabled = this.settings.get('paidMembersEnabled');
         if (this.tier && paidMembersEnabled) {
-            const monthlyAmount = Math.round(this.stripeMonthlyAmount * 100);
-            const yearlyAmount = Math.round(this.stripeYearlyAmount * 100);
+            const monthlyAmount = isNonCurrencies(this.currency) ? this.stripeMonthlyAmount : Math.round(this.stripeMonthlyAmount * 100);
+            const yearlyAmount = isNonCurrencies(this.currency) ? this.stripeYearlyAmount : Math.round(this.stripeYearlyAmount * 100);
 
             this.tier.set('monthlyPrice', monthlyAmount);
             this.tier.set('yearlyPrice', yearlyAmount);
@@ -393,8 +396,8 @@ export default class MembersAccessController extends Controller {
         const monthlyPrice = this.tier.get('monthlyPrice');
         const yearlyPrice = this.tier.get('yearlyPrice');
 
-        this.stripeMonthlyAmount = monthlyPrice ? (monthlyPrice.amount / 100) : 5;
-        this.stripeYearlyAmount = yearlyPrice ? (yearlyPrice.amount / 100) : 50;
+        this.stripeMonthlyAmount = monthlyPrice ? getNonDecimal(monthlyPrice.amount, this.currency) : 5;
+        this.stripeYearlyAmount = yearlyPrice ? getNonDecimal(yearlyPrice.amount, this.currency) : 50;
     }
 
     reset() {

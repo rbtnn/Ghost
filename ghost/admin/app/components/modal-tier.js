@@ -2,7 +2,7 @@ import EmberObject, {action} from '@ember/object';
 import ModalBase from 'ghost-admin/components/modal-base';
 import TierBenefitItem from '../models/tier-benefit-item';
 import classic from 'ember-classic-decorator';
-import {currencies, getCurrencyOptions, getSymbol} from 'ghost-admin/utils/currency';
+import {currencies, getCurrencyOptions, getNonDecimal, getSymbol, isNonCurrencies} from 'ghost-admin/utils/currency';
 import {A as emberA} from '@ember/array';
 import {htmlSafe} from '@ember/template';
 import {isEmpty} from '@ember/utils';
@@ -68,10 +68,11 @@ export default class ModalTierPrice extends ModalBase {
         const monthlyPrice = this.tier.get('monthlyPrice');
         const yearlyPrice = this.tier.get('yearlyPrice');
         if (monthlyPrice) {
-            this.stripeMonthlyAmount = (monthlyPrice / 100);
+            this.currency = monthlyPrice.currency;
+            this.stripeMonthlyAmount = getNonDecimal(monthlyPrice.amount, this.currency);
         }
         if (yearlyPrice) {
-            this.stripeYearlyAmount = (yearlyPrice / 100);
+            this.stripeYearlyAmount = getNonDecimal(yearlyPrice.amount, this.currency);
         }
         this.currency = this.tier.get('currency') || 'usd';
         this.benefits = this.tier.get('benefits') || emberA([]);
@@ -166,8 +167,8 @@ export default class ModalTierPrice extends ModalBase {
         }
 
         if (!this.isFreeTier) {
-            const monthlyAmount = Math.round(this.stripeMonthlyAmount * 100);
-            const yearlyAmount = Math.round(this.stripeYearlyAmount * 100);
+            const monthlyAmount = isNonCurrencies(this.currency) ? this.stripeMonthlyAmount : Math.round(this.stripeMonthlyAmount * 100);
+            const yearlyAmount = isNonCurrencies(this.currency) ? this.stripeYearlyAmount : Math.round(this.stripeYearlyAmount * 100);
             this.tier.set('monthlyPrice', monthlyAmount);
             this.tier.set('yearlyPrice', yearlyAmount);
             this.tier.set('currency', this.currency);
