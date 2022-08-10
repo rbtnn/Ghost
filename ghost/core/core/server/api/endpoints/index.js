@@ -236,6 +236,6 @@ module.exports = {
         return shared.pipeline(require('./comments-comments'), localUtils, 'comments');
     },
     get commentsMembers() {
-        return shared.pipeline(require('./comments-members'), localUtils, 'comments');
+        return shared.pipeline(require('./comments-members'), localUtils, 'members');
     }
 };
