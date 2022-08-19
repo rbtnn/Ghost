@@ -69,10 +69,10 @@ module.exports = function setupSiteApp(routerConfig) {
     siteApp.use(mw.servePublicFile('static', 'public/ghost.min.css', 'text/css', constants.ONE_YEAR_S));
 
     // Serve images for backspacefm theme
-	for (var n = 1; n < 1000; n++) {
-		siteApp.use(mw.servePublicFile('built', 'public/backspacefm/' + ('0000' + n).slice(-3) + '.png', 'image/png', constants.ONE_YEAR_S));
-		siteApp.use(mw.servePublicFile('built', 'public/backspacefm/' + ('0000' + n).slice(-3) + '.jpg', 'image/jpg', constants.ONE_YEAR_S));
-	}
+    for (var n = 1; n < 1000; n++) {
+        siteApp.use(mw.servePublicFile('built', 'public/backspacefm/' + ('0000' + n).slice(-3) + '.png', 'image/png', constants.ONE_YEAR_S));
+        siteApp.use(mw.servePublicFile('built', 'public/backspacefm/' + ('0000' + n).slice(-3) + '.jpg', 'image/jpg', constants.ONE_YEAR_S));
+    }
 
     // Card assets
     siteApp.use(mw.servePublicFile('built', 'public/cards.min.css', 'text/css', constants.ONE_YEAR_S));

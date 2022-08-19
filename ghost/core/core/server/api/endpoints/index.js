@@ -225,15 +225,7 @@ module.exports = {
         return apiFramework.pipeline(require('./offers-public'), localUtils, 'content');
     },
     get bsmPodcast() {
-        return shared.pipeline(require('./bsm-podcast'), localUtils, 'content');
-    },
-
-    /**
-     * Comment API
-     */
-
-    get commentsComments() {
-        return shared.pipeline(require('./comments-comments'), localUtils, 'comments');
+        return apiFramework.pipeline(require('./bsm-podcast'), localUtils, 'content');
     },
     get commentsMembers() {
         return apiFramework.pipeline(require('./comments-members'), localUtils, 'members');
