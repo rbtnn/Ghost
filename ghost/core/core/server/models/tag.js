@@ -14,6 +14,9 @@ Tag = ghostBookshelf.Model.extend({
 
     tableName: 'tags',
 
+    actionsCollectCRUD: true,
+    actionsResourceType: 'tag',
+
     defaults: function defaults() {
         return {
             visibility: 'public'
@@ -138,24 +141,6 @@ Tag = ghostBookshelf.Model.extend({
         return attrs;
     },
 
-    getAction(event, options) {
-        const actor = this.getActor(options);
-
-        // @NOTE: we ignore internal updates (`options.context.internal`) for now
-        if (!actor) {
-            return;
-        }
-
-        // @TODO: implement context
-        return {
-            event: event,
-            resource_id: this.id || this.previous('id'),
-            resource_type: 'tag',
-            actor_id: actor.id,
-            actor_type: actor.type
-        };
-    },
-
     defaultColumnsToFetch() {
         return ['id'];
     }
@@ -180,6 +165,26 @@ Tag = ghostBookshelf.Model.extend({
         }
 
         return options;
+    },
+
+    countRelations() {
+        return {
+            posts(modelOrCollection, options) {
+                modelOrCollection.query('columns', 'tags.*', (qb) => {
+                    qb.count('posts.id')
+                        .from('posts')
+                        .leftOuterJoin('posts_tags', 'posts.id', 'posts_tags.post_id')
+                        .whereRaw('posts_tags.tag_id = tags.id')
+                        .as('count__posts');
+
+                    if (options.context && options.context.public) {
+                        // @TODO use the filter behavior for posts
+                        qb.andWhere('posts.type', '=', 'post');
+                        qb.andWhere('posts.status', '=', 'published');
+                    }
+                });
+            }
+        };
     },
 
     destroy: function destroy(unfilteredOptions) {

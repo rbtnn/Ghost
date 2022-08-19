@@ -5,7 +5,7 @@ const urlUtils = require('../../../shared/url-utils');
 const labs = require('../../../shared/labs');
 const moment = require('moment-timezone');
 const api = require('../../api').endpoints;
-const apiShared = require('../../api').shared;
+const apiFramework = require('@tryghost/api-framework');
 const {URL} = require('url');
 const mobiledocLib = require('../../lib/mobiledoc');
 const htmlToPlaintext = require('@tryghost/html-to-plaintext');
@@ -59,9 +59,11 @@ const getSite = () => {
  * In case of no member uuid, generates the preview unsubscribe url - `?preview=1`
  *
  * @param {string} uuid post uuid
- * @param {string} newsletterUuid newsletter uuid
+ * @param {Object} [options]
+ * @param {string} [options.newsletterUuid] newsletter uuid
+ * @param {boolean} [options.comments] Unsubscribe from comment emails
  */
-const createUnsubscribeUrl = (uuid, newsletterUuid) => {
+const createUnsubscribeUrl = (uuid, options = {}) => {
     const siteUrl = urlUtils.getSiteUrl();
     const unsubscribeUrl = new URL(siteUrl);
     unsubscribeUrl.pathname = `${unsubscribeUrl.pathname}/unsubscribe/`.replace('//', '/');
@@ -70,8 +72,11 @@ const createUnsubscribeUrl = (uuid, newsletterUuid) => {
     } else {
         unsubscribeUrl.searchParams.set('preview', '1');
     }
-    if (newsletterUuid) {
-        unsubscribeUrl.searchParams.set('newsletter', newsletterUuid);
+    if (options.newsletterUuid) {
+        unsubscribeUrl.searchParams.set('newsletter', options.newsletterUuid);
+    }
+    if (options.comments) {
+        unsubscribeUrl.searchParams.set('comments', '1');
     }
 
     return unsubscribeUrl.href;
@@ -104,7 +109,7 @@ const serializePostModel = async (model) => {
     const frame = {options: {context: {user: true}, formats: 'mobiledoc'}};
     const docName = 'posts';
 
-    await apiShared
+    await apiFramework
         .serializers
         .handle
         .output(model, {docName: docName, method: 'read'}, api.serializers.output, frame);

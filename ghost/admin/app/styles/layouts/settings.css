@@ -2406,9 +2406,25 @@ p.theme-validation-details {
     border-radius: 5px;
 }
 
+.gh-settings-members-pricetrialcont {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-gap: 32px;
+}
+
+.gh-settings-members-pricetrialcont .trial-docs-link {
+    color: #30cf43;
+    white-space: nowrap;
+}
+
 .gh-settings-members-pricelabelcont {
     display: flex;
     align-items: baseline;
+}
+
+.gh-settings-members-pricelabelcont.free-trial-enabled {
+    justify-content: space-between;
+    margin-bottom: 3px;
 }
 
 .gh-settings-members-pricelabelcont span {
@@ -2428,10 +2444,10 @@ p.theme-validation-details {
 
 .gh-settings-members-pricelabelcont .gh-select {
     padding: 0;
-    width: 60px;
     height: 16px;
     border: none;
-    margin-left: -4px;
+    margin-left: 0;
+    margin-right: 0;
 }
 
 .gh-settings-members-pricelabelcont .gh-select select {
@@ -2447,6 +2463,13 @@ p.theme-validation-details {
     display: grid;
     grid-template-columns: 1fr 1fr;
     grid-gap: 20px;
+}
+
+.gh-setting-members-prices.free-trial-enabled {
+    display: grid;
+    grid-template-rows: 1fr 1fr;
+    grid-template-columns: none !important;
+    grid-gap: 6px;
 }
 
 .gh-setting-members-currency {
@@ -2472,8 +2495,17 @@ p.theme-validation-details {
 .gh-setting-members-currencylabel span {
     margin-right: 0;
     pointer-events: none;
+    padding-right: 3px;
 }
 
+.gh-input-group-tier-trial-disabled .gh-input-append {
+    border-color: #eceef0;
+    background-color: #fcfcfc;
+}
+
+.gh-input-group-tier-trial-disabled .gh-input-append:before {
+    background-color: #fcfcfc;
+}
 
 /* Stripe Connect modal */
 .fullscreen-modal-stripe-connect {
@@ -2633,6 +2665,15 @@ p.theme-validation-details {
 .gh-stripe-error-hasactivesub {
     margin: 24px 24px -8px;
     color: var(--red);
+}
+
+@media (max-width: 1080px) {
+    .gh-settings-members-pricetrialcont {
+        display: grid;
+        grid-template-columns: none;
+        grid-gap: 0px;
+        margin-bottom: 24px;
+    }
 }
 
 @media (max-width: 500px) {

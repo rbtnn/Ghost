@@ -2,6 +2,7 @@ const {promises: fs} = require('fs');
 const path = require('path');
 const moment = require('moment');
 const htmlToPlaintext = require('@tryghost/html-to-plaintext');
+const postEmailSerializer = require('../mega/post-email-serializer');
 
 class CommentsServiceEmails {
     constructor({config, logging, models, mailer, settingsCache, urlService, urlUtils}) {
@@ -44,7 +45,7 @@ class CommentsServiceEmails {
                 accentColor: this.settingsCache.get('accent_color'),
                 fromEmail: this.notificationFromAddress,
                 toEmail: to,
-                staffUrl: `${this.urlUtils.getAdminUrl()}ghost/#/settings/staff/${author.get('slug')}`
+                staffUrl: this.urlUtils.urlJoin(this.urlUtils.urlFor('admin', true), '#', `/settings/staff/${author.get('slug')}`)
             };
 
             const {html, text} = await this.renderEmailTemplate('new-comment', templateData);
@@ -93,7 +94,7 @@ class CommentsServiceEmails {
             accentColor: this.settingsCache.get('accent_color'),
             fromEmail: this.notificationFromAddress,
             toEmail: to,
-            profileUrl: `${this.urlUtils.getSiteUrl()}#/portal/account/profile`
+            profileUrl: postEmailSerializer.createUnsubscribeUrl(member.get('uuid'), {comments: true})
         };
 
         const {html, text} = await this.renderEmailTemplate('new-comment-reply', templateData);
@@ -131,7 +132,7 @@ class CommentsServiceEmails {
             commentHtml: comment.get('html'),
             commentText: htmlToPlaintext.comment(comment.get('html')),
             commentDate: moment(comment.get('created_at')).tz(this.settingsCache.get('timezone')).format('D MMM YYYY'),
-            
+
             reporterName: reporter.name,
             reporterEmail: reporter.email,
             reporter: reporter.name ? `${reporter.name} (${reporter.email})` : reporter.email,
@@ -143,7 +144,7 @@ class CommentsServiceEmails {
             accentColor: this.settingsCache.get('accent_color'),
             fromEmail: this.notificationFromAddress,
             toEmail: to,
-            staffUrl: `${this.urlUtils.getAdminUrl()}ghost/#/settings/staff/${owner.get('slug')}`
+            staffUrl: this.urlUtils.urlJoin(this.urlUtils.urlFor('admin', true), '#', `/settings/staff/${owner.get('slug')}`)
         };
 
         const {html, text} = await this.renderEmailTemplate('report', templateData);

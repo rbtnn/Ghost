@@ -1,11 +1,11 @@
+const errors = require('@tryghost/errors');
 const should = require('should');
 const sinon = require('sinon');
-const Promise = require('bluebird');
 const CachedImageSizeFromUrl = require('../../../../../core/server/lib/image/cached-image-size-from-url');
+const InMemoryCache = require('../../../../../core/server/adapters/cache/ImageSizesCacheSyncInMemory');
 
 describe('lib/image: image size cache', function () {
     let sizeOfStub;
-    let cachedImagedSize;
 
     beforeEach(function () {
         sizeOfStub = sinon.stub();
@@ -15,87 +15,100 @@ describe('lib/image: image size cache', function () {
         sinon.restore();
     });
 
-    it('should read from cache, if dimensions for image are fetched already', function (done) {
+    it('should read from cache, if dimensions for image are fetched already', async function () {
         const url = 'http://mysite.com/content/image/mypostcoverimage.jpg';
-        let cachedImagedSizeResult;
         let imageSizeSpy;
 
-        sizeOfStub.returns(new Promise.resolve({
+        sizeOfStub.resolves({
             width: 50,
             height: 50,
             type: 'jpg'
-        }));
+        });
 
-        const cachedImageSizeFromUrl = new CachedImageSizeFromUrl({logging: {
-            error: () => {}
-        }, imageSize: {
-            getImageSizeFromUrl: sizeOfStub
-        }});
+        const cacheStore = new InMemoryCache();
+        const cachedImageSizeFromUrl = new CachedImageSizeFromUrl({
+            getImageSizeFromUrl: sizeOfStub,
+            cache: cacheStore
+        });
 
         imageSizeSpy = sizeOfStub;
 
-        cachedImagedSizeResult = Promise.resolve(cachedImageSizeFromUrl.getCachedImageSizeFromUrl(url));
-        cachedImagedSizeResult.then(function () {
-            // first call to get result from `getImageSizeFromUrl`
-            cachedImagedSize = cachedImageSizeFromUrl.cache;
-            should.exist(cachedImagedSize);
-            cachedImagedSize.has(url).should.be.true;
-            const image = cachedImagedSize.get(url);
-            should.exist(image.width);
-            image.width.should.be.equal(50);
-            should.exist(image.height);
-            image.height.should.be.equal(50);
+        await cachedImageSizeFromUrl.getCachedImageSizeFromUrl(url);
 
-            // second call to check if values get returned from cache
-            cachedImagedSizeResult = Promise.resolve(cachedImageSizeFromUrl.getCachedImageSizeFromUrl(url));
-            cachedImagedSizeResult.then(function () {
-                imageSizeSpy.calledOnce.should.be.true();
-                imageSizeSpy.calledTwice.should.be.false();
-                cachedImagedSize = cachedImageSizeFromUrl.cache;
-                should.exist(cachedImagedSize);
-                cachedImagedSize.has(url).should.be.true;
-                const image2 = cachedImagedSize.get(url);
-                should.exist(image2.width);
-                image2.width.should.be.equal(50);
-                should.exist(image2.height);
-                image2.height.should.be.equal(50);
-                done();
-            });
-        }).catch(done);
+        // first call to get result from `getImageSizeFromUrl`
+
+        should.exist(cacheStore);
+        cacheStore.get(url).should.not.be.undefined;
+        const image = cacheStore.get(url);
+        should.exist(image.width);
+        image.width.should.be.equal(50);
+        should.exist(image.height);
+        image.height.should.be.equal(50);
+
+        // second call to check if values get returned from cache
+        await cachedImageSizeFromUrl.getCachedImageSizeFromUrl(url);
+
+        imageSizeSpy.calledOnce.should.be.true();
+        imageSizeSpy.calledTwice.should.be.false();
+
+        cacheStore.get(url).should.not.be.undefined;
+        const image2 = cacheStore.get(url);
+        should.exist(image2.width);
+        image2.width.should.be.equal(50);
+        should.exist(image2.height);
+        image2.height.should.be.equal(50);
     });
 
-    it('can handle image-size errors', function (done) {
+    it('can handle generic image-size errors', async function () {
         const url = 'http://mysite.com/content/image/mypostcoverimage.jpg';
-        let cachedImageSizeResult;
 
-        sizeOfStub.returns(new Promise.reject('error'));
+        sizeOfStub.rejects('error');
 
-        const cachedImageSizeFromUrl = new CachedImageSizeFromUrl({logging: {
-            error: () => {}
-        }, imageSize: {
-            getImageSizeFromUrl: sizeOfStub
-        }});
+        const cacheStore = new InMemoryCache();
+        const cachedImageSizeFromUrl = new CachedImageSizeFromUrl({
+            getImageSizeFromUrl: sizeOfStub,
+            cache: cacheStore
+        });
 
-        cachedImageSizeResult = Promise.resolve(cachedImageSizeFromUrl.getCachedImageSizeFromUrl(url));
-        cachedImageSizeResult.then(function () {
-            cachedImagedSize = cachedImageSizeFromUrl.cache;
-            should.exist(cachedImagedSize);
-            cachedImagedSize.has(url).should.be.true;
-            const image = cachedImagedSize.get(url);
-            should.not.exist(image.width);
-            should.not.exist(image.height);
-            done();
-        }).catch(done);
+        await cachedImageSizeFromUrl.getCachedImageSizeFromUrl(url);
+
+        cacheStore.get(url).should.not.be.undefined;
+        const image = cacheStore.get(url);
+        should.equal(image.url, 'http://mysite.com/content/image/mypostcoverimage.jpg');
+        should.not.exist(image.width);
+        should.not.exist(image.height);
     });
 
-    it('should return null if url is undefined', function (done) {
-        const cachedImageSizeFromUrl = new CachedImageSizeFromUrl({logging: {}, imageSize: {}});
+    it('can handle NotFoundError error', async function () {
+        const url = 'http://mysite.com/content/image/mypostcoverimage.jpg';
+
+        sizeOfStub.rejects(new errors.NotFoundError('it iz gone mate!'));
+
+        const cacheStore = new InMemoryCache();
+        const cachedImageSizeFromUrl = new CachedImageSizeFromUrl({
+            getImageSizeFromUrl: sizeOfStub,
+            cache: cacheStore
+        });
+
+        await cachedImageSizeFromUrl.getCachedImageSizeFromUrl(url);
+
+        cacheStore.get(url).should.not.be.undefined;
+        const image = cacheStore.get(url);
+        should.equal(image.url, 'http://mysite.com/content/image/mypostcoverimage.jpg');
+        should.not.exist(image.width);
+        should.not.exist(image.height);
+    });
+
+    it('should return null if url is null', async function () {
+        const cachedImageSizeFromUrl = new CachedImageSizeFromUrl({
+            imageSize: {},
+            cache: new InMemoryCache()
+        });
         const url = null;
         let result;
 
-        result = cachedImageSizeFromUrl.getCachedImageSizeFromUrl(url);
+        result = await cachedImageSizeFromUrl.getCachedImageSizeFromUrl(url);
 
         should.not.exist(result);
-        done();
     });
 });

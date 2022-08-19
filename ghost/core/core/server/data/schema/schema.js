@@ -319,7 +319,7 @@ module.exports = {
             maxlength: 50,
             nullable: false,
             defaultTo: 'custom',
-            validations: {isIn: [['internal', 'builtin', 'custom']]}
+            validations: {isIn: [['internal', 'builtin', 'custom', 'core']]}
         },
         name: {type: 'string', maxlength: 191, nullable: false},
         slug: {type: 'string', maxlength: 191, nullable: false, unique: true},
@@ -440,9 +440,9 @@ module.exports = {
         stripe_coupon_id: {type: 'string', maxlength: 255, nullable: true, unique: true},
         interval: {type: 'string', maxlength: 50, nullable: false, validations: {isIn: [['month', 'year']]}},
         currency: {type: 'string', maxlength: 50, nullable: true},
-        discount_type: {type: 'string', maxlength: 50, nullable: false, validations: {isIn: [['percent', 'amount']]}},
+        discount_type: {type: 'string', maxlength: 50, nullable: false, validations: {isIn: [['percent', 'amount', 'trial']]}},
         discount_amount: {type: 'integer', nullable: false},
-        duration: {type: 'string', maxlength: 50, nullable: false},
+        duration: {type: 'string', maxlength: 50, nullable: false, validations: {isIn: [['trial', 'once', 'repeating', 'forever']]}},
         duration_in_months: {type: 'integer', nullable: true},
         portal_title: {type: 'string', maxlength: 191, nullable: true},
         portal_description: {type: 'string', maxlength: 2000, nullable: true},
@@ -466,13 +466,23 @@ module.exports = {
         id: {type: 'string', maxlength: 24, nullable: false, primary: true},
         member_id: {type: 'string', maxlength: 24, nullable: false, references: 'members.id', cascadeDelete: true},
         product_id: {type: 'string', maxlength: 24, nullable: false, references: 'products.id', cascadeDelete: true},
-        sort_order: {type: 'integer', nullable: false, unsigned: true, defaultTo: 0}
+        sort_order: {type: 'integer', nullable: false, unsigned: true, defaultTo: 0},
+        expiry_at: {type: 'dateTime', nullable: true}
     },
     posts_products: {
         id: {type: 'string', maxlength: 24, nullable: false, primary: true},
         post_id: {type: 'string', maxlength: 24, nullable: false, references: 'posts.id', cascadeDelete: true},
         product_id: {type: 'string', maxlength: 24, nullable: false, references: 'products.id', cascadeDelete: true},
         sort_order: {type: 'integer', nullable: false, unsigned: true, defaultTo: 0}
+    },
+    members_created_events: {
+        id: {type: 'string', maxlength: 24, nullable: false, primary: true},
+        created_at: {type: 'dateTime', nullable: false},
+        member_id: {type: 'string', maxlength: 24, nullable: false, references: 'members.id', cascadeDelete: true},
+        attribution_id: {type: 'string', maxlength: 24, nullable: true},
+        attribution_type: {type: 'string', maxlength: 50, nullable: true},
+        attribution_url: {type: 'string', maxlength: 2000, nullable: true},
+        source: {type: 'string', maxlength: 50, nullable: false}
     },
     members_cancel_events: {
         id: {type: 'string', maxlength: 24, nullable: false, primary: true},
@@ -593,6 +603,15 @@ module.exports = {
         plan_interval: {type: 'string', maxlength: 50, nullable: false},
         plan_amount: {type: 'integer', nullable: false},
         plan_currency: {type: 'string', maxLength: 3, nullable: false}
+    },
+    members_subscription_created_events: {
+        id: {type: 'string', maxlength: 24, nullable: false, primary: true},
+        created_at: {type: 'dateTime', nullable: false},
+        member_id: {type: 'string', maxlength: 24, nullable: false, references: 'members.id', cascadeDelete: true},
+        subscription_id: {type: 'string', maxlength: 24, nullable: false, references: 'members_stripe_customers_subscriptions.id', cascadeDelete: true},
+        attribution_id: {type: 'string', maxlength: 24, nullable: true},
+        attribution_type: {type: 'string', maxlength: 50, nullable: true},
+        attribution_url: {type: 'string', maxlength: 2000, nullable: true}
     },
     offer_redemptions: {
         id: {type: 'string', maxlength: 24, nullable: false, primary: true},
@@ -754,7 +773,7 @@ module.exports = {
         id: {type: 'string', maxlength: 24, nullable: false, primary: true},
         post_id: {type: 'string', maxlength: 24, nullable: false, unique: false, references: 'posts.id', cascadeDelete: true},
         member_id: {type: 'string', maxlength: 24, nullable: true, unique: false, references: 'members.id', setNullDelete: true},
-        parent_id: {type: 'string', maxlength: 24, nullable: true, unique: false, references: 'comments.id'},
+        parent_id: {type: 'string', maxlength: 24, nullable: true, unique: false, references: 'comments.id', cascadeDelete: true},
         status: {type: 'string', maxlength: 50, nullable: false, defaultTo: 'published', validations: {isIn: [['published', 'hidden', 'deleted']]}},
         html: {type: 'text', maxlength: 1000000000, fieldtype: 'long', nullable: true},
         edited_at: {type: 'dateTime', nullable: true},

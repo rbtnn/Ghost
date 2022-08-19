@@ -8,7 +8,8 @@
   "types": "types",
   "scripts": {
     "dev": "echo \"Implement me!\"",
-    "test": "NODE_ENV=testing c8 --all --reporter text --reporter cobertura --check-coverage mocha './test/**/*.test.js'",
+    "test:unit": "NODE_ENV=testing c8 --all --reporter text --reporter cobertura --check-coverage mocha './test/**/*.test.js'",
+    "test": "yarn test:unit",
     "lint": "eslint . --ext .js --cache"
   },
   "files": [
@@ -18,7 +19,6 @@
   "devDependencies": {
     "c8": "7.12.0",
     "mocha": "10.0.0",
-    "should": "13.2.3",
-    "sinon": "14.0.0"
+    "should": "13.2.3"
   }
 }

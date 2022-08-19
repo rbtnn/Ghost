@@ -38,6 +38,11 @@ Post = ghostBookshelf.Model.extend({
 
     tableName: 'posts',
 
+    actionsCollectCRUD: true,
+    actionsResourceType: function () {
+        return this.get('type') || this.previous('type');
+    },
+
     /**
      * @NOTE
      *
@@ -962,24 +967,6 @@ Post = ghostBookshelf.Model.extend({
 
         delete options.status;
         return filter;
-    },
-
-    getAction(event, options) {
-        const actor = this.getActor(options);
-
-        // @NOTE: we ignore internal updates (`options.context.internal`) for now
-        if (!actor) {
-            return;
-        }
-
-        // @TODO: implement context
-        return {
-            event: event,
-            resource_id: this.id || this.previous('id'),
-            resource_type: 'post',
-            actor_id: actor.id,
-            actor_type: actor.type
-        };
     }
 }, {
     allowedFormats: ['mobiledoc', 'html', 'plaintext'],
@@ -1262,6 +1249,27 @@ Post = ghostBookshelf.Model.extend({
         return Promise.reject(new errors.NoPermissionError({
             message: tpl(messages.notEnoughPermission)
         }));
+    },
+
+    countRelations() {
+        return {
+            signups(modelOrCollection) {
+                modelOrCollection.query('columns', 'posts.*', (qb) => {
+                    qb.count('members_created_events.id')
+                        .from('members_created_events')
+                        .whereRaw('posts.id = members_created_events.attribution_id')
+                        .as('count__signups');
+                });
+            },
+            conversions(modelOrCollection) {
+                modelOrCollection.query('columns', 'posts.*', (qb) => {
+                    qb.count('members_subscription_created_events.id')
+                        .from('members_subscription_created_events')
+                        .whereRaw('posts.id = members_subscription_created_events.attribution_id')
+                        .as('count__conversions');
+                });
+            }
+        };
     }
 });
 

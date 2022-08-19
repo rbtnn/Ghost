@@ -60,6 +60,10 @@
     right: 0;
 }
 
+.gh-tier-actions-menu.closed {
+    display: none;
+}
+
 .gh-tier-card-block {
     flex-basis: 30%;
 }
@@ -139,9 +143,21 @@
     flex-grow: 1;
 }
 
+.gh-tier-card-block.price-block {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    margin: 0 70px 0 20px;
+}
+
 .gh-tier-price-container {
     display: flex;
-    margin: 0 60px 0 20px;
+    flex-direction: column;
+    border: 1px solid var(--whitegrey);
+}
+
+.gh-tier-price-cards {
+    display: inline-flex;
     justify-content: flex-end;
 }
 
@@ -150,14 +166,29 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    margin: 0 12px 2px 0;
     font-size: 1.3rem;
     color: var(--midgrey);
     padding: 12px 8px;
-    border: 1px solid var(--whitegrey);
     border-radius: 3px;
     min-width: 90px;
     min-height: 66px;
+}
+
+.gh-tier-free-trial-label {
+    text-align: center;
+    font-size: 1.25rem;
+    color: var(--midgrey);
+    padding: 4px;
+    border-top: 1px solid var(--whitegrey);
+}
+
+.gh-tier-free-trial-days {
+    font-weight: 600;
+    color: var(--darkgrey);
+}
+
+.gh-tier-card-price:first-of-type {
+    border-right: 1px solid var(--whitegrey);
 }
 
 .gh-tier-card-price .currency-symbol,
@@ -173,7 +204,7 @@
 }
 
 .gh-tier-card-price .amount {
-    letter-spacing: -.2px;
+    letter-spacing: -.7px;
     line-height: 1;
     margin-right: 2px;
     margin-left: 1px;
@@ -759,13 +790,11 @@
     opacity: 0.35;
 }
 
-.gh-tier-form-tierpreview .after-trial-amount {
-    display: block;
-    font-size: 1.5rem;
-    font-weight: 500;
-    color: #7f7f7f;
-    margin-top: 12px;
+.gh-tier-form-tierpreview .gh-portal-discount-label-trial {
+    font-weight: 600;
+    font-size: 1.3rem;
     line-height: 1;
+    margin-top: 4px;
 }
 
 .gh-tier-setting-title {

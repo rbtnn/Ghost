@@ -12,7 +12,7 @@
 
         <div class="gh-main-section">
             <h4 class="gh-main-section-header small bn">Migration options</h4>
-            <div class="gh-expandable">
+            <div class="gh-expandable {{if this.importErrors "overflow-hidden"}}">
                 <div class="gh-expandable-block">
                     <div class="gh-expandable-header">
                         <div>
@@ -190,6 +190,19 @@
                 <div class="gh-expandable-block">
                     <div class="gh-expandable-header">
                         <div>
+                            <h4 class="gh-expandable-title">Audit Log</h4>
+                            <p class="gh-expandable-description">
+                               Allow visibility into Staff actions
+                            </p>
+                        </div>
+                        <div class="for-switch">
+                           <GhFeatureFlag @flag="auditLog" />
+                        </div>
+                    </div>
+                </div>
+                <div class="gh-expandable-block">
+                    <div class="gh-expandable-header">
+                        <div>
                             <h4 class="gh-expandable-title">URL Cache</h4>
                             <p class="gh-expandable-description">
                                Enable URL Caching
@@ -216,19 +229,6 @@
                 <div class="gh-expandable-block">
                     <div class="gh-expandable-header">
                         <div>
-                            <h4 class="gh-expandable-title">Comments</h4>
-                            <p class="gh-expandable-description">
-                               Enable comments
-                            </p>
-                        </div>
-                        <div class="for-switch">
-                           <GhFeatureFlag @flag="comments" />
-                        </div>
-                    </div>
-                </div>
-                <div class="gh-expandable-block">
-                    <div class="gh-expandable-header">
-                        <div>
                             <h4 class="gh-expandable-title">Free trial</h4>
                             <p class="gh-expandable-description">
                                Add support for free trials
@@ -236,6 +236,45 @@
                         </div>
                         <div class="for-switch">
                            <GhFeatureFlag @flag="freeTrial" />
+                        </div>
+                    </div>
+                </div>
+                <div class="gh-expandable-block">
+                    <div class="gh-expandable-header">
+                        <div>
+                            <h4 class="gh-expandable-title">Cardless trials</h4>
+                            <p class="gh-expandable-description">
+                               Add support for expiring complimentary subscriptions
+                            </p>
+                        </div>
+                        <div class="for-switch">
+                           <GhFeatureFlag @flag="compExpiring" />
+                        </div>
+                    </div>
+                </div>
+                <div class="gh-expandable-block">
+                    <div class="gh-expandable-header">
+                        <div>
+                            <h4 class="gh-expandable-title">Member Attribution</h4>
+                            <p class="gh-expandable-description">
+                               Track which posts & pages are driving Member Subscriptions & Paid Conversions
+                            </p>
+                        </div>
+                        <div class="for-switch">
+                           <GhFeatureFlag @flag="memberAttribution" />
+                        </div>
+                    </div>
+                </div>
+                <div class="gh-expandable-block">
+                    <div class="gh-expandable-header">
+                        <div>
+                            <h4 class="gh-expandable-title">Search helper</h4>
+                            <p class="gh-expandable-description">
+                               Enable the <code>&#123;&#123;search&#125;&#125;</code> handlebars helper.
+                            </p>
+                        </div>
+                        <div class="for-switch">
+                           <GhFeatureFlag @flag="searchHelper" />
                         </div>
                     </div>
                 </div>

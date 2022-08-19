@@ -8,7 +8,8 @@
   "exports": "./lib/update-check-service.js",
   "scripts": {
     "dev": "echo \"Implement me!\"",
-    "test": "NODE_ENV=testing c8 --all --check-coverage --reporter text --reporter cobertura mocha './test/**/*.test.js'",
+    "test:unit": "NODE_ENV=testing c8 --all --check-coverage --reporter text --reporter cobertura mocha './test/**/*.test.js'",
+    "test": "yarn test:unit",
     "lint": "eslint . --ext .js --cache"
   },
   "files": [
@@ -18,13 +19,14 @@
     "c8": "7.12.0",
     "mocha": "10.0.0",
     "should": "13.2.3",
-    "sinon": "14.0.0"
+    "sinon": "14.0.0",
+    "uuid": "8.3.2"
   },
   "dependencies": {
-    "@tryghost/debug": "0.1.17",
-    "@tryghost/errors": "1.2.14",
-    "@tryghost/logging": "2.2.3",
-    "@tryghost/tpl": "0.1.17",
+    "@tryghost/debug": "0.1.18",
+    "@tryghost/errors": "1.2.15",
+    "@tryghost/logging": "2.2.4",
+    "@tryghost/tpl": "0.1.18",
     "bluebird": "3.7.2",
     "lodash": "4.17.21",
     "moment": "2.24.0"

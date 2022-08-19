@@ -1,6 +1,6 @@
 const express = require('../../../shared/express');
 const api = require('../../api').endpoints;
-const http = require('../../api').shared.http;
+const {http} = require('@tryghost/api-framework');
 
 const bodyParser = require('body-parser');
 const membersService = require('../../../server/services/members');
@@ -23,6 +23,7 @@ module.exports = function apiRoutes() {
 
     router.post('/:id/like', http(api.commentsMembers.like));
     router.delete('/:id/like', http(api.commentsMembers.unlike));
+    router.get('/:id/replies', http(api.commentsMembers.replies));
 
     router.post('/:id/report', http(api.commentsMembers.report));
 

@@ -7,7 +7,8 @@
   "main": "index.js",
   "scripts": {
     "dev": "echo \"Implement me!\"",
-    "test": "NODE_ENV=testing c8 --all --reporter text --reporter cobertura --check-coverage mocha './test/**/*.test.js'",
+    "test:unit": "NODE_ENV=testing c8 --all --reporter text --reporter cobertura --check-coverage mocha './test/**/*.test.js'",
+    "test": "yarn test:unit",
     "lint": "eslint . --ext .js --cache"
   },
   "files": [
@@ -16,14 +17,11 @@
   ],
   "devDependencies": {
     "mocha": "10.0.0",
-    "nock": "13.2.9",
-    "should": "13.2.3",
     "sinon": "14.0.0"
   },
   "dependencies": {
     "@tryghost/email-analytics-service": "0.0.0",
-    "@tryghost/logging": "2.2.3",
-    "mailgun-js": "0.22.0",
+    "@tryghost/mailgun-client": "0.0.0",
     "moment": "2.29.1"
   }
 }

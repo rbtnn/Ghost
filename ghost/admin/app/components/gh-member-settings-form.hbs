@@ -146,7 +146,7 @@
                                     <div>
                                         <div>
                                             {{#if sub.trialUntil}}
-                                                <span class="gh-cp-membertier-pricelabel">Free Trial</span>
+                                                <span class="gh-cp-membertier-pricelabel">Free trial</span>
                                             {{else}}
                                                 <span class="gh-cp-membertier-pricelabel">{{sub.price.nickname}}</span>
                                             {{/if}}
@@ -155,12 +155,15 @@
                                             {{#if (eq sub.status "canceled")}}
                                                 <span class="gh-cp-membertier-renewal">Ended {{sub.validUntil}}</span>
                                                 <span class="gh-badge archived" data-test-text="member-subscription-status">Cancelled</span>
-                                            {{else if sub.trialUntil}}
-                                                <span class="gh-cp-membertier-renewal">Ends {{sub.trialUntil}}</span>
-                                                <span class="gh-badge active" data-test-text="member-subscription-status">Active</span>
                                             {{else if sub.cancel_at_period_end}}
                                                 <span class="gh-cp-membertier-renewal">Has access until {{sub.validUntil}}</span>
                                                 <span class="gh-badge archived" data-test-text="member-subscription-status">Cancelled</span>
+                                            {{else if sub.compExpiry}}
+                                                    <span class="gh-cp-membertier-renewal">Expires {{sub.compExpiry}}</span>
+                                                    <span class="gh-badge active" data-test-text="member-subscription-status">Active</span>
+                                            {{else if sub.trialUntil}}
+                                                    <span class="gh-cp-membertier-renewal">Ends {{sub.trialUntil}}</span>
+                                                    <span class="gh-badge active" data-test-text="member-subscription-status">Active</span>
                                             {{else}}
                                                 <span class="gh-cp-membertier-renewal">Renews {{sub.validUntil}}</span>
                                                 <span class="gh-badge active" data-test-text="member-subscription-status">Active</span>
@@ -170,16 +173,24 @@
                                             <div class="gh-membertier-cancelreason"><span class="fw6">Cancellation reason:</span> {{sub.cancellationReason}}</div>
                                         {{/if}}
                                         {{#if sub.offer}}
-                                            <div>
-                                                <span class="gh-cp-membertier-pricelabel"> {{sub.offer.name}} </span>
-                                                offer
-                                                {{#if (eq sub.offer.type 'fixed')}}
-                                                    ({{currency-symbol sub.offer.currency}}{{gh-price-amount sub.offer.amount}} off)
-                                                {{else}}
-                                                    ({{sub.offer.amount}}% off)
-                                                {{/if}}
-                                                applied to subscription
-                                            </div>
+                                            {{#if (eq sub.offer.type "trial")}}
+                                                <div>
+                                                    <span class="gh-cp-membertier-pricelabel"> {{sub.offer.name}} </span>
+                                                    offer
+                                                    ({{sub.offer.amount}} days free)
+                                                </div>
+                                            {{else}}
+                                                <div>
+                                                    <span class="gh-cp-membertier-pricelabel"> {{sub.offer.name}} </span>
+                                                    offer
+                                                    {{#if (eq sub.offer.type 'fixed')}}
+                                                        ({{currency-symbol sub.offer.currency}}{{gh-price-amount sub.offer.amount}} off)
+                                                    {{else}}
+                                                        ({{sub.offer.amount}}% off)
+                                                    {{/if}}
+                                                    applied to subscription
+                                                </div>
+                                            {{/if}}
                                         {{/if}}
                                         <div class="gh-membertier-created">
                                             Created on {{sub.startDate}}

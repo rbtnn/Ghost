@@ -61,14 +61,26 @@
                                     <span class="blue">{{svg-jar "offer"}}</span>
                                     <span class="blue fw6">{{gh-price-amount offer.amount}} <span class="ttu">{{offer.currency}}</span> OFF</span>
                                 {{/if}}
-                                <span class="dib ml1 midgrey ttc"> – 
-                                    {{if (eq offer.duration 'once') "First-payment" "Repeating"}}
-                                </span>
+                                {{#if (feature 'freeTrial')}}
+                                    {{#if (eq offer.type 'trial')}}
+                                        <span class="pink">{{svg-jar "offer"}}</span>
+                                        <span class="pink fw6"><span class="ttu">{{offer.amount}}</span> DAYS FREE</span>
+                                    {{/if}}
+                                {{/if}}
+                                {{#if (not (eq offer.type 'trial'))}}
+                                    <span class="dib ml1 midgrey ttc"> – 
+                                        {{if (eq offer.duration 'once') "First-payment" "Repeating"}}
+                                    </span>
+                                {{/if}}
                             </span>
                         </LinkTo>
                         <LinkTo @route="offer" @model={{offer}} class="gh-list-data">
-                            <span>{{currency-symbol offer.finalCurrency}}{{gh-price-amount offer.updatedPrice}}</span>
-                            <span class="midgrey strike ml2">{{currency-symbol offer.finalCurrency}}{{gh-price-amount offer.originalPrice}}</span>
+                            {{#if (eq offer.type 'trial')}}
+                                <span>{{currency-symbol offer.finalCurrency}}{{gh-price-amount offer.originalPrice}}</span>
+                            {{else}}
+                                <span>{{currency-symbol offer.finalCurrency}}{{gh-price-amount offer.updatedPrice}}</span>
+                                <span class="midgrey strike ml2">{{currency-symbol offer.finalCurrency}}{{gh-price-amount offer.originalPrice}}</span>
+                            {{/if}}
                         </LinkTo>
                         <LinkTo @route="offer" @model={{offer}} class="gh-list-data">
                             <span class="midgrey">{{offer.redemptionCount}}</span>

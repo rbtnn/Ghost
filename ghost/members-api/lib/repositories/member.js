@@ -3,7 +3,7 @@ const errors = require('@tryghost/errors');
 const logging = require('@tryghost/logging');
 const tpl = require('@tryghost/tpl');
 const DomainEvents = require('@tryghost/domain-events');
-const {SubscriptionCreatedEvent, MemberSubscribeEvent} = require('@tryghost/member-events');
+const {MemberCreatedEvent, SubscriptionCreatedEvent, MemberSubscribeEvent} = require('@tryghost/member-events');
 const ObjectId = require('bson-objectid');
 const {NotFoundError} = require('@tryghost/errors');
 
@@ -167,6 +167,22 @@ module.exports = class MemberRepository {
         }, options);
     }
 
+    /**
+     * Create a member
+     * @param {Object} data 
+     * @param {string} data.email
+     * @param {string} [data.name]
+     * @param {string} [data.note]
+     * @param {(string|Object)[]} [data.labels]
+     * @param {boolean} [data.subscribed] (deprecated)
+     * @param {string} [data.geolocation] 
+     * @param {Date} [data.created_at]
+     * @param {Object[]} [data.products]
+     * @param {Object[]} [data.newsletters]
+     * @param {import('@tryghost/member-attribution/lib/history').Attribution} [data.attribution]
+     * @param {*} options 
+     * @returns 
+     */
     async create(data, options) {
         if (!options) {
             options = {};
@@ -280,6 +296,12 @@ module.exports = class MemberRepository {
             }, eventData.created_at));
         }
 
+        DomainEvents.dispatch(MemberCreatedEvent.create({
+            memberId: member.id,
+            attribution: data.attribution,
+            source
+        }, eventData.created_at));
+
         return member;
     }
 
@@ -327,7 +349,7 @@ module.exports = class MemberRepository {
         if (memberData.bio) {
             memberData.bio = memberData.bio.trim();
         }
-   
+
         // Determine if we need to fetch the initial member with relations
         const needsProducts = this._stripeAPIService.configured && data.products;
         const needsNewsletters = memberData.newsletters || typeof memberData.subscribed === 'boolean';
@@ -698,6 +720,7 @@ module.exports = class MemberRepository {
      * @param {Object} data
      * @param {String} data.id - member ID
      * @param {Object} data.subscription
+     * @param {String} data.offerId
      * @param {*} options
      * @returns
      */
@@ -785,7 +808,9 @@ module.exports = class MemberRepository {
         }
 
         let stripeCouponId = subscription.discount && subscription.discount.coupon ? subscription.discount.coupon.id : null;
-        let offerId = null;
+
+        // For trial offers, offer id is passed from metadata as there is no stripe coupon
+        let offerId = data.offerId || null;
 
         if (stripeCouponId) {
             // Get the offer from our database
@@ -831,6 +856,11 @@ module.exports = class MemberRepository {
 
         let eventData = {};
         if (model) {
+            // CASE: Offer is already mapped against sub, don't overwrite it with NULL
+            // Needed for trial offers, which don't have a stripe coupon/discount attached to sub
+            if (!subscriptionData.offer_id) {
+                delete subscriptionData.offer_id;
+            }
             const updated = await this._StripeCustomerSubscription.edit(subscriptionData, {
                 ...options,
                 id: model.id

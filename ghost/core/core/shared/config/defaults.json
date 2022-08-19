@@ -25,7 +25,11 @@
             "active": "Default"
         },
         "cache": {
-            "active": "Memory"
+            "active": "Memory",
+            "settings": "SettingsCacheSyncInMemory",
+            "SettingsCacheSyncInMemory": {},
+            "imageSizes": "ImageSizesCacheSyncInMemory",
+            "ImageSizesCacheSyncInMemory": {}
         }
     },
     "storage": {
@@ -137,7 +141,7 @@
     },
     "portal": {
         "url": "https://cdn.jsdelivr.net/npm/@tryghost/portal@~{version}/umd/portal.min.js",
-        "version": "2.5"
+        "version": "2.9"
     },
     "sodoSearch": {
         "url": "https://cdn.jsdelivr.net/npm/@tryghost/sodo-search@~{version}/umd/sodo-search.min.js",
@@ -147,7 +151,7 @@
     "comments": {
         "url": "https://cdn.jsdelivr.net/npm/@tryghost/comments-ui@~{version}/umd/comments-ui.min.js",
         "styles": "https://cdn.jsdelivr.net/npm/@tryghost/comments-ui@~{version}/umd/main.css",
-        "version": "0.5"
+        "version": "0.9"
     },
     "editor": {
         "url": "https://unpkg.com/@tryghost/koenig-react/dist/umd/koenig-react.min.js"
