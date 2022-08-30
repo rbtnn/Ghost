@@ -65,7 +65,10 @@ User = ghostBookshelf.Model.extend({
             password: security.identifier.uid(50),
             visibility: 'public',
             status: 'active',
-            comment_notifications: true
+            comment_notifications: true,
+            free_member_signup_notification: true,
+            paid_subscription_started_notification: true,
+            paid_subscription_canceled_notification: false
         };
     },
 
@@ -483,6 +486,33 @@ User = ghostBookshelf.Model.extend({
         }
 
         return query.fetch(options);
+    },
+
+    /**
+     * Returns users who should receive a specific type of alert
+     * @param {'free-signup'|'paid-started'|'paid-canceled'} type The type of alert to fetch users for
+     * @param {any} options
+     * @return {Promise<[Object]>} Array of users
+     */
+    getEmailAlertUsers(type, options) {
+        options = options || {};
+
+        let filter = 'status:active';
+        if (type === 'free-signup') {
+            filter += '+free_member_signup_notification:true';
+        } else if (type === 'paid-started') {
+            filter += '+paid_subscription_started_notification:true';
+        } else if (type === 'paid-canceled') {
+            filter += '+paid_subscription_canceled_notification:true';
+        }
+        const updatedOptions = _.merge({}, options, {filter, withRelated: ['roles']});
+        return this.findAll(updatedOptions).then((users) => {
+            return users.toJSON().filter((user) => {
+                return user?.roles?.some((role) => {
+                    return ['Owner', 'Administrator'].includes(role.name);
+                });
+            });
+        });
     },
 
     /**
@@ -1002,10 +1032,10 @@ User = ghostBookshelf.Model.extend({
         let ownerRole;
         let contextUser;
 
-        return Promise.join(
+        return Promise.all([
             ghostBookshelf.model('Role').findOne({name: 'Owner'}),
             User.findOne({id: options.context.user}, {withRelated: ['roles']})
-        )
+        ])
             .then((results) => {
                 ownerRole = results[0];
                 contextUser = results[1];
@@ -1018,8 +1048,10 @@ User = ghostBookshelf.Model.extend({
                     }));
                 }
 
-                return Promise.join(ghostBookshelf.model('Role').findOne({name: 'Administrator'}),
-                    User.findOne({id: object.id}, {withRelated: ['roles']}));
+                return Promise.all([
+                    ghostBookshelf.model('Role').findOne({name: 'Administrator'}),
+                    User.findOne({id: object.id}, {withRelated: ['roles']})
+                ]);
             })
             .then((results) => {
                 const adminRole = results[0];
@@ -1046,9 +1078,11 @@ User = ghostBookshelf.Model.extend({
                 }
 
                 // convert owner to admin
-                return Promise.join(contextUser.roles().updatePivot({role_id: adminRole.id}),
+                return Promise.all([
+                    contextUser.roles().updatePivot({role_id: adminRole.id}),
                     user.roles().updatePivot({role_id: ownerRole.id}),
-                    user.id);
+                    user.id
+                ]);
             })
             .then((results) => {
                 return Users.forge()

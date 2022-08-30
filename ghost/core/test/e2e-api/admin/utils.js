@@ -26,7 +26,7 @@ const expectedProperties = {
     members: ['members', 'meta'],
     snippets: ['snippets', 'meta'],
 
-    action: ['id', 'resource_type', 'actor_type', 'event', 'created_at', 'actor'],
+    action: ['id', 'resource_type', 'actor_type', 'event', 'created_at', 'actor', 'context', 'resource_id', 'actor_id'],
 
     config: [
         'version',
@@ -85,7 +85,8 @@ const expectedProperties = {
         'frontmatter',
         'email_only',
         'tiers',
-        'newsletter'
+        'newsletter',
+        'count'
     ],
 
     page: [
@@ -124,7 +125,8 @@ const expectedProperties = {
         'meta_title',
         'meta_description',
         'frontmatter',
-        'tiers'
+        'tiers',
+        'count'
     ],
 
     user: _(schema.users)

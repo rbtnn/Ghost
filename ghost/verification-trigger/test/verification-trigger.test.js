@@ -9,7 +9,7 @@ const {MemberSubscribeEvent} = require('@tryghost/member-events');
 describe('Import threshold', function () {
     it('Creates a threshold based on config', async function () {
         const trigger = new VerificationTrigger({
-            configThreshold: 2,
+            importTriggerThreshold: 2,
             membersStats: {
                 getTotalMembers: async () => 1
             }
@@ -21,7 +21,7 @@ describe('Import threshold', function () {
 
     it('Increases the import threshold to the number of members', async function () {
         const trigger = new VerificationTrigger({
-            configThreshold: 2,
+            importTriggerThreshold: 2,
             membersStats: {
                 getTotalMembers: async () => 3
             }
@@ -34,7 +34,7 @@ describe('Import threshold', function () {
     it('Does not check members count when config threshold is infinite', async function () {
         const membersStub = sinon.stub().resolves(null);
         const trigger = new VerificationTrigger({
-            configThreshold: Infinity,
+            importTriggerThreshold: Infinity,
             memberStats: {
                 getTotalMembers: membersStub
             }
@@ -59,8 +59,8 @@ describe('Email verification flow', function () {
             sendVerificationEmail: emailStub
         });
 
-        const result = await trigger.startVerificationProcess({
-            amountImported: 10,
+        const result = await trigger._startVerificationProcess({
+            amount: 10,
             throwOnTrigger: false
         });
 
@@ -81,8 +81,8 @@ describe('Email verification flow', function () {
             sendVerificationEmail: emailStub
         });
 
-        const result = await trigger.startVerificationProcess({
-            amountImported: 10,
+        const result = await trigger._startVerificationProcess({
+            amount: 10,
             throwOnTrigger: false
         });
 
@@ -103,8 +103,8 @@ describe('Email verification flow', function () {
             sendVerificationEmail: emailStub
         });
 
-        const result = await trigger.startVerificationProcess({
-            amountImported: 10,
+        const result = await trigger._startVerificationProcess({
+            amount: 10,
             throwOnTrigger: false
         });
 
@@ -125,8 +125,8 @@ describe('Email verification flow', function () {
             sendVerificationEmail: emailStub
         });
 
-        await trigger.startVerificationProcess({
-            amountImported: 10,
+        await trigger._startVerificationProcess({
+            amount: 10,
             throwOnTrigger: true
         }).should.be.rejected();
     });
@@ -143,15 +143,15 @@ describe('Email verification flow', function () {
             sendVerificationEmail: emailStub
         });
 
-        await trigger.startVerificationProcess({
-            amountImported: 10,
+        await trigger._startVerificationProcess({
+            amount: 10,
             throwOnTrigger: false
         });
 
         emailStub.lastCall.firstArg.should.eql({
             subject: 'Email needs verification',
-            message: 'Email verification needed for site: {siteUrl}, has imported: {importedNumber} members in the last 30 days.',
-            amountImported: 10
+            message: 'Email verification needed for site: {siteUrl}, has imported: {amountTriggered} members in the last 30 days.',
+            amountTriggered: 10
         });
     });
 
@@ -167,7 +167,7 @@ describe('Email verification flow', function () {
         });
 
         new VerificationTrigger({
-            configThreshold: 2,
+            apiTriggerThreshold: 2,
             Settings: {
                 edit: settingsStub
             },
@@ -203,7 +203,7 @@ describe('Email verification flow', function () {
         });
 
         const trigger = new VerificationTrigger({
-            configThreshold: 2,
+            importTriggerThreshold: 2,
             Settings: {
                 edit: settingsStub
             },
@@ -229,8 +229,103 @@ describe('Email verification flow', function () {
         emailStub.callCount.should.eql(1);
         emailStub.lastCall.firstArg.should.eql({
             subject: 'Email needs verification',
-            message: 'Email verification needed for site: {siteUrl}, has imported: {importedNumber} members in the last 30 days.',
-            amountImported: 10
+            message: 'Email verification needed for site: {siteUrl}, has imported: {amountTriggered} members in the last 30 days.',
+            amountTriggered: 10
+        });
+    });
+
+    it('Triggers when a number of members are added from Admin', async function () {
+        const emailStub = sinon.stub().resolves(null);
+        const settingsStub = sinon.stub().resolves(null);
+        const eventStub = sinon.stub().resolves({
+            meta: {
+                pagination: {
+                    total: 10
+                }
+            }
+        });
+
+        const trigger = new VerificationTrigger({
+            adminTriggerThreshold: 2,
+            Settings: {
+                edit: settingsStub
+            },
+            membersStats: {
+                getTotalMembers: () => 15
+            },
+            isVerified: () => false,
+            isVerificationRequired: () => false,
+            sendVerificationEmail: emailStub,
+            eventRepository: {
+                getNewsletterSubscriptionEvents: eventStub
+            }
+        });
+
+        await trigger._handleMemberSubscribeEvent({
+            data: {
+                source: 'admin'
+            }
+        });
+
+        eventStub.callCount.should.eql(1);
+        eventStub.lastCall.lastArg.should.have.property('data.source');
+        eventStub.lastCall.lastArg.should.have.property('data.created_at');
+        eventStub.lastCall.lastArg['data.source'].should.eql(`data.source:'admin'`);
+        eventStub.lastCall.lastArg['data.created_at'].should.startWith(`data.created_at:>'`);
+
+        emailStub.callCount.should.eql(1);
+        emailStub.lastCall.firstArg.should.eql({
+            subject: 'Email needs verification',
+            message: 'Email verification needed for site: {siteUrl} has added: {amountTriggered} members through the Admin client in the last 30 days.',
+            amountTriggered: 10
+        });
+    });
+    
+    it('Triggers when a number of members are added from API', async function () {
+        const emailStub = sinon.stub().resolves(null);
+        const settingsStub = sinon.stub().resolves(null);
+        const eventStub = sinon.stub().resolves({
+            meta: {
+                pagination: {
+                    total: 10
+                }
+            }
+        });
+
+        const trigger = new VerificationTrigger({
+            adminTriggerThreshold: 2,
+            apiTriggerThreshold: 2,
+            Settings: {
+                edit: settingsStub
+            },
+            membersStats: {
+                getTotalMembers: () => 15
+            },
+            isVerified: () => false,
+            isVerificationRequired: () => false,
+            sendVerificationEmail: emailStub,
+            eventRepository: {
+                getNewsletterSubscriptionEvents: eventStub
+            }
+        });
+
+        await trigger._handleMemberSubscribeEvent({
+            data: {
+                source: 'api'
+            }
+        });
+
+        eventStub.callCount.should.eql(1);
+        eventStub.lastCall.lastArg.should.have.property('data.source');
+        eventStub.lastCall.lastArg.should.have.property('data.created_at');
+        eventStub.lastCall.lastArg['data.source'].should.eql(`data.source:'api'`);
+        eventStub.lastCall.lastArg['data.created_at'].should.startWith(`data.created_at:>'`);
+
+        emailStub.callCount.should.eql(1);
+        emailStub.lastCall.firstArg.should.eql({
+            subject: 'Email needs verification',
+            message: 'Email verification needed for site: {siteUrl} has added: {amountTriggered} members through the API in the last 30 days.',
+            amountTriggered: 10
         });
     });
 
@@ -246,7 +341,7 @@ describe('Email verification flow', function () {
         });
 
         const trigger = new VerificationTrigger({
-            configThreshold: Infinity,
+            apiTriggerThreshold: Infinity,
             Settings: {
                 edit: settingsStub
             },
@@ -266,7 +361,7 @@ describe('Email verification flow', function () {
         // We shouldn't be fetching the events if the threshold is Infinity
         eventStub.callCount.should.eql(0);
 
-        // We shouldn't be sending emails if the threshold is infinity
+        // We shouldn't be sending emails if the threshold is Infinity
         emailStub.callCount.should.eql(0);
     });
 });

@@ -168,12 +168,32 @@
     padding-left: 10px;
 }
 
-.gh-posts-sends-header,
-.gh-posts-opens-header {
-    width: 120px;
+.gh-posts-status-header {
+    width: 140px;
 }
 
-.gh-posts-status-header {
+.gh-posts-signups-header,
+.gh-posts-conversions-header,
+.gh-posts-sends-header,
+.gh-posts-opens-header {
+    width: 90px;
+    padding-right: 8px;
+}
+
+.feature-memberAttribution .gh-posts-opens-header {
+    width: 150px;
+}
+
+.gh-list.feature-memberAttribution .gh-posts-status-header {
+    width: 180px;
+}
+
+.gh-list:not(.feature-memberAttribution) .gh-posts-status-header {
+    width: 140px;
+}
+
+.pages-list .gh-posts-conversions-header,
+.pages-list .gh-posts-sends-header {
     width: 140px;
 }
 
@@ -205,9 +225,22 @@
 .gh-post-list-updated,
 .gh-post-list-author,
 .gh-post-list-recipients,
-.gh-post-list-opens {
+.gh-post-list-opens,
+.gh-post-list-signups,
+.gh-post-list-conversions {
     color: var(--middarkgrey);
     font-size: 1.3rem;
+}
+
+.gh-post-list-signups,
+.gh-post-list-conversions,
+.gh-post-list-recipients {
+    padding-right: 8px;
+}
+
+/** TODO: improve this hover style */
+a.gh-post-list-signups.active:hover > span, a.gh-post-list-conversions.active:hover > span {
+    opacity: 0.5;
 }
 
 .gh-content-entry-title {
@@ -251,6 +284,10 @@
     display: none;
 }
 
+.gh-content-attribution-stats-mobile {
+    display: none;
+}
+
 .gh-content-status-draft,
 .gh-content-status-published,
 .gh-content-status-scheduled,
@@ -291,10 +328,14 @@
 }
 
 .gh-content-status-emailed {
-    margin: 0px 6px;
+    margin: 0;
     color: var(--midgrey-d1);
     background: var(--whitegrey);
     border-radius: 999px;
+}
+
+.feature-memberAttribution .gh-content-status-emailed {
+    margin: 0px 6px;
 }
 
 .gh-content-status-emailed svg,
@@ -328,6 +369,64 @@
     background: color-mod(var(--green) a(20%));
 }
 
+.gh-post-list-plain-status .gh-content-status-draft,
+.gh-post-list-plain-status .gh-content-status-published,
+.gh-post-list-plain-status .gh-content-status-scheduled,
+.gh-post-list-plain-status .gh-content-status-emailed {
+    background: none;
+    color: var(--darkgrey);
+    text-transform: unset;
+    font-size: 1.3rem;
+    font-weight: 500;
+}
+
+.gh-post-list-plain-status .gh-post-status-email {
+    margin-bottom: -1px;
+    margin-left: 4px;
+}
+
+.gh-post-list-plain-status .gh-post-status-email path {
+    stroke: var(--darkgrey) !important;
+}
+
+.gh-post-list-plain-status .gh-post-status-icon {
+    width: 16px;
+    height: 16px;
+    margin: 0 7px 0 0;
+}
+
+.gh-post-list-plain-status .gh-content-status-published .gh-post-status-icon {
+    width: 12px;
+    height: 12px;
+}
+
+.gh-post-list-plain-status .gh-content-status-scheduled .gh-post-status-icon path {
+    stroke: var(--purple) !important;
+}
+
+.gh-post-list-plain-status .gh-content-status-draft .gh-post-status-icon path {
+    stroke: var(--pink) !important;
+}
+
+.gh-post-list-plain-status .gh-content-status-published .gh-post-status-icon path {
+    stroke: var(--midgrey-l1) !important;
+}
+
+.gh-post-list-plain-status .gh-content-status-published,
+.gh-post-list-plain-status .gh-content-status-emailed {
+    color: var(--midgrey-l1);
+    margin: 0;
+}
+
+.gh-post-list-plain-status .gh-content-status-published .gh-post-status-email path {
+    stroke: var(--midgrey-l1) !important;
+}
+
+.gh-post-list-plain-status .gh-content-status-emailed path {
+    stroke: var(--midgrey-l1) !important;
+    stroke-width: 1.5;
+}
+
 .gh-content-entry-author {
     color: var(--middarkgrey);
 }
@@ -347,8 +446,47 @@
     width: 1px;
 }
 
+@media (max-width: 1600px) {
+    .feature-memberAttribution .gh-post-list-status,
+    .feature-memberAttribution .gh-post-list-recipients,
+    .feature-memberAttribution .gh-post-list-opens,
+    .feature-memberAttribution .gh-post-list-signups,
+    .feature-memberAttribution .gh-post-list-conversions {
+        padding-left: 12px;
+        padding-right: 12px;
+    }
+
+    .feature-memberAttribution .gh-posts-signups-header,
+    .feature-memberAttribution .gh-posts-conversions-header,
+    .feature-memberAttribution .gh-posts-sends-header {
+        width: 80px;
+    }
+    
+    .feature-memberAttribution .gh-posts-opens-header {
+        width: 100px;
+    }
+}
+
+
 /* Mobile style of post list */
-@media (max-width: 1000px) {
+@media (max-width: 1200px) {
+    .feature-memberAttribution .gh-post-list-status,
+    .feature-memberAttribution .gh-post-list-recipients,
+    .feature-memberAttribution .gh-post-list-opens,
+    .feature-memberAttribution .gh-post-list-signups,
+    .feature-memberAttribution .gh-post-list-conversions {
+        padding-left: 0;
+        padding-right: 0;
+    }
+
+    .feature-memberAttribution .gh-content-status-draft,
+    .feature-memberAttribution .gh-content-status-published,
+    .feature-memberAttribution .gh-content-status-scheduled,
+    .feature-memberAttribution .gh-content-status-emailed {
+        padding-left: 0;
+        padding-right: 12px;
+    }
+
     .gh-posts-list-item {
         display: flex;
         flex-wrap: wrap;
@@ -389,7 +527,9 @@
 
     .gh-post-list-status,
     .gh-post-list-recipients,
-    .gh-post-list-opens {
+    .gh-post-list-opens,
+    .gh-post-list-signups,
+    .gh-post-list-conversions {
         display: inline-block;
         border: none;
         padding: 0 4px 20px 0;
@@ -410,6 +550,14 @@
 
     .gh-post-list-opens {
         order: 5;
+    }
+
+    .gh-post-list-signups {
+        order: 6;
+    }
+
+    .gh-post-list-conversions {
+        order: 7;
     }
 
     .gh-post-list-updated {
@@ -451,6 +599,21 @@
 
     .gh-content-email-stats-mobile {
         display: inherit;
+        padding: 0 0.33em;
+    }
+
+    .gh-content-attribution-stats {
+        display: none;
+    }
+
+    .gh-content-attribution-stats-mobile {
+        display: inherit;
+        padding: 0 0.33em;
+    }
+
+    .posts-list .gh-list-nodata,
+    .pages-list .gh-list-nodata {
+        display: none;
     }
 }
 

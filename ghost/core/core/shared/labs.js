@@ -15,23 +15,24 @@ const messages = {
 
 // flags in this list always return `true`, allows quick global enable prior to full flag removal
 const GA_FEATURES = [
-    'newsletterPaywall'
+    'newsletterPaywall',
+    'freeTrial',
+    'compExpiring',
+    'searchHelper',
+    'emailAlerts'
 ];
 
 // NOTE: this allowlist is meant to be used to filter out any unexpected
 //       input for the "labs" setting value
 const BETA_FEATURES = [
-    'activitypub'
+    'activitypub',
+    'memberAttribution'
 ];
 
 const ALPHA_FEATURES = [
     'auditLog',
     'urlCache',
-    'beforeAfterCard',
-    'freeTrial',
-    'memberAttribution',
-    'searchHelper',
-    'compExpiring'
+    'beforeAfterCard'
 ];
 
 module.exports.GA_KEYS = [...GA_FEATURES];

@@ -10,6 +10,10 @@ const testUtils = require('../../utils');
 const Papa = require('papaparse');
 
 const models = require('../../../core/server/models');
+const membersService = require('../../../core/server/services/members');
+const memberAttributionService = require('../../../core/server/services/member-attribution');
+const urlService = require('../../../core/server/services/url');
+const urlUtils = require('../../../core/shared/url-utils');
 
 async function assertMemberEvents({eventType, memberId, asserts}) {
     const events = await models[eventType].where('member_id', memberId).fetchAll();
@@ -150,6 +154,229 @@ describe('Members API without Stripe', function () {
     });
 });
 
+// Tests specific for member attribution
+describe('Members API - member attribution', function () {
+    const signupAttributions = [];
+
+    before(async function () {
+        agent = await agentProvider.getAdminAPIAgent();
+        await fixtureManager.init('posts', 'newsletters', 'members:newsletters', 'comments');
+        await agent.loginAsOwner();
+        // This is required so that the only members in this test are created by this test, and not from fixtures.
+        await models.Member.query().del();
+    });
+
+    beforeEach(function () {
+        mockManager.mockStripe();
+        mockManager.mockMail();
+
+        // For some reason it is enabled by default?
+        mockManager.mockLabsEnabled('memberAttribution');
+    });
+
+    afterEach(function () {
+        mockManager.restore();
+    });
+
+    it('Can read member attributed to a post', async function () {
+        const id = fixtureManager.get('posts', 0).id;
+        const post = await models.Post.where('id', id).fetch({require: true});
+
+        // Set the attribution for this member manually
+        const member = await membersService.api.members.create({
+            email: 'member-attributed-to-post@test.com',
+            attribution: memberAttributionService.attributionBuilder.build({
+                id,
+                url: '/out-of-date/',
+                type: 'post'
+            })
+        });
+
+        const absoluteUrl = urlService.getUrlByResourceId(post.id, {absolute: true});
+
+        await agent
+            .get(`/members/${member.id}/`)
+            .expectStatus(200)
+            .matchBodySnapshot({
+                members: new Array(1).fill(memberMatcherShallowIncludes)
+            })
+            .matchHeaderSnapshot({
+                etag: anyEtag
+            })
+            .expect(({body}) => {
+                should(body.members[0].attribution).eql({
+                    id: post.id,
+                    url: absoluteUrl,
+                    type: 'post',
+                    title: post.get('title')
+                });
+                signupAttributions.push(body.members[0].attribution);
+            });
+    });
+
+    it('Can read member attributed to a page', async function () {
+        const id = fixtureManager.get('posts', 5).id;
+        const post = await models.Post.where('id', id).fetch({require: true});
+
+        // Set the attribution for this member manually
+        const member = await membersService.api.members.create({
+            email: 'member-attributed-to-page@test.com',
+            attribution: memberAttributionService.attributionBuilder.build({
+                id,
+                url: '/out-of-date/',
+                type: 'page'
+            })
+        });
+
+        const absoluteUrl = urlService.getUrlByResourceId(post.id, {absolute: true});
+
+        await agent
+            .get(`/members/${member.id}/`)
+            .expectStatus(200)
+            .matchBodySnapshot({
+                members: new Array(1).fill(memberMatcherShallowIncludes)
+            })
+            .matchHeaderSnapshot({
+                etag: anyEtag
+            })
+            .expect(({body}) => {
+                should(body.members[0].attribution).eql({
+                    id: post.id,
+                    url: absoluteUrl,
+                    type: 'page',
+                    title: post.get('title')
+                });
+                signupAttributions.push(body.members[0].attribution);
+            });
+    });
+
+    it('Can read member attributed to a tag', async function () {
+        const id = fixtureManager.get('tags', 0).id;
+        const tag = await models.Tag.where('id', id).fetch({require: true});
+
+        // Set the attribution for this member manually
+        const member = await membersService.api.members.create({
+            email: 'member-attributed-to-tag@test.com',
+            attribution: memberAttributionService.attributionBuilder.build({
+                id,
+                url: '/out-of-date/',
+                type: 'tag'
+            })
+        });
+
+        const absoluteUrl = urlService.getUrlByResourceId(tag.id, {absolute: true});
+
+        await agent
+            .get(`/members/${member.id}/`)
+            .expectStatus(200)
+            .matchBodySnapshot({
+                members: new Array(1).fill(memberMatcherShallowIncludes)
+            })
+            .matchHeaderSnapshot({
+                etag: anyEtag
+            })
+            .expect(({body}) => {
+                should(body.members[0].attribution).eql({
+                    id: tag.id,
+                    url: absoluteUrl,
+                    type: 'tag',
+                    title: tag.get('name')
+                });
+                signupAttributions.push(body.members[0].attribution);
+            });
+    });
+
+    it('Can read member attributed to an author', async function () {
+        const id = fixtureManager.get('users', 0).id;
+        const author = await models.User.where('id', id).fetch({require: true});
+
+        // Set the attribution for this member manually
+        const member = await membersService.api.members.create({
+            email: 'member-attributed-to-author@test.com',
+            attribution: memberAttributionService.attributionBuilder.build({
+                id,
+                url: '/out-of-date/',
+                type: 'author'
+            })
+        });
+
+        const absoluteUrl = urlService.getUrlByResourceId(author.id, {absolute: true});
+
+        await agent
+            .get(`/members/${member.id}/`)
+            .expectStatus(200)
+            .matchBodySnapshot({
+                members: new Array(1).fill(memberMatcherShallowIncludes)
+            })
+            .matchHeaderSnapshot({
+                etag: anyEtag
+            })
+            .expect(({body}) => {
+                should(body.members[0].attribution).eql({
+                    id: author.id,
+                    url: absoluteUrl,
+                    type: 'author',
+                    title: author.get('name')
+                });
+                signupAttributions.push(body.members[0].attribution);
+            });
+    });
+
+    it('Can read member attributed to an url', async function () {
+        // Set the attribution for this member manually
+        const member = await membersService.api.members.create({
+            email: 'member-attributed-to-url@test.com',
+            attribution: memberAttributionService.attributionBuilder.build({
+                id: null,
+                url: '/a-static-page/',
+                type: 'url'
+            })
+        });
+
+        const absoluteUrl = urlUtils.createUrl('/a-static-page/', true);
+
+        await agent
+            .get(`/members/${member.id}/`)
+            .expectStatus(200)
+            .matchBodySnapshot({
+                members: new Array(1).fill(memberMatcherShallowIncludes)
+            })
+            .matchHeaderSnapshot({
+                etag: anyEtag
+            })
+            .expect(({body}) => {
+                should(body.members[0].attribution).eql({
+                    id: null,
+                    url: absoluteUrl,
+                    type: 'url',
+                    title: '/a-static-page/'
+                });
+                signupAttributions.push(body.members[0].attribution);
+            });
+    });
+
+    // Activity feed
+    it('Returns sign up attributions in activity feed', async function () {
+        // Check activity feed
+        await agent
+            .get(`/members/events/?filter=type:signup_event`)
+            .expectStatus(200)
+            .matchHeaderSnapshot({
+                etag: anyEtag
+            })
+            .matchBodySnapshot({
+                events: new Array(signupAttributions.length).fill({
+                    type: anyString,
+                    data: anyObject
+                })
+            })
+            .expect(({body}) => {
+                should(body.events.find(e => e.type !== 'signup_event')).be.undefined();
+                should(body.events.map(e => e.data.attribution)).containDeep(signupAttributions);
+            });
+    });
+});
+
 describe('Members API', function () {
     let newsletters;
 
@@ -174,13 +401,13 @@ describe('Members API', function () {
     it('Returns comments in activity feed', async function () {
         // Check activity feed
         await agent
-            .get(`/members/events`)
+            .get(`/members/events?filter=type:comment_event`)
             .expectStatus(200)
             .matchHeaderSnapshot({
                 etag: anyEtag
             })
             .matchBodySnapshot({
-                events: new Array(5).fill({
+                events: new Array(2).fill({
                     type: anyString,
                     data: anyObject
                 })
@@ -207,6 +434,30 @@ describe('Members API', function () {
     it('Can browse with filter', async function () {
         await agent
             .get('/members/?filter=label:label-1')
+            .expectStatus(200)
+            .matchBodySnapshot({
+                members: new Array(1).fill(memberMatcherShallowIncludes)
+            })
+            .matchHeaderSnapshot({
+                etag: anyEtag
+            });
+    });
+
+    it('Can filter by signup attribution', async function () {
+        await agent
+            .get('/members/?filter=signup:' + fixtureManager.get('posts', 0).id)
+            .expectStatus(200)
+            .matchBodySnapshot({
+                members: new Array(3).fill(memberMatcherShallowIncludes)
+            })
+            .matchHeaderSnapshot({
+                etag: anyEtag
+            });
+    });
+
+    it('Can filter by signup attribution', async function () {
+        await agent
+            .get('/members/?filter=conversion:' + fixtureManager.get('posts', 0).id)
             .expectStatus(200)
             .matchBodySnapshot({
                 members: new Array(1).fill(memberMatcherShallowIncludes)
@@ -1116,6 +1367,18 @@ describe('Members API', function () {
         assert.equal(browseBody.members.length, 1, 'The member was not found in browse');
         const browseMember = browseBody.members[0];
 
+        // Ignore attribution for now
+        delete readMember.attribution;
+        for (const sub of readMember.subscriptions) {
+            delete sub.attribution;
+        }
+
+        // Ignore attribution for now
+        delete memberWithPaidSubscription.attribution;
+        for (const sub of memberWithPaidSubscription.subscriptions) {
+            delete sub.attribution;
+        }
+
         // Check for this member with a paid subscription that the body results for the patch, get and browse endpoints are 100% identical
         should.deepEqual(browseMember, readMember, 'Browsing a member returns a different format than reading a member');
         should.deepEqual(memberWithPaidSubscription, readMember, 'Editing a member returns a different format than reading a member');
@@ -1541,6 +1804,20 @@ describe('Members API', function () {
 
         await agent
             .get(`/members/${newMember.id}/`)
+            .expectStatus(404)
+            .matchBodySnapshot({
+                errors: [{
+                    id: anyUuid
+                }]
+            })
+            .matchHeaderSnapshot({
+                etag: anyEtag
+            });
+    });
+
+    it('Cannot delete a non-existent member', async function () {
+        await agent
+            .delete('/members/abcd1234abcd1234abcd1234')
             .expectStatus(404)
             .matchBodySnapshot({
                 errors: [{

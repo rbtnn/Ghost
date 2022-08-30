@@ -16,6 +16,7 @@ const FILTER_PROPERTIES = [
     {label: 'Newsletter subscription', name: 'subscribed', group: 'Basic'},
     {label: 'Last seen', name: 'last_seen_at', group: 'Basic', valueType: 'date'},
     {label: 'Created', name: 'created_at', group: 'Basic', valueType: 'date'},
+    {label: 'Signed up on post/page', name: 'signup', group: 'Basic', valueType: 'array', feature: 'memberAttribution'},
 
     // Member subscription
     {label: 'Membership tier', name: 'tier', group: 'Subscription', valueType: 'array'},
@@ -24,6 +25,7 @@ const FILTER_PROPERTIES = [
     {label: 'Stripe subscription status', name: 'subscriptions.status', group: 'Subscription'},
     {label: 'Paid start date', name: 'subscriptions.start_date', valueType: 'date', group: 'Subscription'},
     {label: 'Next billing date', name: 'subscriptions.current_period_end', valueType: 'date', group: 'Subscription'},
+    {label: 'Subscription started on post/page', name: 'conversion', group: 'Subscription', valueType: 'array', feature: 'memberAttribution'},
 
     // Emails
     {label: 'Emails sent (all time)', name: 'email_count', group: 'Email'},
@@ -82,7 +84,9 @@ const FILTER_RELATIONS_OPTIONS = {
     'subscriptions.current_period_end': DATE_RELATION_OPTIONS,
     email_count: NUMBER_RELATION_OPTIONS,
     email_opened_count: NUMBER_RELATION_OPTIONS,
-    email_open_rate: NUMBER_RELATION_OPTIONS
+    email_open_rate: NUMBER_RELATION_OPTIONS,
+    signup: MATCH_RELATION_OPTIONS,
+    conversion: MATCH_RELATION_OPTIONS
 };
 
 const FILTER_VALUE_OPTIONS = {
@@ -186,11 +190,27 @@ export default class MembersFilter extends Component {
     constructor(...args) {
         super(...args);
 
+        this.parseDefaultFilters();
+        this.fetchTiers.perform();
+    }
+
+    /**
+     * This method is not super clean as it uses did-update, but for now this is required to make URL changes work
+     * properly. 
+     * Problem: filter parameter is changed in the members controller by modifying the URL directly
+     * -> the filters property is not updated in the members controller because the new parameter is not parsed again
+     * -> we need to listen for changes in the property and parse it again
+     * -> better future proof solution: move the filter parsing logic elsewhere so it can be parsed in the members controller
+     */
+    @action
+    parseDefaultFilters() {
         if (this.args.defaultFilterParam) {
             this.parseNqlFilter(this.args.defaultFilterParam);
-        }
 
-        this.fetchTiers.perform();
+            // Pass the parsed filter to the parent component
+            // this doesn't start a new network request, and doesn't update filterParam again
+            this.applyParsedFilter();
+        }
     }
 
     @action
@@ -325,6 +345,12 @@ export default class MembersFilter extends Component {
             value = nqlValue;
         }
 
+        if (typeof value === 'boolean' || typeof value === 'number') {
+            // Transform it to a string, to keep it compatible with the internally used value in admin
+            // + make sure false and 0 are truthy
+            value = value.toString();
+        }
+
         if (relation && value) {
             return new Filter({
                 type: key,
@@ -338,14 +364,25 @@ export default class MembersFilter extends Component {
 
     parseNqlFilter(filterParam) {
         const validKeys = Object.keys(FILTER_RELATIONS_OPTIONS);
-        const filters = nql.parse(filterParam);
+        let filters;
+
+        try {
+            filters = nql.parse(filterParam);
+        } catch (e) {
+            // Invalid nql filter
+            this.filters = new TrackedArray([]);
+            return;
+        }
+
         const filterKeys = Object.keys(filters);
 
         let filterData = [];
 
         if (filterKeys?.length === 1 && validKeys.includes(filterKeys[0])) {
             const filterObj = this.parseNqlFilterKey(filters);
-            filterData = [filterObj];
+            if (filterObj) {
+                filterData = [filterObj];
+            }
         } else if (filters?.$and) {
             const andFilters = filters?.$and || [];
             filterData = andFilters.filter((nqlFilter) => {
@@ -456,11 +493,8 @@ export default class MembersFilter extends Component {
     @action
     applySoftFilter() {
         const validFilters = this.filters.filter((filter) => {
-            if (filter.type === 'label') {
-                return filter.value?.length;
-            }
-            if (filter.type === 'tier') {
-                return filter.value?.length;
+            if (Array.isArray(filter.value)) {
+                return filter.value.length;
             }
             return filter.value;
         });
@@ -471,14 +505,26 @@ export default class MembersFilter extends Component {
     @action
     applyFilter() {
         const validFilters = this.filters.filter((filter) => {
-            if (['label', 'tier'].includes(filter.type)) {
-                return filter.value?.length;
+            if (Array.isArray(filter.value)) {
+                return filter.value.length;
             }
             return filter.value;
         });
 
         const query = this.generateNqlFilter(validFilters);
         this.args.onApplyFilter(query, validFilters);
+    }
+
+    @action
+    applyParsedFilter() {
+        const validFilters = this.filters.filter((filter) => {
+            if (Array.isArray(filter.value)) {
+                return filter.value.length;
+            }
+            return filter.value;
+        });
+
+        this.args.onApplyParsedFilter(validFilters);
     }
 
     @action

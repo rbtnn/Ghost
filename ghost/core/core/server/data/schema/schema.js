@@ -149,6 +149,9 @@ module.exports = {
         tour: {type: 'text', maxlength: 65535, nullable: true},
         last_seen: {type: 'dateTime', nullable: true},
         comment_notifications: {type: 'boolean', nullable: false, defaultTo: true},
+        free_member_signup_notification: {type: 'boolean', nullable: false, defaultTo: true},
+        paid_subscription_started_notification: {type: 'boolean', nullable: false, defaultTo: true},
+        paid_subscription_canceled_notification: {type: 'boolean', nullable: false, defaultTo: false},
         created_at: {type: 'dateTime', nullable: false},
         created_by: {type: 'string', maxlength: 24, nullable: false},
         updated_at: {type: 'dateTime', nullable: true},
@@ -480,9 +483,17 @@ module.exports = {
         created_at: {type: 'dateTime', nullable: false},
         member_id: {type: 'string', maxlength: 24, nullable: false, references: 'members.id', cascadeDelete: true},
         attribution_id: {type: 'string', maxlength: 24, nullable: true},
-        attribution_type: {type: 'string', maxlength: 50, nullable: true},
+        attribution_type: {
+            type: 'string', maxlength: 50, nullable: true, validations: {
+                isIn: [['url', 'post', 'page', 'author', 'tag']]
+            }
+        },
         attribution_url: {type: 'string', maxlength: 2000, nullable: true},
-        source: {type: 'string', maxlength: 50, nullable: false}
+        source: {
+            type: 'string', maxlength: 50, nullable: false, validations: {
+                isIn: [['member', 'import', 'system', 'api', 'admin']]
+            }
+        }
     },
     members_cancel_events: {
         id: {type: 'string', maxlength: 24, nullable: false, primary: true},
@@ -610,7 +621,11 @@ module.exports = {
         member_id: {type: 'string', maxlength: 24, nullable: false, references: 'members.id', cascadeDelete: true},
         subscription_id: {type: 'string', maxlength: 24, nullable: false, references: 'members_stripe_customers_subscriptions.id', cascadeDelete: true},
         attribution_id: {type: 'string', maxlength: 24, nullable: true},
-        attribution_type: {type: 'string', maxlength: 50, nullable: true},
+        attribution_type: {
+            type: 'string', maxlength: 50, nullable: true, validations: {
+                isIn: [['url', 'post', 'page', 'author', 'tag']]
+            }
+        },
         attribution_url: {type: 'string', maxlength: 2000, nullable: true}
     },
     offer_redemptions: {
@@ -625,7 +640,11 @@ module.exports = {
         member_id: {type: 'string', maxlength: 24, nullable: false, unique: false, references: 'members.id', cascadeDelete: true},
         subscribed: {type: 'bool', nullable: false, defaultTo: true},
         created_at: {type: 'dateTime', nullable: false},
-        source: {type: 'string', maxlength: 50, nullable: true},
+        source: {
+            type: 'string', maxlength: 50, nullable: true, validations: {
+                isIn: [['member', 'import', 'system', 'api', 'admin']]
+            }
+        },
         newsletter_id: {type: 'string', maxlength: 24, nullable: true, references: 'newsletters.id', cascadeDelete: false}
     },
     stripe_products: {

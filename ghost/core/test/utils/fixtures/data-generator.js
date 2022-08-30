@@ -1531,6 +1531,17 @@ DataGenerator.forKnex = (function () {
         createMember(DataGenerator.Content.members[7])
     ];
 
+    const members_created_events = members.map((member, index) => {
+        return {
+            id: ObjectId().toHexString(),
+            member_id: member.id,
+            source: 'system',
+            attribution_type: 'post',
+            attribution_id: DataGenerator.Content.posts[index % 3].id,
+            attribution_url: '/' + DataGenerator.Content.posts[index % 3].slug
+        };
+    });
+
     const newsletters = [
         createNewsletter(DataGenerator.Content.newsletters[0]),
         createNewsletter(DataGenerator.Content.newsletters[1]),
@@ -1590,6 +1601,18 @@ DataGenerator.forKnex = (function () {
         createBasic(DataGenerator.Content.members_stripe_customers_subscriptions[1]),
         createBasic(DataGenerator.Content.members_stripe_customers_subscriptions[2])
     ];
+
+    const members_subscription_created_events = stripe_customer_subscriptions.map((subscription, index) => {
+        return {
+            id: ObjectId().toHexString(),
+            member_id: members[index].id,
+            subscription_id: subscription.id,
+            source: 'system',
+            attribution_type: 'post',
+            attribution_id: DataGenerator.Content.posts[index % 3].id,
+            attribution_url: '/' + DataGenerator.Content.posts[index % 3].slug
+        };
+    });
 
     const members_paid_subscription_events = [
         createBasic(DataGenerator.Content.members_paid_subscription_events[0]),
@@ -1672,7 +1695,9 @@ DataGenerator.forKnex = (function () {
         custom_theme_settings,
         comments,
 
-        members_paid_subscription_events
+        members_paid_subscription_events,
+        members_created_events,
+        members_subscription_created_events
     };
 }());
 

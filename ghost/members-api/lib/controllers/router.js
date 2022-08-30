@@ -27,6 +27,7 @@ module.exports = class RouterController {
      * @param {import('@tryghost/members-stripe-service')} deps.stripeAPIService
      * @param {import('@tryghost/member-attribution')} deps.memberAttributionService
      * @param {any} deps.tokenService
+     * @param {any} deps.sendEmailWithMagicLink
      * @param {{isSet(name: string): boolean}} deps.labsService
      */
     constructor({
@@ -109,8 +110,10 @@ module.exports = class RouterController {
             });
 
             if (!subscription) {
-                res.writeHead(404);
-                res.end(`Could not find subscription ${req.body.subscription_id}`);
+                res.writeHead(404, {
+                    'Content-Type': 'text/plain;charset=UTF-8'
+                });
+                return res.end(`Could not find subscription ${req.body.subscription_id}`);
             }
             customer = await this._stripeAPIService.getCustomer(subscription.get('customer_id'));
         }
@@ -202,7 +205,7 @@ module.exports = class RouterController {
         delete metadata.attribution_id;
         delete metadata.attribution_url;
         delete metadata.attribution_type;
-        
+
         if (metadata.urlHistory) {
             // The full attribution history doesn't fit in the Stripe metadata (can't store objects + limited to 50 keys and 500 chars values)
             // So we need to add top-level attributes with string values
@@ -319,7 +322,13 @@ module.exports = class RouterController {
             return res.end(JSON.stringify(sessionInfo));
         }
 
-        if (member.related('products').length !== 0) {
+        let restrictCheckout = false;
+        if (!this.labsService.isSet('compExpiring')) {
+            restrictCheckout = member.related('products').length !== 0;
+        } else {
+            restrictCheckout = member.get('status') === 'paid';
+        }
+        if (restrictCheckout) {
             if (!identity && req.body.customerEmail) {
                 try {
                     await this._sendEmailWithMagicLink({email: req.body.customerEmail, requestedType: 'signin'});
@@ -395,7 +404,9 @@ module.exports = class RouterController {
                 }
             } else {
                 const tokenData = _.pick(req.body, ['labels', 'name', 'newsletters']);
-
+                if (req.ip) {
+                    tokenData.reqIp = req.ip;
+                }
                 // Save attribution data in the tokenData
                 tokenData.attribution = this._memberAttributionService.getAttribution(req.body.urlHistory);
 

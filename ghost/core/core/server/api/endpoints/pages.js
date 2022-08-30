@@ -2,7 +2,7 @@ const models = require('../../models');
 const tpl = require('@tryghost/tpl');
 const errors = require('@tryghost/errors');
 const getPostServiceInstance = require('../../services/posts/posts-service');
-const ALLOWED_INCLUDES = ['tags', 'authors', 'authors.roles', 'tiers'];
+const ALLOWED_INCLUDES = ['tags', 'authors', 'authors.roles', 'tiers', 'count.signups', 'count.conversions'];
 const UNSAFE_ATTRS = ['status', 'authors', 'visibility'];
 
 const messages = {
@@ -186,15 +186,7 @@ module.exports = {
             unsafeAttrs: UNSAFE_ATTRS
         },
         query(frame) {
-            frame.options.require = true;
-
-            return models.Post.destroy(frame.options)
-                .then(() => null)
-                .catch(models.Post.NotFoundError, () => {
-                    return Promise.reject(new errors.NotFoundError({
-                        message: tpl(messages.pageNotFound)
-                    }));
-                });
+            return models.Post.destroy({...frame.options, require: true});
         }
     }
 };

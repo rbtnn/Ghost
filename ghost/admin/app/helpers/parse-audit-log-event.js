@@ -8,15 +8,15 @@ export default class ParseAuditLogEvent extends Helper {
         const action = getAction(ev);
         const actionIcon = getActionIcon(ev);
         const getActor = () => this.store.findRecord(ev.actor_type, ev.actor_id, {reload: false});
-        const getResource = () => this.store.findRecord(ev.resource_type, ev.resource_id, {reload: false});
+        const contextResource = getContextResource(ev);
+        const linkTarget = getLinkTarget(ev);
 
         return {
             get actor() {
                 return getActor();
             },
-            get resource() {
-                return getResource();
-            },
+            contextResource,
+            linkTarget,
             actionIcon,
             action,
             original: ev
@@ -24,19 +24,111 @@ export default class ParseAuditLogEvent extends Helper {
     }
 }
 
+function getLinkTarget(ev) {
+    let resourceType = ev.resource_type;
+
+    if (ev.event !== 'deleted') {
+        switch (ev.resource_type) {
+        case 'page':
+        case 'post':
+            if (!ev.resource.id) {
+                return null;
+            }
+
+            if (resourceType === 'post') {
+                if (ev.context?.type) {
+                    resourceType = ev.context?.type;
+                }
+            }
+
+            return {
+                route: 'editor.edit',
+                models: [resourceType, ev.resource.id]
+            };
+        case 'integration':
+            if (!ev.resource.id) {
+                return null;
+            }
+
+            return {
+                route: 'settings.integration',
+                models: [ev.resource.id]
+            };
+        case 'offer':
+            if (!ev.resource.id) {
+                return null;
+            }
+
+            return {
+                route: 'offer',
+                models: [ev.resource.id]
+            };
+        case 'tag':
+            if (!ev.resource.slug) {
+                return null;
+            }
+
+            return {
+                route: 'tag',
+                models: [ev.resource.slug]
+            };
+        case 'user':
+            if (!ev.resource.slug) {
+                return null;
+            }
+
+            return {
+                route: 'settings.staff.user',
+                models: [ev.resource.slug]
+            };
+        }
+    }
+
+    return null;
+}
+
 function getActionIcon(ev) {
     switch (ev.event) {
     case 'added':
-        return 'add-stroke';
+        return 'add';
     case 'edited':
-        return 'content';
+        return 'pen';
     case 'deleted':
-        return 'cross-circle';
+        return 'trash';
     }
 
     return 'info';
 }
 
 function getAction(ev) {
-    return `${ev.event} ${ev.resource_type}`;
+    let resourceType = ev.resource_type;
+
+    if (resourceType === 'api_key') {
+        resourceType = 'API key';
+    } else if (resourceType === 'setting') {
+        resourceType = 'settings';
+    }
+
+    // Because a `page` and `post` both use the same model, we store the
+    // actual type in the context, so let's check if that exists
+    if (resourceType === 'post') {
+        if (ev.context?.type) {
+            resourceType = ev.context?.type;
+        }
+    }
+
+    return `${resourceType} ${ev.event}`;
+}
+
+function getContextResource(ev) {
+    if (ev.resource_type === 'setting') {
+        if (ev.context?.group && ev.context?.key) {
+            return {
+                first: ev.context.group,
+                second: ev.context.key
+            };
+        }
+    }
+
+    return null;
 }

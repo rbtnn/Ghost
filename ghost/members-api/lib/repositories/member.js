@@ -38,6 +38,7 @@ module.exports = class MemberRepository {
      * @param {any} deps.OfferRedemption
      * @param {import('../../services/stripe-api')} deps.stripeAPIService
      * @param {any} deps.labsService
+     * @param {any} deps.staffService
      * @param {any} deps.productRepository
      * @param {any} deps.offerRepository
      * @param {ITokenService} deps.tokenService
@@ -59,6 +60,7 @@ module.exports = class MemberRepository {
         productRepository,
         offerRepository,
         tokenService,
+        staffService,
         newslettersService
     }) {
         this._Member = Member;
@@ -74,6 +76,7 @@ module.exports = class MemberRepository {
         this._productRepository = productRepository;
         this._offerRepository = offerRepository;
         this.tokenService = tokenService;
+        this.staffService = staffService;
         this._newslettersService = newslettersService;
         this._labsService = labsService;
 
@@ -96,6 +99,29 @@ module.exports = class MemberRepository {
 
     isComplimentarySubscription(subscription) {
         return subscription.plan && subscription.plan.nickname && subscription.plan.nickname.toLowerCase() === 'complimentary';
+    }
+
+    /**
+     * Maps the framework context to members_*.source table record value
+     * @param {Object} context instance of ghost framework context object
+     * @returns {'import' | 'system' | 'api' | 'admin' | 'member'}
+     */
+    _resolveContextSource(context) {
+        let source;
+
+        if (context.import || context.importer) {
+            source = 'import';
+        } else if (context.internal) {
+            source = 'system';
+        } else if (context.api_key) {
+            source = 'api';
+        } else if (context.user) {
+            source = 'admin';
+        } else {
+            source = 'member';
+        }
+
+        return source;
     }
 
     getMRR({interval, amount, status = null, canceled = false, discount = null}) {
@@ -169,19 +195,19 @@ module.exports = class MemberRepository {
 
     /**
      * Create a member
-     * @param {Object} data 
+     * @param {Object} data
      * @param {string} data.email
      * @param {string} [data.name]
      * @param {string} [data.note]
      * @param {(string|Object)[]} [data.labels]
      * @param {boolean} [data.subscribed] (deprecated)
-     * @param {string} [data.geolocation] 
+     * @param {string} [data.geolocation]
      * @param {Date} [data.created_at]
      * @param {Object[]} [data.products]
      * @param {Object[]} [data.newsletters]
      * @param {import('@tryghost/member-attribution/lib/history').Attribution} [data.attribution]
-     * @param {*} options 
-     * @returns 
+     * @param {*} options
+     * @returns
      */
     async create(data, options) {
         if (!options) {
@@ -250,19 +276,7 @@ module.exports = class MemberRepository {
         }
 
         const context = options && options.context || {};
-        let source;
-
-        if (context.import || context.importer) {
-            source = 'import';
-        } else if (context.internal) {
-            source = 'system';
-        } else if (context.user) {
-            source = 'admin';
-        } else if (context.api_key) {
-            source = 'api';
-        } else {
-            source = 'member';
-        }
+        const source = this._resolveContextSource(context);
 
         const eventData = _.pick(data, ['created_at']);
 
@@ -473,16 +487,7 @@ module.exports = class MemberRepository {
 
         // Add subscribe events for all (un)subscribed newsletters
         const context = options && options.context || {};
-        let source;
-        if (context.internal) {
-            source = 'system';
-        } else if (context.user) {
-            source = 'admin';
-        } else if (context.api_key) {
-            source = 'api';
-        } else {
-            source = 'member';
-        }
+        const source = this._resolveContextSource(context);
 
         for (const newsletterToAdd of newslettersToAdd) {
             await this._MemberSubscribeEvent.add({
@@ -811,15 +816,18 @@ module.exports = class MemberRepository {
 
         // For trial offers, offer id is passed from metadata as there is no stripe coupon
         let offerId = data.offerId || null;
+        let offer = null;
 
         if (stripeCouponId) {
             // Get the offer from our database
-            const offer = await this._offerRepository.getByStripeCouponId(stripeCouponId, {transacting: options.transacting});
+            offer = await this._offerRepository.getByStripeCouponId(stripeCouponId, {transacting: options.transacting});
             if (offer) {
                 offerId = offer.id;
             } else {
                 logging.error(`Received an unknown stripe coupon id (${stripeCouponId}) for subscription - ${subscription.id}.`);
             }
+        } else if (offerId) {
+            offer = await this._offerRepository.getById(offerId, {transacting: options.transacting});
         }
 
         const subscriptionData = {
@@ -930,6 +938,16 @@ module.exports = class MemberRepository {
                 mrr_delta: model.get('mrr'),
                 ...eventData
             }, options);
+
+            // Notify paid member subscription start
+            if (this._labsService.isSet('emailAlerts')) {
+                await this.staffService.notifyPaidSubscriptionStart({
+                    member: member.toJSON(),
+                    offer: offer ? this._offerRepository.toJSON(offer) : null,
+                    tier: ghostProduct?.toJSON(),
+                    subscription: subscriptionData
+                }, {transacting: options.transacting, forUpdate: true});
+            }
         }
 
         let memberProducts = (await member.related('products').fetch(options)).toJSON();
@@ -941,39 +959,46 @@ module.exports = class MemberRepository {
             } else {
                 status = 'paid';
             }
-            // This is an active subscription! Add the product
-            if (ghostProduct) {
-                memberProducts.push(ghostProduct.toJSON());
-            }
-            if (model) {
-                if (model.get('stripe_price_id') !== subscriptionData.stripe_price_id) {
-                    // The subscription has changed plan - we may need to update the products
+            if (this._labsService.isSet('compExpiring')) {
+                // This is an active subscription! Update member to have only this product
+                if (ghostProduct) {
+                    memberProducts = [ghostProduct.toJSON()];
+                }
+            } else {
+                // This is an active subscription! Add the product
+                if (ghostProduct) {
+                    memberProducts.push(ghostProduct.toJSON());
+                }
+                if (model) {
+                    if (model.get('stripe_price_id') !== subscriptionData.stripe_price_id) {
+                        // The subscription has changed plan - we may need to update the products
 
-                    const subscriptions = await member.related('stripeSubscriptions').fetch(options);
-                    const changedProduct = await this._productRepository.get({
-                        stripe_price_id: model.get('stripe_price_id')
-                    }, options);
+                        const subscriptions = await member.related('stripeSubscriptions').fetch(options);
+                        const changedProduct = await this._productRepository.get({
+                            stripe_price_id: model.get('stripe_price_id')
+                        }, options);
 
-                    let activeSubscriptionForChangedProduct = false;
+                        let activeSubscriptionForChangedProduct = false;
 
-                    for (const subscription of subscriptions.models) {
-                        if (this.isActiveSubscriptionStatus(subscription.get('status'))) {
-                            try {
-                                const subscriptionProduct = await this._productRepository.get({stripe_price_id: subscription.get('stripe_price_id')}, options);
-                                if (subscriptionProduct && changedProduct && subscriptionProduct.id === changedProduct.id) {
-                                    activeSubscriptionForChangedProduct = true;
+                        for (const subscription of subscriptions.models) {
+                            if (this.isActiveSubscriptionStatus(subscription.get('status'))) {
+                                try {
+                                    const subscriptionProduct = await this._productRepository.get({stripe_price_id: subscription.get('stripe_price_id')}, options);
+                                    if (subscriptionProduct && changedProduct && subscriptionProduct.id === changedProduct.id) {
+                                        activeSubscriptionForChangedProduct = true;
+                                    }
+                                } catch (e) {
+                                    logging.error(`Failed to attach products to member - ${data.id}`);
+                                    logging.error(e);
                                 }
-                            } catch (e) {
-                                logging.error(`Failed to attach products to member - ${data.id}`);
-                                logging.error(e);
                             }
                         }
-                    }
 
-                    if (!activeSubscriptionForChangedProduct) {
-                        memberProducts = memberProducts.filter((product) => {
-                            return product.id !== changedProduct.id;
-                        });
+                        if (!activeSubscriptionForChangedProduct) {
+                            memberProducts = memberProducts.filter((product) => {
+                                return product.id !== changedProduct.id;
+                            });
+                        }
                     }
                 }
             }
@@ -1178,6 +1203,22 @@ module.exports = class MemberRepository {
                     member_id: member.id,
                     from_plan: subscriptionModel.get('plan_id')
                 }, sharedOptions);
+
+                if (this._labsService.isSet('emailAlerts')) {
+                    const subscriptionPriceData = _.get(updatedSubscription, 'items.data[0].price');
+                    let ghostProduct;
+                    try {
+                        ghostProduct = await this._productRepository.get({stripe_product_id: subscriptionPriceData.product}, {...sharedOptions, forUpdate: true});
+                    } catch (e) {
+                        ghostProduct = null;
+                    }
+                    await this.staffService.notifyPaidSubscriptionCancel({
+                        member: member.toJSON(),
+                        subscription: updatedSubscription,
+                        cancellationReason: data.subscription.cancellationReason,
+                        tier: ghostProduct?.toJSON()
+                    });
+                }
             } else {
                 updatedSubscription = await this._stripeAPIService.continueSubscriptionAtPeriodEnd(
                     data.subscription.subscription_id

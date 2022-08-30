@@ -1,30 +1,28 @@
 /**
- * @typedef {UrlHistoryItem[]} UrlHistoryArray
- */
-
-/**
  * @typedef {Object} UrlHistoryItem
  * @prop {string} path
  * @prop {number} time
  */
 
 /**
+ * @typedef {UrlHistoryItem[]} UrlHistoryArray
+ */
+
+/**
  * Represents a validated history
  */
 class UrlHistory {
+    /**
+     * @private
+     * @param {UrlHistoryArray} urlHistory
+     */
     constructor(urlHistory) {
-        this.history = urlHistory && UrlHistory.isValidHistory(urlHistory) ? urlHistory : [];
+        /** @private */
+        this.history = urlHistory;
     }
 
     get length() {
         return this.history.length;
-    }
-
-    get last() {
-        if (this.length === 0) {
-            return undefined;
-        }
-        return this.history[this.history.length - 1];
     }
 
     /**
@@ -34,13 +32,45 @@ class UrlHistory {
         yield* this.history.slice().reverse();
     }
 
+    /**
+     * @private
+     * @param {any[]} history
+     * @returns {boolean}
+     */
     static isValidHistory(history) {
-        return Array.isArray(history) && !history.find(item => !this.isValidHistoryItem(item));
+        for (const item of history) {
+            if (typeof item?.path !== 'string' || !Number.isSafeInteger(item?.time)) {
+                return false;
+            }
+        }
+        return true;
     }
 
-    static isValidHistoryItem(item) {
-        return !!item && !!item.path && !!item.time && typeof item.path === 'string' && typeof item.time === 'number' && Number.isSafeInteger(item.time);
+    /**
+     * @param {unknown} urlHistory
+     * @returns {UrlHistory}
+     */
+    static create(urlHistory) {
+        if (!Array.isArray(urlHistory)) {
+            return new UrlHistory([]);
+        }
+
+        if (!this.isValidHistory(urlHistory)) {
+            return new UrlHistory([]);
+        }
+
+        const now = Date.now();
+        const filteredHistory = urlHistory.filter((item) => {
+            return now - item.time < this.MAX_AGE;
+        });
+
+        return new UrlHistory(filteredHistory);
     }
+
+    /**
+     * @private
+     */
+    static MAX_AGE = 1000 * 60 * 60 * 24;
 }
 
 module.exports = UrlHistory;

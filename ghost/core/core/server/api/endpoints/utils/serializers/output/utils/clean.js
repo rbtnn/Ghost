@@ -32,6 +32,9 @@ const author = (attrs, frame) => {
         delete attrs.status;
         delete attrs.email;
         delete attrs.comment_notifications;
+        delete attrs.free_member_signup_notification;
+        delete attrs.paid_subscription_started_notification;
+        delete attrs.paid_subscription_canceled_notification;
 
         // @NOTE: used for night shift
         delete attrs.accessibility;
@@ -130,9 +133,6 @@ const post = (attrs, frame) => {
 
 const action = (attrs) => {
     if (attrs.actor) {
-        delete attrs.actor_id;
-        delete attrs.resource_id;
-
         if (attrs.actor_type === 'user') {
             attrs.actor = _.pick(attrs.actor, ['id', 'name', 'slug', 'profile_image']);
             attrs.actor.image = attrs.actor.profile_image;
@@ -142,12 +142,11 @@ const action = (attrs) => {
             attrs.actor.image = attrs.actor.icon_image;
             delete attrs.actor.icon_image;
         }
-    } else if (attrs.resource) {
-        delete attrs.actor_id;
-        delete attrs.resource_id;
+    }
 
+    if (attrs.resource) {
         // @NOTE: we only support posts right now
-        attrs.resource = _.pick(attrs.resource, ['id', 'title', 'slug', 'feature_image']);
+        attrs.resource = _.pick(attrs.resource, ['id', 'title', 'slug', 'feature_image', 'name']);
         attrs.resource.image = attrs.resource.feature_image;
         delete attrs.resource.feature_image;
     }
