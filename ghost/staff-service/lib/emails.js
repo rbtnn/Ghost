@@ -190,7 +190,7 @@ class StaffServiceEmails {
             return 0;
         }
 
-        return amount / 100;
+        return amount;
     }
 
     /** @private */
