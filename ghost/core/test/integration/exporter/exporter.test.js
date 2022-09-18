@@ -61,6 +61,7 @@ describe('Exporter', function () {
                 'permissions',
                 'permissions_roles',
                 'permissions_users',
+                'post_revisions',
                 'posts',
                 'posts_authors',
                 'posts_meta',
@@ -96,6 +97,7 @@ describe('Exporter', function () {
             const excludedTables = [
                 'sessions',
                 'mobiledoc_revisions',
+                'post_revisions',
                 'email_batches',
                 'email_recipients',
                 'members_cancel_events',

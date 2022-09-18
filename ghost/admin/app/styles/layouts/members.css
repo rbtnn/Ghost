@@ -1373,7 +1373,6 @@ p.gh-members-import-errorcontext {
 .gh-members-import-scrollarea {
     position: relative;
     max-height: calc(100vh - 350px - 12vw);
-    min-height: 175px;
     overflow-y: scroll;
     margin: 0 -32px;
     padding: 0 32px;
@@ -1488,6 +1487,11 @@ p.gh-members-import-errordetailtext {
 
 .gh-members-import-table tr:last-of-type td {
     border-bottom: 1px solid var(--member-import-table-outline);
+}
+
+.gh-members-import-table td span,
+.gh-members-import-table th span {
+    user-select: none !important;
 }
 
 .gh-members-import-datanav {
@@ -1630,6 +1634,17 @@ p.gh-members-import-errordetail:first-of-type {
 .gh-member-import-icon-confetti circle,
 .gh-member-import-icon-confetti ellipse {
     stroke-width: 0.85px;
+}
+
+.gh-import-member-icon {
+    color: var(--darkgrey);
+    width: 54px !important;
+    height: 54px !important;
+    margin-right: -8px;
+}
+
+.gh-import-member-icon * {
+    stroke-width: 0.8px !important;
 }
 
 /* Fixing Firefox's select padding */
