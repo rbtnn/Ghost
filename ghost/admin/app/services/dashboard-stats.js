@@ -26,15 +26,15 @@ import {tracked} from '@glimmer/tracking';
  * @type {Object}
  * @property {string} date The date (YYYY-MM-DD) on which these counts were recorded
  * @property {number} source Attribution Source
- * @property {number} freeSignups Total free members signed up for this source
+ * @property {number} signups Total free members signed up for this source
  * @property {number} paidConversions Total paid conversions for this source
  */
 
 /**
- * @typedef SourceAttributionCounts
+ * @typedef SourceAttributionCount
  * @type {Object}
- * @property {number} source Attribution Source
- * @property {number} freeSignups Total free members signed up for this source
+ * @property {string} source Attribution Source
+ * @property {number} signups Total free members signed up for this source
  * @property {number} paidConversions Total paid conversions for this source
  */
 
@@ -233,7 +233,7 @@ export default class DashboardStatsService extends Service {
     }
 
     /**
-     * @type {?SourceAttributionCounts}
+     * @type {SourceAttributionCount[]}
      */
     get memberSourceAttributionCounts() {
         if (!this.memberAttributionStats) {
@@ -248,17 +248,19 @@ export default class DashboardStatsService extends Service {
         }).reduce((acc, stat) => {
             const existingSource = acc.find(s => s.source === stat.source);
             if (existingSource) {
-                existingSource.freeSignups += stat.freeSignups || 0;
+                existingSource.signups += stat.signups || 0;
                 existingSource.paidConversions += stat.paidConversions || 0;
             } else {
                 acc.push({
                     source: stat.source,
-                    freeSignups: stat.freeSignups || 0,
+                    signups: stat.signups || 0,
                     paidConversions: stat.paidConversions || 0
                 });
             }
             return acc;
-        }, []);
+        }, []).sort((a, b) => {
+            return b.signups - a.signups;
+        });
     }
 
     get currentMRRTrend() {
@@ -323,13 +325,17 @@ export default class DashboardStatsService extends Service {
             return {
                 count: obj.count,
                 positiveDelta: 0,
-                negativeDelta: 0
+                negativeDelta: 0,
+                signups: 0,
+                cancellations: 0
             };
         }
         return this.fillMissingDates(this.subscriptionCountStats, {
             positiveDelta: 0,
             negativeDelta: 0,
-            count: 0
+            count: 0,
+            signups: 0,
+            cancellations: 0
         }, copyData, this.chartDays);
     }
 
@@ -541,14 +547,22 @@ export default class DashboardStatsService extends Service {
      */
      @task
     *_loadMemberAttributionStats() {
-        this.memberAttributionStats = null;
+        this.memberAttributionStats = [];
 
         if (this.dashboardMocks.enabled) {
             yield this.dashboardMocks.waitRandom();
             this.memberAttributionStats = this.dashboardMocks.memberAttributionStats;
             return;
         }
-        return;
+        let statsUrl = this.ghostPaths.url.api('stats/referrers');
+        let stats = yield this.ajax.request(statsUrl);
+
+        this.memberAttributionStats = stats.stats.map((stat) => {
+            return {
+                ...stat,
+                paidConversions: stat.paid_conversions
+            };
+        });
     }
 
      loadMrrStats() {

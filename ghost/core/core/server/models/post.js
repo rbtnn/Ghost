@@ -26,7 +26,11 @@ const messages = {
     expectedPublishedAtInFuture: 'Date must be at least {cannotScheduleAPostBeforeInMinutes} minutes in the future.',
     untitled: '(Untitled)',
     notEnoughPermission: 'You do not have permission to perform this action',
-    invalidNewsletter: 'The newsletter parameter doesn\'t match any active newsletter.'
+    invalidNewsletter: 'The newsletter parameter doesn\'t match any active newsletter.',
+    invalidMobiledocStructure: 'Invalid mobiledoc structure.',
+    invalidMobiledocStructureHelp: 'https://ghost.org/docs/publishing/',
+    invalidLexicalStructure: 'Invalid lexical structure.',
+    invalidLexicalStructureHelp: 'https://ghost.org/docs/publishing/'
 };
 
 const MOBILEDOC_REVISIONS_COUNT = 10;
@@ -130,6 +134,7 @@ Post = ghostBookshelf.Model.extend({
         // transform URLs from __GHOST_URL__ to absolute
         [
             'mobiledoc',
+            'lexical',
             'html',
             'plaintext',
             'custom_excerpt',
@@ -158,6 +163,7 @@ Post = ghostBookshelf.Model.extend({
                     cardTransformers: mobiledocLib.cards
                 }
             },
+            lexical: 'lexicalToTransformReady',
             html: 'htmlToTransformReady',
             plaintext: 'plaintextToTransformReady',
             custom_excerpt: 'htmlToTransformReady',
@@ -623,7 +629,7 @@ Post = ghostBookshelf.Model.extend({
                 this.set('html', mobiledocLib.mobiledocHtmlRenderer.render(JSON.parse(this.get('mobiledoc'))));
             } catch (err) {
                 throw new errors.ValidationError({
-                    message: 'Invalid mobiledoc structure.',
+                    message: tpl(messages.invalidMobiledocStructure),
                     help: 'https://ghost.org/docs/publishing/'
                 });
             }
@@ -644,9 +650,10 @@ Post = ghostBookshelf.Model.extend({
                 this.set('html', lexicalLib.lexicalHtmlRenderer.render(this.get('lexical')));
             } catch (err) {
                 throw new errors.ValidationError({
-                    message: 'Invalid lexical structure.',
-                    help: 'https://ghost.org/docs/publishing/',
-                    property: 'lexical'
+                    message: tpl(messages.invalidLexicalStructure),
+                    context: err.message,
+                    property: 'lexical',
+                    help: tpl(messages.invalidLexicalStructureHelp)
                 });
             }
         }
@@ -1337,6 +1344,15 @@ Post = ghostBookshelf.Model.extend({
                         .from('members_subscription_created_events')
                         .whereRaw('posts.id = members_subscription_created_events.attribution_id')
                         .as('count__conversions');
+                });
+            },
+            clicks(modelOrCollection) {
+                modelOrCollection.query('columns', 'posts.*', (qb) => {
+                    qb.countDistinct('members_link_click_events.member_id')
+                        .from('members_link_click_events')
+                        .join('link_redirects', 'members_link_click_events.link_id', 'link_redirects.id')
+                        .whereRaw('posts.id = link_redirects.post_id')
+                        .as('count__clicks');
                 });
             }
         };

@@ -62,11 +62,15 @@
             </div>
 
             {{#if this.hasPaidTiers}}
+                {{#if (feature "sourceAttribution")}}
+
+                {{else}}
                 <article class="gh-dashboard-minicharts">
                     <Dashboard::Charts::PaidMrr />
                     <Dashboard::Charts::PaidBreakdown />
                     <Dashboard::Charts::PaidMix />
                 </article>
+                {{/if}}
             {{/if}}
         </div>
 

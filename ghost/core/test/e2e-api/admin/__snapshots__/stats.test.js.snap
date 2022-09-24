@@ -125,3 +125,41 @@ Object {
   "x-powered-by": "Express",
 }
 `;
+
+exports[`Stats API Post attribution stats Can fetch attribution stats 1: [body] 1`] = `
+Object {
+  "meta": Object {},
+  "stats": Array [
+    Object {
+      "paid_conversions": 1,
+      "signups": 2,
+      "source": "Direct",
+    },
+    Object {
+      "paid_conversions": 0,
+      "signups": 1,
+      "source": "Twitter",
+    },
+  ],
+}
+`;
+
+exports[`Stats API Referrer source history stats Can fetch attribution stats 1: [body] 1`] = `
+Object {
+  "meta": Object {},
+  "stats": Array [
+    Object {
+      "date": StringMatching /\\\\d\\{4\\}-\\\\d\\{2\\}-\\\\d\\{2\\}/,
+      "paid_conversions": 1,
+      "signups": 4,
+      "source": "Direct",
+    },
+    Object {
+      "date": StringMatching /\\\\d\\{4\\}-\\\\d\\{2\\}-\\\\d\\{2\\}/,
+      "paid_conversions": 2,
+      "signups": 4,
+      "source": "Twitter",
+    },
+  ],
+}
+`;

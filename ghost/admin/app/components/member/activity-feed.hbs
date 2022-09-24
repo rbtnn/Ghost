@@ -37,6 +37,14 @@
                                                                 <GhEmailPreviewLink @data={{event.email}} />
                                                             {{/if}}
                                                         </span>
+                                                        {{#if event.description}}
+                                                            <div class="ghost-members-activity-event-description {{if (feature "memberAttribution") 'feature-memberAttribution'}}">
+                                                                <div class="ghost-members-activity-event-prefix">URL</div>
+                                                                <div class="ghost-members-activity-event-url" {{on "mouseenter" this.enterLinkURL}} {{on "mouseleave" this.leaveLinkURL}}>
+                                                                    <span>{{event.description}}</span>
+                                                                </div>
+                                                            </div>
+                                                        {{/if}}
                                                     </span>
                                                 </div>
                                                 <div class="gh-member-feed-time">

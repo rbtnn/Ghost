@@ -5,7 +5,8 @@ const LinkRedirect = require('./LinkRedirect');
 
 /**
  * @typedef {object} ILinkRedirectRepository
- * @prop {(url: URL) => Promise<LinkRedirect>} getByURL
+ * @prop {(url: URL) => Promise<LinkRedirect|undefined>} getByURL
+ * @prop {({filter: string}) => Promise<LinkRedirect[]>} getAll
  * @prop {(linkRedirect: LinkRedirect) => Promise<void>} save
  */
 
@@ -33,26 +34,29 @@ class LinkRedirectsService {
     }
 
     /**
-     * Get a unique slug for a redirect which hasn't already been taken
+     * Get a unique URL with slug for creating unique redirects
      *
-     * @returns {Promise<string>}
+     * @returns {Promise<URL>}
      */
-    async getSlug() {
-        return crypto.randomBytes(4).toString('hex');
+    async getSlugUrl() {
+        let url;
+        while (!url || await this.#linkRedirectRepository.getByURL(url)) {
+            const slug = crypto.randomBytes(4).toString('hex');
+            url = new URL(`r/${slug}`, this.#baseURL);
+        }
+        return url;
     }
 
     /**
+     * @param {URL} from
      * @param {URL} to
-     * @param {string} slug
      *
      * @returns {Promise<LinkRedirect>}
      */
-    async addRedirect(to, slug) {
-        const from = new URL(`r/${slug}`, this.#baseURL);
-
+    async addRedirect(from, to) {
         const link = new LinkRedirect({
-            to,
-            from
+            from,
+            to
         });
 
         await this.#linkRedirectRepository.save(link);

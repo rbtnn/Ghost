@@ -1,7 +1,6 @@
 import Component from '@glimmer/component';
 import {action} from '@ember/object';
 import {inject as service} from '@ember/service';
-// import {tracked} from '@glimmer/tracking';
 
 export default class Recents extends Component {
     @service dashboardStats;
@@ -12,7 +11,13 @@ export default class Recents extends Component {
     }
 
     get sources() {
-        return this.dashboardStats?.memberSourceAttributionCounts;
+        return this.dashboardStats?.memberSourceAttributionCounts || [];
+    }
+
+    get chartSources() {
+        const counts = this.dashboardStats?.memberSourceAttributionCounts || [];
+        // filter null source from the list
+        return counts.filter(source => source.source);
     }
 
     get areMembersEnabled() {

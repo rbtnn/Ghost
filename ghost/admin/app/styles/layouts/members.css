@@ -747,6 +747,45 @@ label[for="member-description"] + p {
     stroke: var(--midgrey);
 }
 
+.gh-member-details-attribution {
+    display: grid;
+    grid-template-columns: 1fr;
+    padding: 0 0 3.2rem 0;
+}
+
+.gh-member-details-attribution svg {
+    width: 1.6rem;
+    height: 1.6rem;
+    margin-right: .8rem;
+    flex-shrink: 0;
+}
+
+.gh-member-details-attribution p {
+    display: flex;
+    align-items: center;
+    white-space: nowrap;
+    min-width: 0;
+}
+
+.gh-member-details-attribution p a {
+    text-overflow: ellipsis;
+    overflow: hidden;
+    white-space: nowrap;
+    font-weight: 600;
+    color: var(--darkgrey);
+}
+
+.gh-member-details-attribution svg path, .gh-member-details-attribution svg circle {
+    stroke: var(--midgrey);
+    fill: none;
+}
+
+.gh-member-details-attribution .gh-main-section-header {
+    margin-bottom: 1.6rem;
+    border-bottom: 1px solid var(--whitegrey);
+    grid-column: 1 !important;
+}
+
 .gh-member-details-stats-container {
     display: flex;
     flex-direction: column;
@@ -1159,12 +1198,6 @@ textarea.gh-member-details-textarea {
     width: 0;
 }
 
-@media (max-width: 600px) {
-    .gh-member-feed-detail {
-        flex-direction: column;
-    }
-}
-
 .gh-member-feed-event {
     flex: 1;
     min-width: 0;
@@ -1181,6 +1214,7 @@ textarea.gh-member-details-textarea {
     white-space: nowrap;
     overflow: hidden; 
     padding-right: 1rem;
+    width: 100%;
 }
 
 .gh-member-feed-event-inner:first-letter {
@@ -2327,6 +2361,22 @@ p.gh-members-import-errordetail:first-of-type {
     left: auto;
 }
 
+.gh-cp-membertier-details {
+    margin-top: 1px;
+    color: var(--middarkgrey);
+    font-weight: 500;
+}
+
+.gh-cp-membertier-details svg {
+    width: 10px;
+    margin-left: 4px;
+}
+
+.gh-cp-membertier-details svg path {
+    stroke-width: 3px;
+    stroke: var(--middarkgrey);
+}
+
 .gh-membertier-subscription .action-menu .gh-btn-subscription-action:not(:hover) {
     border: 1px solid var(--whitegrey);
     background: var(--main-bg-color) !important;
@@ -2406,4 +2456,99 @@ p.gh-members-import-errordetail:first-of-type {
     .gh-contentfilter-menu:last-of-type {
         padding-right: 8px;
     }
+}
+
+/* This needs to be moved once the flag is removed */
+.gh-cp-membertier-attribution.gh-membertier-subscription {
+    display: block !important;
+}
+
+.gh-cp-membertier-attribution {
+    position: relative;
+}
+
+.gh-cp-membertier-attribution .gh-tier-card-header {
+    display: flex;
+    align-items: flex-start;
+}
+
+.gh-cp-membertier-attribution .tier-actions-menu {
+    top: calc(100% + 6px);
+}
+
+.gh-cp-membertier-attribution .gh-tier-card-price {
+    border: none !important;
+    background: #f5f6f6;
+    padding: 20px 10px !important;
+    border-radius: 6px;
+}
+
+.gh-cp-membertier-attribution .amount {
+    font-weight: bold !important;
+    font-size: 2.4rem !important;
+}
+
+.gh-cp-membertier-attribution .currency-symbol {
+    font-weight: bold !important;
+    font-size: 1.4rem !important;
+}
+
+.gh-cp-membertier-attribution .gh-membertier-name {
+    font-weight: bold !important;
+    font-size: 2rem !important;
+}
+
+.gh-cp-membertier-attribution .gh-badge {
+    margin-bottom: -1px !important;
+    margin-left: 8px;
+}
+
+.gh-cp-membertier-attribution .action-menu {
+    position: absolute;
+    top: 24px;
+    right: 24px;
+}
+
+.gh-cp-membertier-attribution span.archived {
+    background: #e4e8ec;
+    color: #7c8b9a;
+    font-size: 1.2rem;
+}
+
+.gh-cp-membertier-attribution .gh-membertier-advanced {
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top:1px solid #ECEEF0;
+}
+
+.gh-cp-membertier-attribution .gh-membertier-advanced h4 {
+    font-size: 1.1rem;
+    text-transform: uppercase;
+    letter-spacing: .03em;
+    font-weight: 500;
+    color: #7F8B99;
+    margin-bottom: 2px;
+}
+
+.gh-cp-membertier-attribution .gh-membertier-details p {
+    margin: 0;
+}
+
+.gh-cp-membertier-attribution .gh-membertier-detail {
+    margin-bottom: 1.6rem;
+}
+
+.gh-cp-membertier-attribution .gh-membertier-details span, .gh-cp-membertier-attribution .gh-membertier-details a {
+    font-size: 1.4rem;
+    font-weight: 600;
+    color: #15171A;
+}
+
+.gh-cp-membertier-attribution .gh-cp-membertier-renewal {
+    color: #7c8b9a;
+}
+
+.gh-cp-membertier-attribution .gh-membertier-detail-timestamp {
+    font-size: 1.2rem;
+    color: var(--midgrey);
 }

@@ -269,12 +269,12 @@ export default class DashboardMocksService extends Service {
                 paidSubscribed: paidSubscribed1 + paidSubscribed2,
                 paidCanceled: paidCanceled1 + paidCanceled2
             });
-            const attributionSources = ['Twitter', 'Ghost Network', 'Product Hunt', 'Direct', 'Ghost Newsletter'];
+            const attributionSources = ['Twitter', 'Ghost Network', 'Product Hunt', 'Direct', 'Ghost Newsletter', 'Rediverge Newsletter', 'Reddit', 'The Lever Newsletter', 'The Browser Newsletter'];
 
             this.memberAttributionStats.push({
                 date: date.toISOString().split('T')[0],
                 source: attributionSources[Math.floor(Math.random() * attributionSources.length)],
-                freeSignups: Math.floor(Math.random() * 50),
+                signups: Math.floor(Math.random() * 50),
                 paidConversions: Math.floor(Math.random() * 30)
             });
         }
@@ -294,11 +294,14 @@ export default class DashboardMocksService extends Service {
 
         this.memberCountStats = stats;
         this.subscriptionCountStats = stats.map((data) => {
+            const signups = (data.paidSubscribed - data.paidCanceled);
             return {
                 date: data.date,
                 count: data.paid,
                 positiveDelta: data.paidSubscribed,
-                negativeDelta: data.paidCanceled
+                negativeDelta: data.paidCanceled,
+                signups: signups < 0 ? 0 : signups,
+                cancellations: Math.floor(signups * 0.3) ? Math.floor(signups * 0.3) : 0
             };
         });
 
