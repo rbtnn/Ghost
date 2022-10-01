@@ -1,10 +1,11 @@
 import Helper from '@ember/component/helper';
-import moment from 'moment';
+import moment from 'moment-timezone';
 import {getNonDecimal, getSymbol} from 'ghost-admin/utils/currency';
 import {inject as service} from '@ember/service';
 
 export default class ParseMemberEventHelper extends Helper {
     @service feature;
+    @service utils;
 
     compute([event, hasMultipleNewsletters]) {
         const subject = event.data.member.name || event.data.member.email;
@@ -156,7 +157,7 @@ export default class ParseMemberEventHelper extends Helper {
         }
 
         if (event.type === 'click_event') {
-            return 'clicked in email';
+            return 'clicked link in email';
         }
     }
 
@@ -227,11 +228,7 @@ export default class ParseMemberEventHelper extends Helper {
         if (event.type === 'click_event') {
             // Clean URL
             try {
-                const parsedURL = new URL(event.data.link.to);
-
-                // Remove protocol, querystring and hash
-                // + strip trailing /
-                return parsedURL.host + (parsedURL.pathname === '/' ? '' : parsedURL.pathname);
+                return this.utils.cleanTrackedUrl(event.data.link.to, true);
             } catch (e) {
                 // Invalid URL
             }

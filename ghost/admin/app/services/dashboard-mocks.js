@@ -269,13 +269,26 @@ export default class DashboardMocksService extends Service {
                 paidSubscribed: paidSubscribed1 + paidSubscribed2,
                 paidCanceled: paidCanceled1 + paidCanceled2
             });
-            const attributionSources = ['Twitter', 'Ghost Network', 'Product Hunt', 'Direct', 'Ghost Newsletter', 'Rediverge Newsletter', 'Reddit', 'The Lever Newsletter', 'The Browser Newsletter'];
+
+            // More than 5 sources
+            const attributionSources = ['Twitter', 'Ghost Network', 'Product Hunt', 'Direct', 'Ghost Newsletter', 'Rediverge Newsletter', 'Reddit', 'The Lever Newsletter', 'The Browser Newsletter', 'Green Newsletter', 'Yellow Newsletter', 'Brown Newsletter', 'Red Newsletter'];
+            // const attributionSources = ['Twitter', 'Ghost Network', 'Product Hunt', 'Direct'];
+            const hasPaidConversions = true;
+            const hasFreeSignups = true;
 
             this.memberAttributionStats.push({
                 date: date.toISOString().split('T')[0],
                 source: attributionSources[Math.floor(Math.random() * attributionSources.length)],
-                signups: Math.floor(Math.random() * 50),
-                paidConversions: Math.floor(Math.random() * 30)
+                signups: hasFreeSignups ? Math.floor(Math.random() * 50) : 0,
+                paidConversions: hasPaidConversions ? Math.floor(Math.random() * 30) : 0
+            });
+
+            // Comment this out to hide Unavailable source
+            this.memberAttributionStats.push({
+                date: date.toISOString().split('T')[0],
+                source: null,
+                signups: hasFreeSignups ? Math.floor(Math.random() * 5) : 0,
+                paidConversions: hasPaidConversions ? Math.floor(Math.random() * 3) : 0
             });
         }
 

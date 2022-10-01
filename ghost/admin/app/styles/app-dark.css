@@ -983,6 +983,30 @@ input:focus,
     border-top: 1px solid var(--hairline-color-1);
 }
 
+a.gh-post-list-cta {
+    background: #26282b;
+    color: #ffffff;
+    border-color: #33373d;
+}
+
+a.gh-post-list-cta > svg {
+    color: #ffffff;
+}
+
+a.gh-post-list-cta > span {
+    color: #ffffff;
+}
+
+a.gh-post-list-cta.is-hovered {
+    background: #1d1e20;
+    border-color: #33373d;
+    box-shadow: 0 1px 2px rgb(0 0 0 / 10%);
+}
+
+a.gh-post-list-cta.is-hovered:hover {
+    background: #1d1e20;
+}
+
 @media (max-width: 1200px) {
     .gh-list-data {
         border-top: 0 none;
@@ -1096,6 +1120,29 @@ input:focus,
 
 .feature-memberAttribution .ghost-members-activity-event-prefix {
     opacity: 0.75;
+}
+
+/* Post Analytics Newsletter Links */
+.gh-links-pagination {
+    background: transparent;
+    border-color: rgba(150,150,150,0.1);
+}
+
+.gh-links-pagination-progress {
+    color: rgba(255,255,255,0.5);
+}
+
+.gh-links-pagination-action.gh-links-pagination-prev:after {
+    background: rgba(150,150,150,0.4);
+}
+
+/* Member */
+.gh-cp-membertier-attribution .gh-membertier-advanced {
+    border-top: 1px solid rgb(23, 25, 28);
+}
+
+.gh-dashboard-metric.is-embedded {
+    background: var(--white);
 }
 
 /* Offers */
@@ -1254,7 +1301,7 @@ kbd {
     background: #1c1e21;
 }
 
-.gh-dashboard-recents .gh-dashboard-list-item:hover {
+.gh-dashboard-recents .gh-dashboard-list-item:hover, .gh-dashboard-attribution .gh-dashboard-list-item:hover {
     background: linear-gradient(90deg, rgba(21,23,25,0) 0%, rgba(21,23,25,1) 100%);
 }
 

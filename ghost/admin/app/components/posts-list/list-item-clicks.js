@@ -11,17 +11,34 @@ export default class PostsListItemClicks extends Component {
 
     @tracked isHovered = false;
 
+    get post() {
+        return this.args.post;
+    }
+
     get scheduledText() {
-        let {post} = this.args;
         let text = [];
 
         let formattedTime = formatPostTime(
-            post.publishedAtUTC,
+            this.post.publishedAtUTC,
             {timezone: this.settings.get('timezone'), scheduled: true}
         );
         text.push(formattedTime);
 
         return text.join(' ');
+    }
+
+    get routeForLink() {
+        if (this.post.hasAnalyticsPage) {
+            return 'posts.analytics';
+        }
+        return 'editor.edit';
+    }
+
+    get modelsForLink() {
+        if (this.post.hasAnalyticsPage) {
+            return [this.post];
+        }
+        return [this.post.displayName, this.post.id];
     }
 
     @action

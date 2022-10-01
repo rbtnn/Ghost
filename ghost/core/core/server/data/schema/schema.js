@@ -723,6 +723,7 @@ module.exports = {
         html: {type: 'text', maxlength: 1000000000, fieldtype: 'long', nullable: true},
         plaintext: {type: 'text', maxlength: 1000000000, fieldtype: 'long', nullable: true},
         track_opens: {type: 'bool', nullable: false, defaultTo: false},
+        track_clicks: {type: 'bool', nullable: false, defaultTo: false},
         submitted_at: {type: 'dateTime', nullable: false},
         newsletter_id: {type: 'string', maxlength: 24, nullable: true, references: 'newsletters.id'},
         created_at: {type: 'dateTime', nullable: false},
@@ -836,7 +837,7 @@ module.exports = {
         created_at: {type: 'dateTime', nullable: false},
         updated_at: {type: 'dateTime', nullable: true}
     },
-    link_redirects: {
+    redirects: {
         id: {type: 'string', maxlength: 24, nullable: false, primary: true},
         from: {type: 'string', maxlength: 2000, nullable: false},
         to: {type: 'string', maxlength: 2000, nullable: false},
@@ -844,10 +845,10 @@ module.exports = {
         created_at: {type: 'dateTime', nullable: false},
         updated_at: {type: 'dateTime', nullable: true}
     },
-    members_link_click_events: {
+    members_click_events: {
         id: {type: 'string', maxlength: 24, nullable: false, primary: true},
         member_id: {type: 'string', maxlength: 24, nullable: false, references: 'members.id', cascadeDelete: true},
-        link_id: {type: 'string', maxlength: 24, nullable: false, references: 'link_redirects.id', cascadeDelete: true},
+        redirect_id: {type: 'string', maxlength: 24, nullable: false, references: 'redirects.id', cascadeDelete: true},
         created_at: {type: 'dateTime', nullable: false}
     }
 };

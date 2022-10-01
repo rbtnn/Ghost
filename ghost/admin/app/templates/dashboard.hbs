@@ -18,20 +18,22 @@
 
                     <div class="gh-dashboard-group {{if this.isTotalMembersZero 'is-zero'}}">
                         {{#if (feature 'sourceAttribution')}}
-                            <Dashboard::Charts::Anchors />
+                            <Dashboard::Charts::AnchorAttribution />
                         {{else}}
                             <Dashboard::Charts::Anchor />
                         {{/if}}
-                        {{#if this.hasPaidTiers}}
-                            {{#if (feature 'sourceAttribution')}}
+                        {{#if (feature 'sourceAttribution')}}
+                            {{#if this.hasPaidTiers}}
                                 <section class="gh-dashboard-section">
-                                    <article class="gh-dashboard-box" style="display:flex; flex:1;flex-direction:row;">
+                                    <article class="gh-dashboard-box gh-dashboard-minicharts-attribution">
                                         <Dashboard::Charts::PaidBreakdown />
                                         <Dashboard::Charts::PaidMix />
                                     </article>
                                 </section>
-                                <Dashboard::Charts::Attribution />
                             {{/if}}
+                            {{#unless this.membersUtils.isMembersInviteOnly}}
+                                <Dashboard::Charts::Attribution />
+                            {{/unless}}
                         {{/if}}
                         {{#if this.areNewslettersEnabled}}
                             <Dashboard::Charts::Engagement />
@@ -65,7 +67,7 @@
                         @options={{this.daysOptions}}
                         @searchEnabled={{false}}
                         @onChange={{this.onDaysChange}}
-                        @triggerComponent="gh-power-select/trigger"
+                        @triggerComponent={{component "gh-power-select/trigger"}}
                         @triggerClass="gh-contentfilter-menu-trigger"
                         @dropdownClass="gh-contentfilter-menu-dropdown is-narrow"
                         @matchTriggerWidth={{false}}

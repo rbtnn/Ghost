@@ -2,7 +2,7 @@ import Ember from 'ember';
 import Model, {attr, belongsTo, hasMany} from '@ember-data/model';
 import ValidationEngine from 'ghost-admin/mixins/validation-engine';
 import boundOneWay from 'ghost-admin/utils/bound-one-way';
-import moment from 'moment';
+import moment from 'moment-timezone';
 import {BLANK_DOC as BLANK_MOBILEDOC} from 'koenig-editor/components/koenig-editor';
 import {compare, isBlank} from '@ember/utils';
 import {computed, observer} from '@ember/object';
@@ -68,10 +68,12 @@ function publishedAtCompare(postA, postB) {
 
 export default Model.extend(Comparable, ValidationEngine, {
     config: service(),
+    session: service(),
     feature: service(),
     ghostPaths: service(),
     clock: service(),
     settings: service(),
+    membersUtils: service(),
 
     displayName: 'post',
     validationType: 'post',
@@ -181,6 +183,47 @@ export default Model.extend(Comparable, ValidationEngine, {
         return this.isScheduled && !!this.newsletter && !this.email;
     }),
 
+    showEmailOpenAnalytics: computed('isPost', 'isSent', 'isPublished', 'email', function () {
+        return this.isPost
+            && !this.session.user.isContributor
+            && this.settings.get('membersSignupAccess') !== 'none'
+            && this.settings.get('editorDefaultEmailRecipients') !== 'disabled'
+            && (this.isSent || this.isPublished) 
+            && this.email
+            && this.email.trackOpens
+            && this.settings.get('emailTrackOpens');
+    }),
+
+    showEmailClickAnalytics: computed('isPost', 'isSent', 'isPublished', 'email', function () {
+        return this.isPost
+            && !this.session.user.isContributor
+            && this.settings.get('membersSignupAccess') !== 'none'
+            && this.settings.get('editorDefaultEmailRecipients') !== 'disabled'
+            && (this.isSent || this.isPublished) 
+            && this.email
+            && this.email.trackClicks
+            && this.settings.get('emailTrackClicks');
+    }),
+
+    showAttributionAnalytics: computed('isPage', 'emailOnly', 'isPublished', 'membersUtils.isMembersInviteOnly', function () {
+        return (this.isPage || !this.emailOnly) 
+                && this.isPublished 
+                && this.feature.get('memberAttribution')
+                && !this.membersUtils.isMembersInviteOnly
+                && !this.session.user.isContributor;
+    }),
+
+    showPaidAttributionAnalytics: computed.and('showAttributionAnalytics', 'membersUtils.paidMembersEnabled'),
+
+    hasAnalyticsPage: computed('isPost', 'showEmailOpenAnalytics', 'showEmailClickAnalytics', 'showAttributionAnalytics', function () {
+        return this.isPost
+            && (
+                this.showEmailOpenAnalytics
+                || this.showEmailClickAnalytics
+                || this.showAttributionAnalytics
+            );
+    }),
+   
     previewUrl: computed('uuid', 'ghostPaths.url', 'config.blogUrl', function () {
         let blogUrl = this.get('config.blogUrl');
         let uuid = this.uuid;
@@ -260,7 +303,7 @@ export default Model.extend(Comparable, ValidationEngine, {
         if (!this.count || !this.count.clicks) {
             return 0;
         }
-        
+
         return Math.round(this.count.clicks / this.email.emailCount * 100);
     }),
 

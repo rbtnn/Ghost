@@ -4,7 +4,7 @@ import BulkRemoveMembersLabelModal from '../components/members/modals/bulk-remov
 import BulkUnsubscribeMembersModal from '../components/members/modals/bulk-unsubscribe';
 import Controller from '@ember/controller';
 import ghostPaths from 'ghost-admin/utils/ghost-paths';
-import moment from 'moment';
+import moment from 'moment-timezone';
 import {A} from '@ember/array';
 import {action} from '@ember/object';
 import {capitalize} from '@ember/string';
@@ -183,7 +183,7 @@ export default class MembersController extends Controller {
         };
         return this.filterColumns.filter((d) => {
             // Exclude Signup and conversions (data not yet available in backend when browsing members)
-            return !['signup', 'conversion'].includes(d);
+            return !['signup', 'conversion', 'emails.post_id', 'clicked_links.post_id', 'opened_emails.post_id'].includes(d);
         }).map((d) => {
             return {
                 name: d,

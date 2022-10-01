@@ -64,17 +64,22 @@
                     {{/if}}
                 </p>
             </div>
-            {{#if (feature 'sourceAttribution')}}
+            {{#if (and (feature 'sourceAttribution') @member.attribution)}}
                 <div class="gh-member-details-attribution">
-                    <h4 class="gh-main-section-header small bn">Signup source</h4>
+                    <h4 class="gh-main-section-header small bn">Attribution</h4>
+                    {{#if this.referrerSource}}
+                        <p>
+                            {{svg-jar "earth"}}
+                            Signup source-&nbsp;<span title="{{this.referrerSource}}">{{this.referrerSource}}</span>
+                        </p>
+                    {{/if}}
+                    {{#if (and @member.attribution.url @member.attribution.title)}}
                     <p>
                         {{svg-jar "posts"}}
-                        Signed up on&nbsp;<a href="{{@member.attribution.url}}" target="_blank" rel="noopener noreferrer" title="{{ @member.attribution.title }}">{{ @member.attribution.title }}</a>
+                        Signup page-&nbsp;<a href="{{@member.attribution.url}}" target="_blank" rel="noopener noreferrer" title="{{ @member.attribution.title }}">{{ @member.attribution.title }}</a>
                     </p>
-                    <p>
-                        {{svg-jar "earth"}}
-                        Coming from&nbsp;<p title="Social: Twitter">Twitter / Social</p>
-                    </p>
+                    <a href="#" class="gh-member-details-attribution-docs">Learn more →</a>
+                    {{/if}}
                 </div>
             {{/if}}
 

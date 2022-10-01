@@ -1,21 +1,53 @@
 <section class="gh-dashboard-section gh-dashboard-attribution">
-
     <article class="gh-dashboard-box" {{did-insert this.loadData}}>
-        <div style="display: grid;grid-template-columns: 1fr 2fr;grid-gap: 24px;">
+        {{#if (is-empty this.sources)}}
+            <h3 class="gh-dashboard-metric-label">Top sources</h3>
+            <div class="attribution-list-empty">
+                {{svg-jar "members-outline"}}
+                <h4>No new members in the past {{this.chartPeriod}} days</h4>
+                <p>Once someone signs up, you’ll be able to see where they came from here.</p>
+            </div>
+        {{else}}
+        <div class="gh-dashboard-select">
+            <PowerSelect
+                @selected={{this.selectedDisplayOption}}
+                @options={{this.allowedDisplayOptions}}
+                @searchEnabled={{false}}
+                @onChange={{this.onDisplayChange}}
+                @triggerComponent={{component "gh-power-select/trigger"}}
+                @triggerClass="gh-contentfilter-menu-trigger"
+                @dropdownClass="gh-contentfilter-menu-dropdown is-narrow"
+                @matchTriggerWidth={{false}}
+                @horizontalPosition="right"
+                @disabled={{this.isDropdownDisabled}}
+                as |option|
+            >
+                {{#if option.name}}{{option.name}}{{else}}<span class="red">Unknown option</span>{{/if}}
+            </PowerSelect>
+        </div>
+        <div class="gh-dashboard-attribution-grid">
             <div>
-                <h3 class="gh-dashboard-metric-label">Attribution</h3>
-                <div style="display: flex;justify-content: center;align-items: center;">
-                    <div style="max-width: 200px; max-height: 200px;">
-                        <MemberAttribution::SourceAttributionChart @sources={{this.chartSources}} />
-                    </div>
-                    <div id="gh-dashboard-attribution-tooltip" class="gh-dashboard-tooltip">
-                        <div class="gh-dashboard-tooltip-value">
-                            -
-                        </div>
+                <h3 class="gh-dashboard-metric-label">Top sources</h3>
+                <MemberAttribution::SourceAttributionTable
+                    @sources={{this.sources}}
+                    @sortColumn={{this.selectedSortColumn}}
+                    class="gh-dashboard-attribution-list gh-dashboard-list"
+                />
+            </div>
+            <div class="gh-dashboard-attribution-chart">
+                <div class="gh-dashboard-attribution-chart-container">
+                    <MemberAttribution::SourceAttributionChart
+                        @sources={{this.chartSources}}
+                        @sortColumn={{this.selectedSortColumn}}
+                    />
+                </div>
+                <div id="gh-dashboard-attribution-tooltip" class="gh-dashboard-tooltip">
+                    <div class="gh-dashboard-tooltip-value">
+                        -
                     </div>
                 </div>
             </div>
-            <MemberAttribution::SourceAttributionTable @sources={{this.sources}} class="gh-dashboard-attribution-list gh-dashboard-list" style="justify-content:flex-start;" />
         </div>
+        {{/if}}
     </article>
 </section>

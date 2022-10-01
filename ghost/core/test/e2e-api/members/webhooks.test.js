@@ -1663,6 +1663,7 @@ describe('Members API', function () {
             subscriptions: anyArray,
             labels: anyArray,
             tiers: anyArray,
+            attribution: anyObject,
             newsletters: anyArray
         };
 
@@ -1836,7 +1837,10 @@ describe('Members API', function () {
                 id: null,
                 url: absoluteUrl,
                 type: 'url',
-                title: 'homepage'
+                title: 'homepage',
+                referrer_source: null,
+                referrer_medium: null,
+                referrer_url: null
             });
         });
 
@@ -1856,7 +1860,10 @@ describe('Members API', function () {
                 id: post.id,
                 url: absoluteUrl,
                 type: 'post',
-                title: post.get('title')
+                title: post.get('title'),
+                referrer_source: null,
+                referrer_medium: null,
+                referrer_url: null
             });
         });
 
@@ -1873,7 +1880,10 @@ describe('Members API', function () {
                 id: null,
                 url: absoluteUrl,
                 type: 'url',
-                title: '/removed-blog-post/'
+                title: '/removed-blog-post/',
+                referrer_source: null,
+                referrer_medium: null,
+                referrer_url: null
             });
         });
 
@@ -1893,7 +1903,10 @@ describe('Members API', function () {
                 id: post.id,
                 url: absoluteUrl,
                 type: 'page',
-                title: post.get('title')
+                title: post.get('title'),
+                referrer_source: null,
+                referrer_medium: null,
+                referrer_url: null
             });
         });
 
@@ -1913,7 +1926,10 @@ describe('Members API', function () {
                 id: tag.id,
                 url: absoluteUrl,
                 type: 'tag',
-                title: tag.get('name')
+                title: tag.get('name'),
+                referrer_source: null,
+                referrer_medium: null,
+                referrer_url: null
             });
         });
 
@@ -1933,19 +1949,38 @@ describe('Members API', function () {
                 id: author.id,
                 url: absoluteUrl,
                 type: 'author',
-                title: author.get('name')
+                title: author.get('name'),
+                referrer_source: null,
+                referrer_medium: null,
+                referrer_url: null
             });
         });
 
         it('Creates a SubscriptionCreatedEvent without attribution', async function () {
             const attribution = undefined;
-            await testWithAttribution(attribution, null);
+            await testWithAttribution(attribution, {
+                id: null,
+                url: null,
+                type: 'url',
+                title: null,
+                referrer_source: null,
+                referrer_medium: null,
+                referrer_url: null
+            });
         });
 
         it('Creates a SubscriptionCreatedEvent with empty attribution object', async function () {
             // Shouldn't happen, but to make sure we handle it
             const attribution = {};
-            await testWithAttribution(attribution, null);
+            await testWithAttribution(attribution, {
+                id: null,
+                url: null,
+                type: 'url',
+                title: null,
+                referrer_source: null,
+                referrer_medium: null,
+                referrer_url: null
+            });
         });
 
         // Activity feed

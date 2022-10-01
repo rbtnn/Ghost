@@ -22,12 +22,12 @@ class LinkTrackingServiceWrapper {
         const {LinkClickTrackingService} = require('@tryghost/link-tracking');
 
         const postLinkRepository = new PostLinkRepository({
-            LinkRedirect: models.LinkRedirect,
+            LinkRedirect: models.Redirect,
             linkRedirectRepository: linkRedirection.linkRedirectRepository
         });
 
-        const linkClickRepository = new LinkClickRepository({
-            MemberLinkClickEventModel: models.MemberLinkClickEvent,
+        this.linkClickRepository = new LinkClickRepository({
+            MemberLinkClickEventModel: models.MemberClickEvent,
             Member: models.Member,
             MemberLinkClickEvent: MemberLinkClickEvent,
             DomainEvents
@@ -36,7 +36,7 @@ class LinkTrackingServiceWrapper {
         // Expose the service
         this.service = new LinkClickTrackingService({
             linkRedirectService: linkRedirection.service,
-            linkClickRepository,
+            linkClickRepository: this.linkClickRepository,
             postLinkRepository,
             DomainEvents
         });
