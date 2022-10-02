@@ -20,21 +20,21 @@ module.exports = {
             return;
         }
 
-		if (docName == 'bsm_podcast') {
-			// Does not initialize frame.response!
-		}
-		else {
-			frame.response = {};
+        if (docName == 'bsm_podcast') {
+            // Does not initialize frame.response!
+        }
+        else {
+            frame.response = {};
 
-			if (response.data) {
-				frame.response[docName] = response.data.map(model => mapResponse(docName, model, frame));
-			} else {
-				frame.response[docName] = [mapResponse(docName, response, frame)];
-			}
+            if (response.data) {
+                frame.response[docName] = response.data.map(model => mapResponse(docName, model, frame));
+            } else {
+                frame.response[docName] = [mapResponse(docName, response, frame)];
+            }
 
-			if (response.meta) {
-				frame.response.meta = response.meta;
-			}
-		}
+            if (response.meta) {
+                frame.response.meta = response.meta;
+            }
+        }
     }
 };

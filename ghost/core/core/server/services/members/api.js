@@ -46,7 +46,6 @@ function createApiInstance(config) {
                 }
             },
             getSubject(type) {
-                const siteTitle = settingsCache.get('title');
                 switch (type) {
                 case 'subscribe':
                     return `backspace.fm: 購読の確認`;
