@@ -225,14 +225,14 @@ export default class ParseMemberEventHelper extends Helper {
     }
 
     getDescription(event) {
-        if ((event.type === 'click_event') && Object.prototype.hasOwnProperty.call(event.data.link, 'to')) {
+        if (event.type === 'click_event') {
             // Clean URL
             try {
                 return this.utils.cleanTrackedUrl(event.data.link.to, true);
             } catch (e) {
                 // Invalid URL
             }
-            return event.data.link.to;
+            return event.data.link?.to;
         }
         return;
     }
