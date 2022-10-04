@@ -232,7 +232,7 @@ export default class ParseMemberEventHelper extends Helper {
             } catch (e) {
                 // Invalid URL
             }
-            return event.data.link?.to;
+            return event.data.link.to;
         }
         return;
     }
