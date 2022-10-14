@@ -66,12 +66,14 @@ export default class FeatureService extends Service {
     @feature('sourceAttribution') sourceAttribution;
     @feature('lexicalEditor') lexicalEditor;
     @feature('exploreApp') exploreApp;
+    @feature('audienceFeedback') audienceFeedback;
+    @feature('fixNewsletterLinks') fixNewsletterLinks;
 
     _user = null;
 
     @computed('settings.labs')
     get labs() {
-        let labs = this.get('settings.labs');
+        let labs = this.settings.labs;
 
         try {
             return JSON.parse(labs) || {};

@@ -1,6 +1,6 @@
 const _ = require('lodash');
 const uuid = require('uuid');
-const ObjectId = require('bson-objectid');
+const ObjectId = require('bson-objectid').default;
 const moment = require('moment');
 const constants = require('@tryghost/constants');
 const DataGenerator = {};
@@ -419,13 +419,19 @@ DataGenerator.Content = {
             // No ID because these are in the core fixtures.json
             slug: 'free',
             // slug is to match the product, the below are updated for the product
-            welcome_page_url: '/welcome-free'
+            welcome_page_url: '/welcome-free',
+            currency: null,
+            monthly_price: null,
+            yearly_price: null
         },
         {
             // No ID because these are in the core fixtures.json
             slug: 'default-product',
             // slug is to match the product, the below are updated for the product
-            welcome_page_url: '/welcome-paid'
+            welcome_page_url: '/welcome-paid',
+            currency: 'usd',
+            monthly_price: 500,
+            yearly_price: 5000
         }
     ],
 

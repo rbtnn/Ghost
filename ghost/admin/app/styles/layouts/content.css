@@ -872,12 +872,6 @@ a.gh-post-list-signups.active:hover > span, a.gh-post-list-conversions.active:ho
     padding-left: 2rem;
     padding-right: 2rem;
     white-space: nowrap;
-    opacity: 1;
-    transition: opacity .1s linear;
-}
-
-.gh-post-analytics-item:hover {
-    opacity: 0.7;
 }
 
 .gh-post-analytics-item:first-child {
@@ -917,6 +911,15 @@ a.gh-post-list-signups.active:hover > span, a.gh-post-list-conversions.active:ho
     text-transform: uppercase;
 }
 
+.gh-post-analytics-item > a {
+    opacity: 1;
+    transition: opacity .1s linear;
+}
+
+.gh-post-analytics-item > a:hover {
+    opacity: 0.7;
+}
+
 .gh-attribution-box {
     margin: 0;
     padding: 24px;
@@ -928,20 +931,7 @@ a.gh-post-list-signups.active:hover > span, a.gh-post-list-conversions.active:ho
 }
 
 .gh-attribution-box .gh-dashboard-list-item-sub-source {
-    padding-left: 20px;
     position: relative;
-}
-
-.gh-attribution-box .gh-dashboard-list-item-sub-source:after {
-    content: "";
-    width: 9px;
-    height: 9px;
-    border-radius: 8px;
-    position: absolute;
-    top: 50%;
-    left: 0;
-    transform: translateY(-50%);
-    background: #e6e9eb;
 }
 
 .gh-attribution-chart-column {
@@ -963,6 +953,14 @@ a.gh-post-list-signups.active:hover > span, a.gh-post-list-conversions.active:ho
     padding: 1rem 0;
 }
 
+.gh-attribution-table-column .gh-attribution-box .gh-dashboard-list-item-sub-source:after {
+    display: none;
+}
+
+.gh-attribution-box .gh-dashboard-list-title:not(.sorted-by) {
+    cursor: pointer;
+}
+
 .gh-links-list {
     margin: 0;
     padding: 20px;
@@ -973,7 +971,7 @@ a.gh-post-list-signups.active:hover > span, a.gh-post-list-conversions.active:ho
 
 .gh-links-list-item {
     display: grid;
-    grid-template-columns: 85% 15%;
+    grid-template-columns: auto minmax(min-content,max-content);
     padding: 1.6rem 0;
     border-bottom: 1px solid var(--whitegrey);
     font-size: 1.4rem;
@@ -1021,7 +1019,7 @@ a.gh-post-list-signups.active:hover > span, a.gh-post-list-conversions.active:ho
 
 .gh-links-list-header {
     display: grid;
-    grid-template-columns: 85% 15%;
+    grid-template-columns: minmax(auto, 85%) minmax(min-content, 15%);
     padding: 0 0 8px;
     border-bottom: 1px solid var(--whitegrey);
 }
