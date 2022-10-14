@@ -1,6 +1,6 @@
 {
   "name": "ghost",
-  "version": "5.17.1",
+  "version": "5.18.0",
   "description": "The professional publishing platform",
   "author": "Ghost Foundation",
   "homepage": "https://ghost.org",
@@ -52,7 +52,7 @@
     "cli": "^1.17.0"
   },
   "dependencies": {
-    "@sentry/node": "7.14.0",
+    "@sentry/node": "7.14.2",
     "@tryghost/adapter-base-cache": "0.1.2",
     "@tryghost/adapter-manager": "0.0.0",
     "@tryghost/admin-api-schema": "4.2.0",
@@ -129,7 +129,7 @@
     "amperize": "0.6.1",
     "analytics-node": "6.2.0",
     "bluebird": "3.7.2",
-    "body-parser": "1.20.0",
+    "body-parser": "1.20.1",
     "bookshelf": "1.2.0",
     "bookshelf-relations": "2.4.0",
     "brute-knex": "4.0.1",
@@ -164,7 +164,7 @@
     "juice": "8.1.0",
     "keypair": "1.0.4",
     "knex": "2.3.0",
-    "knex-migrator": "5.0.6",
+    "knex-migrator": "5.0.7",
     "lodash": "4.17.21",
     "luxon": "3.0.3",
     "moment": "2.24.0",
@@ -178,19 +178,19 @@
     "probe-image-size": "7.2.3",
     "rss": "1.2.2",
     "sanitize-html": "2.7.2",
-    "semver": "7.3.7",
+    "semver": "7.3.8",
     "stoppable": "1.1.0",
     "uuid": "9.0.0",
     "xml": "1.0.1"
   },
   "optionalDependencies": {
     "@tryghost/html-to-mobiledoc": "1.8.14",
-    "sqlite3": "5.1.1"
+    "sqlite3": "5.1.2"
   },
   "devDependencies": {
     "@playwright/test": "1.26.1",
     "@tryghost/express-test": "0.11.5",
-    "@tryghost/webhook-mock-receiver": "0.1.2",
+    "@tryghost/webhook-mock-receiver": "0.2.0",
     "@types/common-tags": "1.8.1",
     "c8": "7.12.0",
     "cli-progress": "3.11.2",
@@ -206,12 +206,12 @@
     "mock-knex": "TryGhost/mock-knex#8ecb8c227bf463c991c3d820d33f59efc3ab9682",
     "nock": "13.2.9",
     "papaparse": "5.3.2",
-    "postcss": "8.4.16",
+    "postcss": "8.4.17",
     "postcss-cli": "10.0.0",
     "rewire": "6.0.0",
     "should": "13.2.3",
-    "sinon": "14.0.0",
-    "supertest": "6.2.4",
+    "sinon": "14.0.1",
+    "supertest": "6.3.0",
     "tmp": "0.2.1"
   },
   "resolutions": {

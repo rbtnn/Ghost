@@ -1,5 +1,5 @@
 const {agentProvider, mockManager, fixtureManager, matchers} = require('../../utils/e2e-framework');
-const {anyEtag, anyObjectId, anyUuid, anyISODateTime, anyISODate, anyString, anyArray, anyLocationFor, anyErrorId, anyObject} = matchers;
+const {anyEtag, anyObjectId, anyUuid, anyISODateTime, anyISODate, anyString, anyArray, anyLocationFor, anyContentLength, anyErrorId, anyObject} = matchers;
 const ObjectId = require('bson-objectid');
 
 const assert = require('assert');
@@ -416,7 +416,7 @@ describe('Members API', function () {
 
     before(async function () {
         agent = await agentProvider.getAdminAPIAgent();
-        await fixtureManager.init('posts', 'newsletters', 'members:newsletters', 'comments');
+        await fixtureManager.init('posts', 'newsletters', 'members:newsletters', 'comments', 'redirects', 'clicks');
         await agent.loginAsOwner();
 
         newsletters = await getNewsletters();
@@ -448,6 +448,36 @@ describe('Members API', function () {
             })
             .expect(({body}) => {
                 should(body.events.find(e => e.type === 'comment_event')).not.be.undefined();
+            });
+    });
+
+    it('Returns click events in activity feed', async function () {
+        // Check activity feed
+        await agent
+            .get(`/members/events?filter=type:click_event`)
+            .expectStatus(200)
+            .matchHeaderSnapshot({
+                etag: anyEtag
+            })
+            .matchBodySnapshot({
+                events: new Array(8).fill({
+                    type: anyString,
+                    data: {
+                        created_at: anyISODate,
+                        member: {
+                            id: anyObjectId,
+                            uuid: anyUuid
+                        },
+                        post: {
+                            id: anyObjectId,
+                            uuid: anyUuid,
+                            url: anyString
+                        }
+                    }
+                })
+            })
+            .expect(({body}) => {
+                should(body.events.find(e => e.type === 'click_event')).not.be.undefined();
             });
     });
 
@@ -555,7 +585,7 @@ describe('Members API', function () {
             .expectStatus(200)
             .matchHeaderSnapshot({
                 etag: anyEtag,
-                'content-length': anyString
+                'content-length': anyContentLength
             })
             .matchBodySnapshot({
                 members: new Array(8).fill(memberMatcherShallowIncludes)
@@ -570,7 +600,7 @@ describe('Members API', function () {
             .expectStatus(200)
             .matchHeaderSnapshot({
                 etag: anyEtag,
-                'content-length': anyString
+                'content-length': anyContentLength
             })
             .matchBodySnapshot({
                 members: new Array(8).fill(memberMatcherShallowIncludes)
@@ -2016,7 +2046,7 @@ describe('Members API', function () {
             .expectEmptyBody() // express-test body parsing doesn't support CSV
             .matchHeaderSnapshot({
                 etag: anyEtag,
-                'content-length': anyString, //For some reason the content-length changes between 1220 and 1317
+                'content-length': anyContentLength,
                 'content-disposition': anyString
             });
 

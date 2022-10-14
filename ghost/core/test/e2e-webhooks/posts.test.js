@@ -1,5 +1,5 @@
 const {agentProvider, mockManager, fixtureManager, matchers} = require('../utils/e2e-framework');
-const {anyObjectId, anyISODateTime, anyUuid, stringMatching} = matchers;
+const {anyGhostAgent, anyObjectId, anyISODateTime, anyUuid, anyContentVersion, anyNumber, anyLocalURL} = matchers;
 
 const tierSnapshot = {
     id: anyObjectId,
@@ -7,15 +7,13 @@ const tierSnapshot = {
     updated_at: anyISODateTime
 };
 
-const buildAuthorSnapshot = (roles = false) => {
+const buildAuthorSnapshot = (roles = true) => {
     const authorSnapshot = {
         last_seen: anyISODateTime,
         created_at: anyISODateTime,
         updated_at: anyISODateTime
     };
 
-    // NOTE: this is such a bad hack! for the reasons I did not investigate the "add" event does not include
-    //       the roles but the "published" does! massive inconsistency and needs to be fixed one day
     if (roles) {
         authorSnapshot.roles = new Array(1).fill({
             id: anyObjectId,
@@ -27,7 +25,7 @@ const buildAuthorSnapshot = (roles = false) => {
     return authorSnapshot;
 };
 
-const buildPostSnapshotWithTiers = ({published, tiersCount, roles = false}) => {
+const buildPostSnapshotWithTiers = ({published, tiersCount, roles = true}) => {
     return {
         id: anyObjectId,
         uuid: anyUuid,
@@ -35,9 +33,7 @@ const buildPostSnapshotWithTiers = ({published, tiersCount, roles = false}) => {
         published_at: published ? anyISODateTime : null,
         created_at: anyISODateTime,
         updated_at: anyISODateTime,
-        // @TODO: hack here! it's due to https://github.com/TryGhost/Toolbox/issues/341
-        //        this matcher should be removed once the issue is solved
-        url: stringMatching(/http:\/\/127.0.0.1:2369\/\w+\//),
+        url: anyLocalURL,
         tiers: new Array(tiersCount).fill(tierSnapshot),
         primary_author: buildAuthorSnapshot(roles),
         authors: new Array(1).fill(buildAuthorSnapshot(roles))
@@ -82,7 +78,8 @@ describe('post.* events', function () {
             .body({
                 posts: [{
                     title: 'webhookz',
-                    status: 'draft'
+                    status: 'draft',
+                    mobiledoc: fixtureManager.get('posts', 1).mobiledoc
                 }]
             })
             .expectStatus(201);
@@ -98,15 +95,19 @@ describe('post.* events', function () {
             })
             .expectStatus(200);
 
-        await webhookMockReceiver
-            // TODO: implement header matching feature next!
-            // .matchHeaderSnapshot();
+        await webhookMockReceiver.receivedRequest();
+
+        webhookMockReceiver
+            .matchHeaderSnapshot({
+                'content-version': anyContentVersion,
+                'content-length': anyNumber,
+                'user-agent': anyGhostAgent
+            })
             .matchBodySnapshot({
                 post: {
                     current: buildPostSnapshotWithTiers({
                         published: true,
-                        tiersCount: 2,
-                        roles: true
+                        tiersCount: 2
                     }),
                     previous: buildPreviousPostSnapshotWithTiers({
                         tiersCount: 2
@@ -133,14 +134,22 @@ describe('post.* events', function () {
             })
             .expectStatus(201);
 
-        await webhookMockReceiver
-            // TODO: implement header matching feature next!
-            // .matchHeaderSnapshot();
+        await webhookMockReceiver.receivedRequest();
+
+        webhookMockReceiver
+            .matchHeaderSnapshot({
+                'content-version': anyContentVersion,
+                'content-length': anyNumber,
+                'user-agent': anyGhostAgent
+            })
             .matchBodySnapshot({
                 post: {
                     current: buildPostSnapshotWithTiers({
                         published: false,
-                        tiersCount: 2
+                        tiersCount: 2,
+                        // @NOTE: post.added event does not include post author's roles
+                        //        see commit message for more context
+                        roles: false
                     })
                 }
             });
