@@ -517,7 +517,8 @@ module.exports = {
             type: 'string', maxlength: 50, nullable: false, validations: {
                 isIn: [['member', 'import', 'system', 'api', 'admin']]
             }
-        }
+        },
+        batch_id: {type: 'string', maxlength: 24, nullable: true}
     },
     members_cancel_events: {
         id: {type: 'string', maxlength: 24, nullable: false, primary: true},
@@ -630,7 +631,7 @@ module.exports = {
             }
         },
         member_id: {type: 'string', maxlength: 24, nullable: false, unique: false, references: 'members.id', cascadeDelete: true},
-        tier_id: {type: 'string', maxlength: 24, nullable: true, unique: false, references: 'products.id'},
+        tier_id: {type: 'string', maxlength: 24, nullable: false, unique: false, references: 'products.id'},
 
         // These are null if type !== 'paid'
         cadence: {
@@ -657,6 +658,7 @@ module.exports = {
     members_stripe_customers_subscriptions: {
         id: {type: 'string', maxlength: 24, nullable: false, primary: true},
         customer_id: {type: 'string', maxlength: 255, nullable: false, unique: false, references: 'members_stripe_customers.customer_id', cascadeDelete: true},
+        ghost_subscription_id: {type: 'string', maxlength: 24, nullable: true, references: 'subscriptions.id', constraintName: 'mscs_ghost_subscription_id_foreign', cascadeDelete: true},
         subscription_id: {type: 'string', maxlength: 255, nullable: false, unique: true},
         stripe_price_id: {type: 'string', maxlength: 255, nullable: false, unique: false, index: true, defaultTo: ''},
         status: {type: 'string', maxlength: 50, nullable: false},
@@ -696,7 +698,8 @@ module.exports = {
         attribution_url: {type: 'string', maxlength: 2000, nullable: true},
         referrer_source: {type: 'string', maxlength: 191, nullable: true},
         referrer_medium: {type: 'string', maxlength: 191, nullable: true},
-        referrer_url: {type: 'string', maxlength: 2000, nullable: true}
+        referrer_url: {type: 'string', maxlength: 2000, nullable: true},
+        batch_id: {type: 'string', maxlength: 24, nullable: true}
     },
     offer_redemptions: {
         id: {type: 'string', maxlength: 24, nullable: false, primary: true},
@@ -782,6 +785,7 @@ module.exports = {
         plaintext: {type: 'text', maxlength: 1000000000, fieldtype: 'long', nullable: true},
         track_opens: {type: 'boolean', nullable: false, defaultTo: false},
         track_clicks: {type: 'boolean', nullable: false, defaultTo: false},
+        feedback_enabled: {type: 'boolean', nullable: false, defaultTo: false},
         submitted_at: {type: 'dateTime', nullable: false},
         newsletter_id: {type: 'string', maxlength: 24, nullable: true, references: 'newsletters.id'},
         created_at: {type: 'dateTime', nullable: false},

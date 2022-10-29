@@ -1,11 +1,13 @@
 import Helper from '@ember/component/helper';
 import moment from 'moment-timezone';
 import {getNonDecimal, getSymbol} from 'ghost-admin/utils/currency';
+import {ghPluralize} from 'ghost-admin/helpers/gh-pluralize';
 import {inject as service} from '@ember/service';
 
 export default class ParseMemberEventHelper extends Helper {
     @service feature;
     @service utils;
+    @service membersUtils;
 
     compute([event, hasMultipleNewsletters]) {
         const subject = event.data.member.name || event.data.member.email;
@@ -18,6 +20,7 @@ export default class ParseMemberEventHelper extends Helper {
         const object = this.getObject(event);
         const url = this.getURL(event);
         const timestamp = moment(event.data.created_at);
+        const source = this.getSource(event);
 
         return {
             memberId: event.data.member_id ?? event.data.member?.id,
@@ -29,6 +32,7 @@ export default class ParseMemberEventHelper extends Helper {
             action,
             join,
             object,
+            source,
             info,
             description,
             url,
@@ -39,10 +43,6 @@ export default class ParseMemberEventHelper extends Helper {
     /* internal helper functions */
     getIcon(event) {
         let icon;
-
-        if (event.type === 'signup_event') {
-            icon = 'signed-up';
-        }
 
         if (event.type === 'login_event') {
             icon = 'logged-in';
@@ -68,11 +68,15 @@ export default class ParseMemberEventHelper extends Helper {
             }
         }
 
+        if (event.type === 'signup_event' || (event.type === 'subscription_event' && event.data.type === 'created' && event.data.signup)) {
+            icon = 'signed-up';
+        }
+
         if (event.type === 'email_opened_event') {
             icon = 'opened-email';
         }
 
-        if (event.type === 'email_delivered_event') {
+        if (event.type === 'email_delivered_event' || event.type === 'email_sent_event') {
             icon = 'received-email';
         }
 
@@ -84,15 +88,23 @@ export default class ParseMemberEventHelper extends Helper {
             icon = 'comment';
         }
 
-        if (event.type === 'click_event') {
+        if (event.type === 'click_event' || event.type === 'aggregated_click_event') {
             icon = 'click';
+        }
+
+        if (event.type === 'feedback_event') {
+            if (event.data.score === 1) {
+                icon = 'more-like-this';
+            } else {
+                icon = 'less-like-this';
+            }
         }
 
         return 'event-' + icon + (this.feature.get('memberAttribution') ? '--feature-attribution' : '');
     }
 
     getAction(event, hasMultipleNewsletters) {
-        if (event.type === 'signup_event') {
+        if (event.type === 'signup_event' || (event.type === 'subscription_event' && event.data.type === 'created' && event.data.signup)) {
             return 'signed up';
         }
 
@@ -141,7 +153,7 @@ export default class ParseMemberEventHelper extends Helper {
             return 'opened email';
         }
 
-        if (event.type === 'email_delivered_event') {
+        if (event.type === 'email_delivered_event' || event.type === 'email_sent_event') {
             return 'received email';
         }
 
@@ -158,6 +170,20 @@ export default class ParseMemberEventHelper extends Helper {
 
         if (event.type === 'click_event') {
             return 'clicked link in email';
+        }
+
+        if (event.type === 'aggregated_click_event') {
+            if (event.data.count.clicks <= 1) {
+                return 'clicked link in email';
+            }
+            return `clicked ${ghPluralize(event.data.count.clicks, 'link')} in email`;
+        }
+
+        if (event.type === 'feedback_event') {
+            if (event.data.score === 1) {
+                return 'more like this';
+            }
+            return 'less like this';
         }
     }
 
@@ -202,7 +228,7 @@ export default class ParseMemberEventHelper extends Helper {
             }
         }
 
-        if (event.type === 'click_event') {
+        if (event.type === 'click_event' || event.type === 'feedback_event') {
             if (event.data.post) {
                 return event.data.post.title;
             }
@@ -211,16 +237,41 @@ export default class ParseMemberEventHelper extends Helper {
         return '';
     }
 
+    /**
+     * Clickable object, shown between action and info, or in a separate column in some views
+     */
+    getSource(event) {
+        if (event.data?.attribution?.referrer_source) {
+            return {
+                name: event.data.attribution.referrer_source,
+                url: event.data.attribution.referrer_url ?? null
+            };
+        }
+
+        return null;
+    }
+
     getInfo(event) {
         if (event.type === 'subscription_event') {
             let mrrDelta = getNonDecimal(event.data.mrr_delta, event.data.currency);
             if (mrrDelta === 0) {
                 return;
             }
-            let sign = mrrDelta > 0 ? '+' : '-';
-            let symbol = getSymbol(event.data.currency);
-            return `(MRR ${sign}${symbol}${Math.abs(mrrDelta)})`;
+            const symbol = getSymbol(event.data.currency);
+
+            if (event.data.type === 'created') {
+                const sign = mrrDelta > 0 ? '' : '-';
+                const tierName = this.membersUtils.hasMultipleTiers ? (event.data.tierName ?? 'paid') : 'paid';
+                return `${tierName} - ${sign}${symbol}${Math.abs(mrrDelta)}/month`;
+            }
+            const sign = mrrDelta > 0 ? '+' : '-';
+            return `MRR - ${sign}${symbol}${Math.abs(mrrDelta)}`;
         }
+
+        if (event.type === 'signup_event' && this.membersUtils.paidMembersEnabled) {
+            return 'Free';
+        }
+
         return;
     }
 
@@ -241,13 +292,7 @@ export default class ParseMemberEventHelper extends Helper {
      * Make the object clickable
      */
     getURL(event) {
-        if (event.type === 'comment_event') {
-            if (event.data.post) {
-                return event.data.post.url;
-            }
-        }
-
-        if (event.type === 'click_event') {
+        if (event.type === 'comment_event' || event.type === 'click_event' || event.type === 'feedback_event') {
             if (event.data.post) {
                 return event.data.post.url;
             }

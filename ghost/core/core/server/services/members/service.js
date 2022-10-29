@@ -16,6 +16,7 @@ const config = require('../../../shared/config');
 const models = require('../../models');
 const {GhostMailer} = require('../mail');
 const jobsService = require('../jobs');
+const tiersService = require('../tiers');
 const VerificationTrigger = require('@tryghost/verification-trigger');
 const DatabaseInfo = require('@tryghost/database-info');
 const settingsHelpers = require('../settings-helpers');
@@ -47,7 +48,13 @@ let verificationTrigger;
 const membersImporter = new MembersCSVImporter({
     storagePath: config.getContentPath('data'),
     getTimezone: () => settingsCache.get('timezone'),
-    getMembersApi: () => module.exports.api,
+    getMembersRepository: async () => {
+        const api = await module.exports.api;
+        return api.members;
+    },
+    getDefaultTier: () => {
+        return tiersService.api.readDefaultTier();
+    },
     sendEmail: ghostMailer.send.bind(ghostMailer),
     isSet: labsService.isSet.bind(labsService),
     addJob: jobsService.addJob.bind(jobsService),

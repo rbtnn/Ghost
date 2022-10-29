@@ -391,17 +391,18 @@ function setupGhostApi({siteUrl = window.location.origin, apiUrl, apiKey}) {
                     throw new Error(errMssg);
                 }
                 return res.json();
-            }).then(function (result) {
-                const stripe = window.Stripe(result.publicKey);
-                return stripe.redirectToCheckout({
-                    sessionId: result.sessionId
-                });
-            }).then(function (result) {
-                if (result.error) {
-                    throw new Error(result.error.message);
+            }).then(function (responseBody) {
+                if (responseBody.url) {
+                    return window.location.assign(responseBody.url);
                 }
-            }).catch(function (err) {
-                throw err;
+                const stripe = window.Stripe(responseBody.publicKey);
+                return stripe.redirectToCheckout({
+                    sessionId: responseBody.sessionId
+                }).then(function (redirectResult) {
+                    if (redirectResult.error) {
+                        throw new Error(redirectResult.error.message);
+                    }
+                });
             });
         },
 

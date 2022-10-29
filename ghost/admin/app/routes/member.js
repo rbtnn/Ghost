@@ -9,6 +9,7 @@ export default class MembersRoute extends AdminRoute {
     @service router;
 
     _requiresBackgroundRefresh = true;
+    fromAnalytics = null;
 
     constructor() {
         super(...arguments);
@@ -27,10 +28,33 @@ export default class MembersRoute extends AdminRoute {
         }
     }
 
-    setupController(controller, member) {
+    setupController(controller, member, transition) {
         super.setupController(...arguments);
         if (this._requiresBackgroundRefresh) {
             controller.fetchMemberTask.perform(member.id);
+        }
+
+        controller.directlyFromAnalytics = false;
+        if (transition.from?.name === 'posts.analytics') {
+            // Sadly transition.from.params is not reliable to use (not populated on transitions)
+            const oldParams = transition.router?.oldState?.params['posts.analytics'] ?? {};
+            
+            // We need to store analytics in 'this' to have it accessible for the member route
+            this.fromAnalytics = Object.values(oldParams);
+            controller.fromAnalytics = this.fromAnalytics;
+            controller.directlyFromAnalytics = true;
+        } else if (transition.from?.metadata?.fromAnalytics) {
+            // Handle returning from member route
+            const fromAnalytics = transition.from?.metadata.fromAnalytics ?? null;
+            controller.fromAnalytics = fromAnalytics;
+            this.fromAnalytics = fromAnalytics;
+        } else if (transition.from?.name === 'members.index' && transition.from?.parent?.name === 'members') {
+            const fromAnalytics = transition.from?.parent?.metadata.fromAnalytics ?? null;
+            controller.fromAnalytics = fromAnalytics;
+            this.fromAnalytics = fromAnalytics;
+        } else {
+            controller.fromAnalytics = null;
+            this.fromAnalytics = null;
         }
     }
 
@@ -48,42 +72,39 @@ export default class MembersRoute extends AdminRoute {
 
     @action
     async willTransition(transition) {
-        if (this.hasConfirmed) {
-            return true;
-        }
-
-        transition.abort();
+        let hasDirtyAttributes = this.controller.dirtyAttributes;
 
         // wait for any existing confirm modal to be closed before allowing transition
         if (this.confirmModal) {
             return;
         }
 
-        if (this.controller.saveTask?.isRunning) {
-            await this.controller.saveTask.last;
-        }
+        if (!this.hasConfirmed && hasDirtyAttributes) {
+            transition.abort();
 
-        const shouldLeave = await this.confirmUnsavedChanges();
+            if (this.controller.saveTask?.isRunning) {
+                await this.controller.saveTask.last;
+                transition.retry();
+            }
 
-        if (shouldLeave) {
-            this.controller.model.rollbackAttributes();
-            this.hasConfirmed = true;
-            return transition.retry();
+            const shouldLeave = await this.confirmUnsavedChanges();
+
+            if (shouldLeave) {
+                this.controller.model.rollbackAttributes();
+                this.hasConfirmed = true;
+                return transition.retry();
+            }
         }
     }
 
     async confirmUnsavedChanges() {
-        if (this.controller.model?.hasDirtyAttributes) {
-            this.confirmModal = this.modals
-                .open(ConfirmUnsavedChangesModal)
-                .finally(() => {
-                    this.confirmModal = null;
-                });
+        this.confirmModal = this.modals
+            .open(ConfirmUnsavedChangesModal)
+            .finally(() => {
+                this.confirmModal = null;
+            });
 
-            return this.confirmModal;
-        }
-
-        return true;
+        return this.confirmModal;
     }
 
     closeImpersonateModal(transition) {
@@ -98,5 +119,11 @@ export default class MembersRoute extends AdminRoute {
 
     titleToken() {
         return this.controller.member.name;
+    }
+
+    buildRouteInfoMetadata() {
+        return {
+            fromAnalytics: this.fromAnalytics
+        };
     }
 }

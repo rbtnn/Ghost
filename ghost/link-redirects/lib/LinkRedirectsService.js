@@ -7,6 +7,7 @@ const LinkRedirect = require('./LinkRedirect');
  * @typedef {object} ILinkRedirectRepository
  * @prop {(url: URL) => Promise<LinkRedirect|undefined>} getByURL
  * @prop {({filter: string}) => Promise<LinkRedirect[]>} getAll
+ * @prop {({filter: string}) => Promise<String[]>} getFilteredIds
  * @prop {(linkRedirect: LinkRedirect) => Promise<void>} save
  */
 
@@ -48,6 +49,15 @@ class LinkRedirectsService {
     }
 
     /**
+     * @param {Object} options
+     *
+     * @returns {Promise<String[]>}
+     */
+    async getFilteredIds(options) {
+        return await this.#linkRedirectRepository.getFilteredIds(options);
+    }
+
+    /**
      * @param {URL} from
      * @param {URL} to
      *
@@ -86,6 +96,7 @@ class LinkRedirectsService {
 
         DomainEvents.dispatch(event);
 
+        res.setHeader('X-Robots-Tag', 'noindex, nofollow');
         return res.redirect(link.to.href);
     }
 }

@@ -2,6 +2,21 @@ const mapComment = require('./comments');
 const url = require('../utils/url');
 const _ = require('lodash');
 
+const memberFields = [
+    'id',
+    'uuid',
+    'name',
+    'email',
+    'avatar_image'
+];
+
+const postFields = [
+    'id',
+    'uuid',
+    'title',
+    'url'
+];
+
 const commentEventMapper = (json, frame) => {
     return {
         ...json,
@@ -10,24 +25,9 @@ const commentEventMapper = (json, frame) => {
 };
 
 const clickEventMapper = (json, frame) => {
-    const memberFields = [
-        'id',
-        'uuid',
-        'name',
-        'email',
-        'avatar_image'
-    ];
-
     const linkFields = [
         'from',
         'to'
-    ];
-
-    const postFields = [
-        'id',
-        'uuid',
-        'title',
-        'url'
     ];
 
     const data = json.data;
@@ -51,6 +51,67 @@ const clickEventMapper = (json, frame) => {
 
     if (data.created_at) {
         response.created_at = data.created_at;
+    }
+
+    if (data.id) {
+        response.id = data.id;
+    }
+
+    return {
+        ...json,
+        data: response
+    };
+};
+
+const aggregatedClickEventMapper = (json) => {
+    const data = json.data;
+    const response = {};
+
+    if (data.member) {
+        response.member = _.pick(data.member, memberFields);
+    } else {
+        response.member = null;
+    }
+
+    if (data.created_at) {
+        response.created_at = data.created_at;
+    }
+
+    if (data.id) {
+        response.id = data.id;
+    }
+
+    response.count = {
+        clicks: data.count?.clicks ?? 0
+    };
+
+    return {
+        ...json,
+        data: response
+    };
+};
+
+const feedbackEventMapper = (json, frame) => {
+    const feedbackFields = [
+        'id',
+        'score',
+        'created_at'
+    ];
+
+    const data = json.data;
+    const response = _.pick(data, feedbackFields);
+
+    if (data.post) {
+        url.forPost(data.post.id, data.post, frame);
+        response.post = _.pick(data.post, postFields);
+    } else {
+        response.post = null;
+    }
+    
+    if (data.member) {
+        response.member = _.pick(data.member, memberFields);
+    } else {
+        response.member = null;
     }
 
     return {
@@ -82,8 +143,21 @@ const activityFeedMapper = (event, frame) => {
     if (event.type === 'click_event') {
         return clickEventMapper(event, frame);
     }
+    if (event.type === 'aggregated_click_event') {
+        return aggregatedClickEventMapper(event, frame);
+    }
+    if (event.type === 'feedback_event') {
+        return feedbackEventMapper(event, frame);
+    }
     if (event.data?.attribution) {
         event.data.attribution = serializeAttribution(event.data.attribution);
+    }
+    // TODO: add dedicated mappers for other event types
+    if (event.data?.batch_id) {
+        delete event.data.batch_id;
+    }
+    if (event.data?.subscriptionCreatedEvent) {
+        delete event.data.subscriptionCreatedEvent;
     }
     return event;
 };

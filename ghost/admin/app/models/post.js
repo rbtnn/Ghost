@@ -79,6 +79,7 @@ export default Model.extend(Comparable, ValidationEngine, {
     validationType: 'post',
 
     count: attr(),
+    sentiment: attr(),
     createdAtUTC: attr('moment-utc'),
     excerpt: attr('string'),
     customExcerpt: attr('string'),
@@ -195,8 +196,8 @@ export default Model.extend(Comparable, ValidationEngine, {
             && this.email && this.email.status === 'failed';
     }),
 
-    showAudienceFeedback: computed('count', function () {
-        return this.feature.get('audienceFeedback') && this.count.sentiment !== undefined;
+    showAudienceFeedback: computed('sentiment', function () {
+        return this.feature.get('audienceFeedback') && this.sentiment !== undefined;
     }),
 
     showEmailOpenAnalytics: computed('hasBeenEmailed', 'isSent', 'isPublished', function () {
@@ -219,10 +220,10 @@ export default Model.extend(Comparable, ValidationEngine, {
             && this.settings.emailTrackClicks;
     }),
 
-    showAttributionAnalytics: computed('isPage', 'emailOnly', 'isPublished', 'membersUtils.isMembersInviteOnly', function () {
+    showAttributionAnalytics: computed('isPage', 'emailOnly', 'isPublished', 'membersUtils.isMembersInviteOnly', 'settings.membersTrackSources', function () {
         return (this.isPage || !this.emailOnly)
                 && this.isPublished
-                && this.feature.get('memberAttribution')
+                && this.settings.membersTrackSources
                 && !this.membersUtils.isMembersInviteOnly
                 && !this.session.user.isContributor;
     }),
@@ -249,6 +250,8 @@ export default Model.extend(Comparable, ValidationEngine, {
         }
         return this.get('ghostPaths.url').join(blogUrl, previewKeyword, uuid);
     }),
+
+    isFeedbackEnabledForEmail: computed.reads('email.feedbackEnabled'),
 
     isPublic: computed('visibility', function () {
         return this.visibility === 'public' ? true : false;

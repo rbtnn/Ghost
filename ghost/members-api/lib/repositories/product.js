@@ -129,6 +129,21 @@ class ProductRepository {
     }
 
     /**
+     * Fetches the default product
+     * @param {Object} options
+     * @returns {Promise<ProductModel>}
+     */
+    async getDefaultProduct(options = {}) {
+        const defaultProductPage = await this.list({
+            filter: 'type:paid+active:true',
+            limit: 1,
+            ...options
+        });
+
+        return defaultProductPage.data[0];
+    }
+
+    /**
      * Creates a product from a name
      *
      * @param {object} data
@@ -314,7 +329,7 @@ class ProductRepository {
      * @param {string} data.welcome_page_url
      * @param {BenefitInput[]} data.benefits
      *
-     * @param {StripePriceInput[]=} data.stripe_prices
+     * @param {StripePriceInput[]} [data.stripe_prices]
      * @param {StripePriceInput|null} data.monthly_price
      * @param {StripePriceInput|null} data.yearly_price
      *

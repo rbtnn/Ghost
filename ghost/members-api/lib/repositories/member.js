@@ -227,6 +227,11 @@ module.exports = class MemberRepository {
             options = {};
         }
 
+        if (!options.batch_id) {
+            // We'll use this to link related events
+            options.batch_id = ObjectId().toHexString();
+        }
+
         const {labels, stripeCustomer, offerId, attribution} = data;
 
         if (labels) {
@@ -339,7 +344,7 @@ module.exports = class MemberRepository {
                         subscription,
                         offerId,
                         attribution
-                    });
+                    }, {batch_id: options.batch_id});
                 } catch (err) {
                     if (err.code !== 'ER_DUP_ENTRY' && err.code !== 'SQLITE_CONSTRAINT') {
                         throw err;
@@ -352,6 +357,7 @@ module.exports = class MemberRepository {
         }
         this.dispatchEvent(MemberCreatedEvent.create({
             memberId: member.id,
+            batchId: options.batch_id,
             attribution: data.attribution,
             source
         }, eventData.created_at), options);
@@ -807,6 +813,11 @@ module.exports = class MemberRepository {
                 });
             });
         }
+
+        if (!options.batch_id) {
+            options.batch_id = ObjectId().toHexString();
+        }
+
         const member = await this._Member.findOne({
             id: data.id
         }, {...options, forUpdate: true});
@@ -841,13 +852,10 @@ module.exports = class MemberRepository {
             ghostProduct = await this._productRepository.get({stripe_product_id: subscriptionPriceData.product}, {...options, forUpdate: true});
             // Use first Ghost product as default product in case of missing link
             if (!ghostProduct) {
-                let {data: pageData} = await this._productRepository.list({
-                    limit: 1,
-                    filter: 'type:paid',
-                    ...options,
-                    forUpdate: true
+                ghostProduct = await this._productRepository.getDefaultProduct({
+                    forUpdate: true,
+                    ...options
                 });
-                ghostProduct = (pageData && pageData[0]) || null;
             }
 
             // Link Stripe Product & Price to Ghost Product
@@ -1013,7 +1021,8 @@ module.exports = class MemberRepository {
                 memberId: member.id,
                 subscriptionId: subscriptionModel.get('id'),
                 offerId: data.offerId,
-                attribution: data.attribution
+                attribution: data.attribution,
+                batchId: options.batch_id
             });
             this.dispatchEvent(event, options);
         }
@@ -1385,18 +1394,19 @@ module.exports = class MemberRepository {
         const activeSubscriptions = subscriptions.models.filter((subscription) => {
             return this.isActiveSubscriptionStatus(subscription.get('status'));
         });
+        const sharedOptions = _.pick(options, ['context', 'transacting']);
 
-        const productPage = await this._productRepository.list({
-            limit: 1,
+        const ghostProductModel = await this._productRepository.getDefaultProduct({
             withRelated: ['stripePrices'],
-            filter: 'type:paid',
-            ...options
+            ...sharedOptions
         });
 
-        const defaultProduct = productPage && productPage.data && productPage.data[0] && productPage.data[0].toJSON();
+        const defaultProduct = ghostProductModel?.toJSON();
 
         if (!defaultProduct) {
-            throw new errors.NotFoundError({message: tpl(messages.productNotFound)});
+            throw new errors.NotFoundError({
+                message: tpl(messages.productNotFound, {id: '"default"'})
+            });
         }
 
         const zeroValuePrices = defaultProduct.stripePrices.filter((price) => {
@@ -1445,7 +1455,7 @@ module.exports = class MemberRepository {
                 await this.linkSubscription({
                     id: member.id,
                     subscription: updatedSubscription
-                }, options);
+                }, sharedOptions);
             }
         } else {
             const stripeCustomer = await this._stripeAPIService.createCustomer({
@@ -1457,7 +1467,7 @@ module.exports = class MemberRepository {
                 member_id: data.id,
                 email: stripeCustomer.email,
                 name: stripeCustomer.name
-            }, options);
+            }, sharedOptions);
 
             let zeroValuePrice = zeroValuePrices[0];
 
@@ -1473,7 +1483,7 @@ module.exports = class MemberRepository {
                         interval: 'year',
                         amount: 0
                     }]
-                }, options)).toJSON();
+                }, sharedOptions)).toJSON();
                 zeroValuePrice = product.stripePrices.find((price) => {
                     return price.currency.toLowerCase() === 'usd' && price.amount === 0;
                 });
@@ -1488,7 +1498,7 @@ module.exports = class MemberRepository {
             await this.linkSubscription({
                 id: member.id,
                 subscription
-            }, options);
+            }, sharedOptions);
         }
     }
 
