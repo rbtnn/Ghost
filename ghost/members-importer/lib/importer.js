@@ -86,9 +86,9 @@ module.exports = class MembersCSVImporter {
         const numberOfBatches = Math.ceil(rows.length / batchSize);
         const mappedCSV = membersCSV.unparse(rows, columns);
 
-        const hasStripeData = rows.find(function rowHasStripeData(row) {
-            return !!row.stripe_customer_id || !!row.complimentary_plan;
-        });
+        const hasStripeData = !!(rows.find(function rowHasStripeData(row) {
+            return !!row.stripe_customer_id;
+        }));
 
         await fs.writeFile(outputFilePath, mappedCSV);
 
@@ -107,7 +107,7 @@ module.exports = class MembersCSVImporter {
      * @param {string} filePath - the path to a "prepared" CSV file
      */
     async perform(filePath) {
-        const rows = membersCSV.parse(filePath, DEFAULT_CSV_HEADER_MAPPING);
+        const rows = await membersCSV.parse(filePath, DEFAULT_CSV_HEADER_MAPPING);
 
         const defaultTier = await this._getDefaultTier();
         const membersRepository = await this._getMembersRepository();
