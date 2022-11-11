@@ -751,7 +751,7 @@ export function getPriceIdFromPageQuery({site, pageQuery}) {
 
 export const getOfferOffAmount = ({offer}) => {
     if (offer.type === 'fixed') {
-        return `${getCurrencySymbol(offer.currency)}${offer.amount / 100}`;
+        return `${getCurrencySymbol(offer.currency)}${offer.amount}`;
     } else if (offer.type === 'percent') {
         return `${offer.amount}%`;
     }
@@ -762,12 +762,12 @@ export const getUpdatedOfferPrice = ({offer, price, useFormatted = false}) => {
     const originalAmount = price.amount;
     let updatedAmount;
     if (offer.type === 'fixed' && isSameCurrency(offer.currency, price.currency)) {
-        updatedAmount = ((originalAmount - offer.amount)) / 100;
+        updatedAmount = ((originalAmount - offer.amount));
         updatedAmount = updatedAmount > 0 ? updatedAmount : 0;
     } else if (offer.type === 'percent') {
         updatedAmount = (originalAmount - ((originalAmount * offer.amount) / 100)) / 100;
     } else {
-        updatedAmount = originalAmount / 100;
+        updatedAmount = originalAmount;
     }
     if (useFormatted) {
         return Intl.NumberFormat('en', {currency: price?.currency, style: 'currency'}).format(updatedAmount);

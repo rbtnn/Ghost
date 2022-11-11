@@ -422,7 +422,7 @@ export default class OfferPage extends React.Component {
             updatedAmount = originalAmount - offer.amount;
             return updatedAmount > 0 ? updatedAmount : 0;
         } else if (offer.type === 'percent') {
-            updatedAmount = originalAmount - ((originalAmount * offer.amount) / 100);
+            updatedAmount = originalAmount - ((originalAmount * offer.amount));
             return updatedAmount;
         }
         return originalAmount;
