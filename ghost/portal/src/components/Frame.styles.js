@@ -35,6 +35,7 @@ const FrameStyles = `
 
 .gh-portal-text-center {
     text-align: center;
+    font-size: 1.2rem;
 }
 
 .gh-portal-input-label {

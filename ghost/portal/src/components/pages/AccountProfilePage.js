@@ -56,9 +56,9 @@ export default class AccountProfilePage extends React.Component {
 
     renderSaveButton() {
         const isRunning = (this.context.action === 'updateProfile:running');
-        let label = 'Save';
+        let label = '保存';
         if (this.context.action === 'updateProfile:failed') {
-            label = 'Retry';
+            label = 'リトライ';
         }
         const disabled = isRunning ? true : false;
         return (
@@ -91,7 +91,7 @@ export default class AccountProfilePage extends React.Component {
         return (
             <header className='gh-portal-detail-header'>
                 <BackButton brandColor={this.context.brandColor} hidden={!this.context.lastPage} onClick={e => this.onBack(e)} />
-                <h3 className='gh-portal-main-title'>Account settings</h3>
+                <h3 className='gh-portal-main-title'>アカウント設定</h3>
             </header>
         );
     }
@@ -134,7 +134,7 @@ export default class AccountProfilePage extends React.Component {
                 type: 'text',
                 value: state.name,
                 placeholder: 'Jamie Larson',
-                label: 'Name',
+                label: '名前',
                 name: 'name',
                 required: true,
                 errorMessage: errors.name || ''
@@ -143,7 +143,7 @@ export default class AccountProfilePage extends React.Component {
                 type: 'email',
                 value: state.email,
                 placeholder: 'jamie@example.com',
-                label: 'Email',
+                label: 'メールアドレス',
                 name: 'email',
                 required: true,
                 errorMessage: errors.email || ''

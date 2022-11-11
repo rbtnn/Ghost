@@ -363,7 +363,7 @@ function ChangePlanOptions({plans, selectedPlan, onPlanSelect, changePlan}) {
     addDiscountToPlans(plans);
 
     return plans.map(({name, currency_symbol: currencySymbol, amount, description, interval, id}) => {
-        const price = amount / 100;
+        const price = amount;
         const isChecked = selectedPlan === id;
         let displayName = interval === 'month' ? 'Monthly' : 'Yearly';
 
@@ -377,7 +377,7 @@ function ChangePlanOptions({plans, selectedPlan, onPlanSelect, changePlan}) {
                 <h4 className={planNameClass}>{displayName}</h4>
                 <PriceLabel currencySymbol={currencySymbol} price={price} interval={interval} />
                 <div className={featureClass} style={{border: 'none', paddingTop: '3px'}}>
-                    {(changePlan && selectedPlan === id ? <span className='gh-portal-plan-current'>Current plan</span> : '')}
+                    {(changePlan && selectedPlan === id ? <span className='gh-portal-plan-current'>(購読中)</span> : '')}
                 </div>
             </div>
         );

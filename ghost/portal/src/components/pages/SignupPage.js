@@ -369,7 +369,7 @@ class SignupPage extends React.Component {
                 type: 'email',
                 value: state.email,
                 placeholder: 'jamie@example.com',
-                label: 'Email',
+                label: 'メールアドレス',
                 name: 'email',
                 required: true,
                 tabindex: 2,
@@ -383,7 +383,7 @@ class SignupPage extends React.Component {
                 type: 'text',
                 value: state.name,
                 placeholder: 'Jamie Larson',
-                label: 'Name',
+                label: '名前',
                 name: 'name',
                 required: true,
                 tabindex: 1,
@@ -406,11 +406,11 @@ class SignupPage extends React.Component {
             return null;
         }
 
-        let label = 'Continue';
+        let label = '次へ';
         const showOnlyFree = pageQuery === 'free' && hasFreeProductPrice({site});
 
         if (hasOnlyFreePlan({site}) || showOnlyFree) {
-            label = 'Sign up';
+            label = 'BSMを購読';
         } else {
             return null;
         }
@@ -422,7 +422,7 @@ class SignupPage extends React.Component {
         }
         let retry = false;
         if (action === 'signup:failed') {
-            label = 'Retry';
+            label = 'リトライ';
             retry = true;
         }
 
@@ -471,13 +471,13 @@ class SignupPage extends React.Component {
             <div>
                 {this.renderFreeTrialMessage()}
                 <div className='gh-portal-signup-message'>
-                    <div>Already a member?</div>
+                    <div>既にアカウントを持っていますか？</div>
                     <button
                         className='gh-portal-btn gh-portal-btn-link'
                         style={{color: brandColor}}
                         onClick={() => onAction('switchPage', {page: 'signin'})}
                     >
-                        <span>Sign in</span>
+                        <span>ログイン</span>
                     </button>
                 </div>
             </div>

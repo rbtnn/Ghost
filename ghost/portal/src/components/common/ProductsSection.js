@@ -688,7 +688,7 @@ function FreeProductCard({products, handleChooseSignup}) {
                                 onClick={(e) => {
                                     handleChooseSignup(e, 'free');
                                 }}>
-                                {((selectedProduct === 'free' && disabled) ? <LoaderIcon className='gh-portal-loadingicon' /> : 'Choose')}
+                                {((selectedProduct === 'free' && disabled) ? <LoaderIcon className='gh-portal-loadingicon' /> : '選択')}
                             </button>
                         </div>
                         : '')}
@@ -709,7 +709,7 @@ function ProductCardButton({selectedProduct, product, disabled, noOfProducts, tr
         return ('Start ' + trialDays + '-day free trial');
     }
 
-    return (noOfProducts > 1 ? 'Choose' : 'Continue');
+    return (noOfProducts > 1 ? '選択' : '次へ');
 }
 
 function ProductCard({product, products, selectedInterval, handleChooseSignup}) {
@@ -971,7 +971,7 @@ export function ChangeProductSection({onPlanSelect, selectedPlan, products, type
                     disabled={!selectedPrice?.id || (activePrice.id === selectedPrice?.id)}
                     isPrimary={true}
                     brandColor={brandColor}
-                    label={'Continue'}
+                    label={'次へ'}
                     style={{height: '40px', width: '100%', marginTop: '24px'}}
                 /> */}
             </section>
@@ -1018,7 +1018,7 @@ function ChangeProductCard({product, onPlanSelect}) {
                 </div>
                 {(currentPlan ?
                     <div className='gh-portal-btn-product'>
-                        <span className='gh-portal-current-plan'><span>Current plan</span></span>
+                        <span className='gh-portal-current-plan'><span>(購読中)</span></span>
                     </div>
                     :
                     <div className='gh-portal-btn-product'>
@@ -1027,7 +1027,7 @@ function ChangeProductCard({product, onPlanSelect}) {
                             onClick={() => {
                                 onPlanSelect(null, selectedPrice?.id);
                             }}
-                        >Choose</button>
+                        >選択</button>
                     </div>)}
             </div>
         </div>

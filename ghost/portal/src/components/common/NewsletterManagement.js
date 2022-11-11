@@ -16,7 +16,7 @@ function AccountHeader() {
             <BackButton brandColor={brandColor} hidden={!lastPage} onClick={(e) => {
                 onAction('back');
             }} />
-            <h3 className='gh-portal-main-title'>Email preferences</h3>
+            <h3 className='gh-portal-main-title'>メール設定</h3>
         </header>
     );
 }
@@ -50,8 +50,8 @@ function NewsletterPrefSection({newsletter, subscribedNewsletters, setSubscribed
     return (
         <section className='gh-portal-list-toggle-wrapper'>
             <div className='gh-portal-list-detail'>
-                <h3>{newsletter.name}</h3>
-                <p>{newsletter?.description}</p>
+                <h3>BSM投稿</h3>
+                <p>BSMの記事が投稿された時、メールにて通知します。</p>
             </div>
             <div style={{display: 'flex', alignItems: 'center'}}>
                 <SuccessIcon show={showUpdated} checked={isChecked} />
@@ -98,8 +98,8 @@ function CommentsSection({updateCommentNotifications, isCommentsEnabled, enableC
     return (
         <section className='gh-portal-list-toggle-wrapper'>
             <div className='gh-portal-list-detail'>
-                <h3>Comments</h3>
-                <p>Get notified when someone replies to your comment</p>
+                <h3>コメント</h3>
+                <p>誰かがあなたのコメントに対して返信をした時、メールにて通知します。</p>
             </div>
             <div style={{display: 'flex', alignItems: 'center'}}>
                 <SuccessIcon show={showUpdated} checked={isChecked} />
@@ -135,7 +135,7 @@ function NewsletterPrefs({subscribedNewsletters, setSubscribedNewsletters}) {
 function ShowPaidMemberMessage({site, isPaid}) {
     if (isPaid) {
         return (
-            <p style={{textAlign: 'center', marginTop: '12px', marginBottom: '0', color: 'var(--grey6)'}}>Unsubscribing from emails will not cancel your paid subscription to {site?.title}</p>
+            <p style={{textAlign: 'center', marginTop: '12px', marginBottom: '0', color: 'var(--grey6)'}}>メールの通知を停止してもBSM購読は解除されません。</p>
         );
     }
     return null;
@@ -192,7 +192,7 @@ export default function NewsletterManagement({
                         disabled={isDisabled}
                         brandColor={brandColor}
                         isPrimary={false}
-                        label='Unsubscribe from all emails'
+                        label='すべての通知を解除する'
                         isDestructive={true}
                         style={{width: '100%'}}
                     />

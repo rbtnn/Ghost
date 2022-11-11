@@ -4,10 +4,10 @@ export const FormInputError = ({field}) => {
     if (field.required && !field.value) {
         switch (field.name) {
         case 'name':
-            return `Enter your name`;
+            return `名前を入力してください`;
         
         case 'email':
-            return `Enter your email address`;
+            return `メールアドレスを入力してください`;
 
         default:
             return `Please enter ${field.name}`;
@@ -15,7 +15,7 @@ export const FormInputError = ({field}) => {
     }
 
     if (field.type === 'email' && !Validator.isValidEmail(field.value)) {
-        return `Invalid email address`;
+        return `メールアドレスが不正です`;
     }
     return null;
 };

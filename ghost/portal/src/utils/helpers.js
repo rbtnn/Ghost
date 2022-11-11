@@ -121,7 +121,7 @@ export function getPriceFromSubscription({subscription}) {
             ...subscription.price,
             stripe_price_id: subscription.price.id,
             id: subscription.price.price_id,
-            price: subscription.price.amount / 100,
+            price: subscription.price.amount,
             name: subscription.price.nickname,
             tierId: subscription.tier?.id,
             cadence: subscription.price?.interval === 'month' ? 'month' : 'year',
@@ -577,7 +577,7 @@ export function getAvailablePrices({site, products = null}) {
         return {
             ...d,
             price_id: d.id,
-            price: d.amount / 100,
+            price: d.amount,
             name: d.nickname,
             currency_symbol: getCurrencySymbol(d.currency)
         };
@@ -697,7 +697,7 @@ export const getStripeAmount = (amount) => {
     if (isNaN(amount)) {
         return 0;
     }
-    return (amount / 100);
+    return amount;
 };
 
 export const getPriceString = (price = {}) => {

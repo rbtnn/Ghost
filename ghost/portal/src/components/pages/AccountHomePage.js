@@ -4,7 +4,7 @@ import ActionButton from '../common/ActionButton';
 import CloseButton from '../common/CloseButton';
 import Switch from '../common/Switch';
 import {allowCompMemberUpgrade, getCompExpiry, getMemberSubscription, getMemberTierName, getSiteNewsletters, getSupportAddress, getUpdatedOfferPrice, hasCommentsEnabled, hasMultipleNewsletters, hasMultipleProductsFeature, hasOnlyFreePlan, isComplimentaryMember, subscriptionHasFreeTrial} from '../../utils/helpers';
-import {getDateString} from '../../utils/date-time';
+import {getDateString, getDateStringJa} from '../../utils/date-time';
 import {ReactComponent as LoaderIcon} from '../../images/icons/loader.svg';
 import {ReactComponent as OfferTagIcon} from '../../images/icons/offer-tag.svg';
 import {useContext} from 'react';
@@ -139,19 +139,11 @@ const UserAvatar = ({avatar, brandColor}) => {
 };
 
 const AccountFooter = ({onClose, handleSignout, supportAddress = ''}) => {
-    const supportAddressMail = `mailto:${supportAddress}`;
     return (
         <footer className='gh-portal-account-footer'>
             <ul className='gh-portal-account-footermenu'>
-                <li><button className='gh-portal-btn' name='logout' aria-label='logout' onClick={e => handleSignout(e)}>Sign out</button></li>
+                <li><button className='gh-portal-btn' name='logout' aria-label='logout' onClick={e => handleSignout(e)}>ログアウト</button></li>
             </ul>
-            <div className='gh-portal-account-footerright'>
-                <ul className='gh-portal-account-footermenu'>
-                    <li><a className='gh-portal-btn gh-portal-btn-branded' href={supportAddressMail} onClick={() => {
-                        supportAddressMail && window.open(supportAddressMail);
-                    }}>Contact support</a></li>
-                </ul>
-            </div>
         </footer>
     );
 };
@@ -162,7 +154,7 @@ const UserHeader = () => {
     return (
         <header className='gh-portal-account-header'>
             <UserAvatar avatar={avatar} brandColor={brandColor} />
-            <h2 className="gh-portal-main-title">Your account</h2>
+            <h2 className="gh-portal-main-title">アカウント情報</h2>
         </header>
     );
 };
@@ -179,7 +171,7 @@ function getOfferLabel({offer, price, subscriptionStartDate}) {
             const durationInMonths = offer.duration_in_months || 0;
             let offerStartDate = new Date(subscriptionStartDate);
             let offerEndDate = new Date(offerStartDate.setMonth(offerStartDate.getMonth() + durationInMonths));
-            durationLabel = `Ends ${getDateString(offerEndDate)}`;
+            durationLabel = `Ends ${getDateStringJa(offerEndDate)}`;
         }
         offerLabel = `${getUpdatedOfferPrice({offer, price, useFormatted: true})}/${price.interval}${durationLabel ? ` — ${durationLabel}` : ``}`;
     }
@@ -227,7 +219,7 @@ const PaidAccountActions = () => {
         let label = '';
         if (price) {
             const {amount = 0, currency, interval} = price;
-            label = `${Intl.NumberFormat('en', {currency, style: 'currency'}).format(amount / 100)}/${interval}`;
+            label = `${Intl.NumberFormat('en', {currency, style: 'currency'}).format(amount)}/${interval}`;
         }
         let offerLabelStr = getOfferLabel({price, offer, subscriptionStartDate: startDate});
         const compExpiry = getCompExpiry({member});
@@ -285,7 +277,7 @@ const PaidAccountActions = () => {
             return null;
         }
         return (
-            <button className='gh-portal-btn gh-portal-btn-list' onClick={e => openUpdatePlan(e)}>Change</button>
+            <button className='gh-portal-btn gh-portal-btn-list' onClick={e => openUpdatePlan(e)}>変更</button>
         );
     };
 
@@ -305,7 +297,7 @@ const PaidAccountActions = () => {
         const {action} = useContext(AppContext);
         const label = action === 'editBilling:running' ? (
             <LoaderIcon className='gh-portal-billing-button-loader' />
-        ) : 'Update';
+        ) : '更新';
         if (isComplimentary) {
             return null;
         }
@@ -313,7 +305,7 @@ const PaidAccountActions = () => {
         return (
             <section>
                 <div className='gh-portal-list-detail'>
-                    <h3>Billing info</h3>
+                    <h3>支払い情報</h3>
                     <CardLabel defaultCardLast4={defaultCardLast4} />
                 </div>
                 <button className='gh-portal-btn gh-portal-btn-list' onClick={e => onEditBilling(e)}>{label}</button>
@@ -334,6 +326,7 @@ const PaidAccountActions = () => {
         if (hasMultipleProductsFeature({site}) && getMemberTierName({member})) {
             planLabel = getMemberTierName({member});
         }
+        planLabel = 'プラン';
         // const hasFreeTrial = subscriptionHasFreeTrial({sub: subscription});
         // if (hasFreeTrial) {
         //     planLabel += ' (Free Trial)';
@@ -370,10 +363,10 @@ const AccountActions = () => {
             <div className='gh-portal-list'>
                 <section>
                     <div className='gh-portal-list-detail'>
-                        <h3>{(name ? name : 'Account')}</h3>
+                        <h3>{(name ? name : 'アカウント')}</h3>
                         <p>{email}</p>
                     </div>
-                    <button className='gh-portal-btn gh-portal-btn-list' onClick={e => openEditProfile(e)}>Edit</button>
+                    <button className='gh-portal-btn gh-portal-btn-list' onClick={e => openEditProfile(e)}>編集</button>
                 </section>
 
                 <PaidAccountActions />
@@ -392,8 +385,9 @@ function EmailNewsletterAction() {
     if (hasMultipleNewsletters({site}) || hasCommentsEnabled({site})) {
         return null;
     }
+
     const subscribed = !!newsletters?.length;
-    let label = subscribed ? 'Subscribed' : 'Unsubscribed';
+    let label = subscribed ? '停止中' : '購読中';
     const onToggleSubscription = (e, sub) => {
         e.preventDefault();
         const siteNewsletters = getSiteNewsletters({site});
@@ -404,7 +398,7 @@ function EmailNewsletterAction() {
     return (
         <section>
             <div className='gh-portal-list-detail'>
-                <h3>Email newsletter</h3>
+                <h3>メール配信</h3>
                 <p>{label}</p>
             </div>
             <div>
@@ -427,15 +421,14 @@ function EmailPreferencesAction() {
     return (
         <section>
             <div className='gh-portal-list-detail'>
-                <h3>Emails</h3>
-                <p>Update your preferences</p>
+                <h3>メール設定</h3>
             </div>
             <button className='gh-portal-btn gh-portal-btn-list' onClick={(e) => {
                 onAction('switchPage', {
                     page: 'accountEmail',
                     lastPage: 'accountHome'
                 });
-            }}>Manage</button>
+            }}>設定</button>
         </section>
     );
 }
@@ -458,7 +451,7 @@ const SubscribeButton = () => {
     return (
         <ActionButton
             isRunning={isRunning}
-            label="View plans"
+            label="プラン選択"
             onClick={() => openPlanPage()}
             brandColor={brandColor}
             style={{width: '100%'}}
@@ -503,14 +496,14 @@ const AccountWelcome = () => {
         }
         return (
             <div className='gh-portal-section'>
-                <p className='gh-portal-text-center gh-portal-free-ctatext'>Your subscription will renew on {getDateString(currentPeriodEnd)}</p>
+                <p className='gh-portal-text-center gh-portal-free-ctatext'>あなたの購読は{getDateStringJa(currentPeriodEnd)}に自動的に更新されます</p>
             </div>
         );
     }
 
     return (
         <div className='gh-portal-section'>
-            <p className='gh-portal-text-center gh-portal-free-ctatext'>You currently have a free membership, upgrade to a paid subscription for full access.</p>
+            <p className='gh-portal-text-center gh-portal-free-ctatext'>現在、あなたはメンバー登録をしていますが月契約および年契約はしていません。</p>
             <SubscribeButton />
         </div>
     );
@@ -527,7 +520,7 @@ const ContinueSubscriptionButton = () => {
     if (!subscription.cancel_at_period_end) {
         return null;
     }
-    const label = subscription.cancel_at_period_end ? 'Continue subscription' : 'Cancel subscription';
+    const label = subscription.cancel_at_period_end ? '購読継続' : '購読停止';
     const isRunning = ['cancelSubscription:running'].includes(action);
     const disabled = (isRunning) ? true : false;
     const isPrimary = !!subscription.cancel_at_period_end;
@@ -538,7 +531,7 @@ const ContinueSubscriptionButton = () => {
         }
         const currentPeriodEnd = subscription.current_period_end;
         return (
-            <p className='gh-portal-text-center gh-portal-free-ctatext'>Your subscription will expire on {getDateString(currentPeriodEnd)}</p>
+            <p className='gh-portal-text-center gh-portal-free-ctatext'>あなたの購読は{getDateStringJa(currentPeriodEnd)}で期限切れになります</p>
         );
     };
 

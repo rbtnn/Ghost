@@ -4,7 +4,7 @@ import ActionButton from '../common/ActionButton';
 import CloseButton from '../common/CloseButton';
 import BackButton from '../common/BackButton';
 import {MultipleProductsPlansSection} from '../common/PlansSection';
-import {getDateString} from '../../utils/date-time';
+import {getDateString, getDateStringJa} from '../../utils/date-time';
 import {allowCompMemberUpgrade, formatNumber, getAvailablePrices, getFilteredPrices, getMemberActivePrice, getMemberSubscription, getPriceFromSubscription, getProductFromPrice, getSubscriptionFromId, getUpgradeProducts, hasMultipleProductsFeature, isComplimentaryMember, isPaidMember} from '../../utils/helpers';
 
 export const AccountPlanPageStyles = `
@@ -42,17 +42,17 @@ const React = require('react');
 
 function getConfirmationPageTitle({confirmationType}) {
     if (confirmationType === 'changePlan') {
-        return 'Confirm subscription';
+        return '購読確認';
     } else if (confirmationType === 'cancel') {
-        return 'Cancel subscription';
+        return '購読停止';
     } else if (confirmationType === 'subscribe') {
-        return 'Subscribe';
+        return '購読開始';
     }
 }
 
 const Header = ({onBack, showConfirmation, confirmationType}) => {
     const {member} = useContext(AppContext);
-    let title = isPaidMember({member}) ? 'Change plan' : 'Choose a plan';
+    let title = isPaidMember({member}) ? 'プラン変更' : 'プラン選択';
     if (showConfirmation) {
         title = getConfirmationPageTitle({confirmationType});
     }
@@ -77,7 +77,7 @@ const CancelSubscriptionButton = ({member, onCancelSubscription, action, brandCo
     if (subscription.cancel_at_period_end) {
         return null;
     }
-    const label = 'Cancel subscription';
+    const label = '購読停止';
     const isRunning = ['cancelSubscription:running'].includes(action);
     const disabled = (isRunning) ? true : false;
     const isPrimary = !!subscription.cancel_at_period_end;
@@ -129,7 +129,7 @@ const PlanConfirmationSection = ({plan, type, onConfirm}) => {
                 <div className='gh-portal-list mb6'>
                     <section>
                         <div className='gh-portal-list-detail'>
-                            <h3>Account</h3>
+                            <h3>アカウント</h3>
                             <p>{member.email}</p>
                         </div>
                     </section>
@@ -156,15 +156,15 @@ const PlanConfirmationSection = ({plan, type, onConfirm}) => {
     } else {
         return (
             <div className="gh-portal-logged-out-form-container gh-portal-cancellation-form">
-                <p>If you cancel your subscription now, you will continue to have access until <strong>{getDateString(subscription.current_period_end)}</strong>.</p>
+                <p>もしいま購読停止する場合、<strong>{getDateStringJa(subscription.current_period_end)}</strong>まで購読コンテンツにアクセスすることができます</p>
                 <section className='gh-portal-input-section'>
                     <div className='gh-portal-input-labelcontainer'>
-                        <label className='gh-portal-input-label'>Cancellation reason</label>
+                        <label className='gh-portal-input-label'>購読停止する理由</label>
                     </div>
                     <textarea
                         className='gh-portal-input'
                         key='cancellation_reason'
-                        label='Cancellation reason'
+                        label='購読停止する理由'
                         type='text'
                         name='cancellation_reason'
                         placeholder=''
@@ -179,7 +179,7 @@ const PlanConfirmationSection = ({plan, type, onConfirm}) => {
                     isRunning={isRunning}
                     isPrimary={true}
                     brandColor={brandColor}
-                    label={label + ' cancellation'}
+                    label={'購読停止'}
                     style={{
                         width: '100%',
                         height: '40px'
@@ -249,7 +249,7 @@ const UpgradePlanSection = ({
                 isRunning={isRunning}
                 isPrimary={true}
                 brandColor={brandColor}
-                label={'Continue'}
+                label={'次へ'}
                 style={{height: '40px', width: '100%', marginTop: '24px'}}
             /> */}
         </section>
