@@ -16,6 +16,7 @@ const offersService = require('../offers');
 const tiersService = require('../tiers');
 const newslettersService = require('../newsletters');
 const memberAttributionService = require('../member-attribution');
+const emailSuppressionList = require('../email-suppression-list');
 
 const MAGIC_LINK_TOKEN_VALIDITY = 24 * 60 * 60 * 1000;
 
@@ -176,6 +177,7 @@ function createApiInstance(config) {
             StripeCustomer: models.MemberStripeCustomer,
             StripeCustomerSubscription: models.StripeCustomerSubscription,
             Member: models.Member,
+            MemberNewsletter: models.MemberNewsletter,
             MemberCancelEvent: models.MemberCancelEvent,
             MemberSubscribeEvent: models.MemberSubscribeEvent,
             MemberPaidSubscriptionEvent: models.MemberPaidSubscriptionEvent,
@@ -184,7 +186,6 @@ function createApiInstance(config) {
             MemberPaymentEvent: models.MemberPaymentEvent,
             MemberStatusEvent: models.MemberStatusEvent,
             MemberProductEvent: models.MemberProductEvent,
-            MemberAnalyticEvent: models.MemberAnalyticEvent,
             MemberCreatedEvent: models.MemberCreatedEvent,
             SubscriptionCreatedEvent: models.SubscriptionCreatedEvent,
             MemberLinkClickEvent: models.MemberClickEvent,
@@ -202,7 +203,8 @@ function createApiInstance(config) {
         offersAPI: offersService.api,
         labsService: labsService,
         newslettersService: newslettersService,
-        memberAttributionService: memberAttributionService.service
+        memberAttributionService: memberAttributionService.service,
+        emailSuppressionList
     });
 
     return membersApiInstance;

@@ -155,6 +155,7 @@ p.gh-members-list-email {
     display: inline-block;
     max-width: 300px;
     min-width: 220px;
+    white-space: wrap;
 }
 
 .gh-members-list-feedback{
@@ -1119,6 +1120,42 @@ textarea.gh-member-details-textarea {
     font-weight: 600;
     font-size: 1.4rem !important;
     margin-bottom: 0!important;
+}
+
+.gh-main-section-content.gh-member-newsletter-section {
+    padding-bottom: 16px;
+}
+
+.gh-member-newsletter-section .for-switch.disabled {
+    opacity: 0.1;
+}
+
+.gh-member-newsletter-footer-text {
+    font-weight: 500;
+}
+
+.gh-member-newsletter-footer-text a {
+    display: inline-block;
+    text-decoration: underline;
+    margin-left: 2px;
+    font-weight: 400;
+}
+
+.gh-member-newsletter-footer {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+    font-size: 1.25rem;
+    margin-top: 12px;
+}
+
+.gh-member-newsletter-footer-icon {
+    width: 24px;
+    height: 24px;
+}
+
+.gh-member-newsletter-footer-icon [class*="__body"] {
+    stroke: #95A1AD;
 }
 
 .gh-member-feed-container {
@@ -2165,6 +2202,7 @@ p.gh-members-import-errordetail:first-of-type {
 
 .gh-members-emailpreview-feedback-title {
     text-align: center;
+    color: #15212a;
 }
 
 .gh-members-emailpreview-feedback-buttons-group {

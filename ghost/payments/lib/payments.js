@@ -214,19 +214,26 @@ class PaymentsService {
             stripe_product_id: product.id,
             currency,
             interval: cadence,
-            amount
-        }).query().select('stripe_price_id');
+            amount,
+            active: true
+        }).query().select('id', 'stripe_price_id');
 
         for (const row of rows) {
             try {
                 const price = await this.stripeAPIService.getPrice(row.stripe_price_id);
-                if (price.active && price.currency.toUpperCase() === currency && price.unit_amount === amount && price.recurring?.interval === cadence) {
+                if (price.active && price.currency.toLowerCase() === currency && price.unit_amount === amount && price.recurring?.interval === cadence) {
                     return {
                         id: price.id
                     };
+                } else {
+                    // Update the database model to prevent future Stripe fetches when it is not needed
+                    await this.StripePriceModel.edit({
+                        active: !!price.active
+                    }, {id: row.id});
                 }
             } catch (err) {
-                logging.warn(err);
+                logging.error(`Failed to lookup Stripe Price ${row.stripe_price_id}`);
+                logging.error(err);
             }
         }
 
