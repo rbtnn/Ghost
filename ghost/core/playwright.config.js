@@ -1,15 +1,26 @@
-const ghostConfig = require('./core/shared/config');
-
 /** @type {import('@playwright/test').PlaywrightTestConfig} */
+
 const config = {
-    timeout: 10 * 1000,
-    webServer: {
-        command: 'yarn test:browser:start',
-        url: ghostConfig.get('url')
-    },
+    timeout: 60 * 1000,
+    workers: 1,
     use: {
-        baseURL: ghostConfig.get('url')
+        // Use a single browser since we can't simultaneously test multiple browsers
+        browserName: 'chromium',
+        baseURL: process.env.TEST_URL ?? 'http://localhost:2368',
+        headless: false
     }
 };
+
+if (!process.env.TEST_URL) {
+    config.webServer = {
+        command: 'yarn start',
+        env: {
+            // TODO: Use `testing` when starting a server
+            NODE_ENV: 'development'
+        },
+        reuseExistingServer: !process.env.CI,
+        url: 'http://localhost:2368'
+    };
+}
 
 module.exports = config;

@@ -1,4 +1,5 @@
 const _ = require('lodash');
+const path = require('path');
 const semver = require('semver');
 const debug = require('@tryghost/debug')('error-handler');
 const errors = require('@tryghost/errors');
@@ -7,6 +8,7 @@ const {isReqResUserSpecific, cacheControlValues} = require('@tryghost/http-cache
 const tpl = require('@tryghost/tpl');
 
 const messages = {
+    genericError: 'An unexpected error occurred, please try again.',
     pageNotFound: 'Page not found',
     resourceNotFound: 'Resource not found',
     methodNotAcceptableVersionAhead: {
@@ -52,6 +54,12 @@ const messages = {
     UnknownError: 'Unknown error - {name}, cannot {action}.'
 };
 
+function isDependencyInStack(dependency, err) {
+    const dependencyPath = path.join('node_modules', dependency);
+
+    return err?.stack?.match(dependencyPath);
+}
+
 /**
  * Get an error ready to be shown the the user
  */
@@ -62,13 +70,16 @@ module.exports.prepareError = (err, req, res, next) => {
         err = err[0];
     }
 
+    // If the error is already a GhostError, it has been handled and can be returned as-is
+    // For everything else, we do some custom handling here
     if (!errors.utils.isGhostError(err)) {
-        // We need a special case for 404 errors & bookshelf empty errors
+        // Catch bookshelf empty errors and other 404s, and turn into a Ghost 404
         if ((err.statusCode && err.statusCode === 404) || err.message === 'EmptyResponse') {
             err = new errors.NotFoundError({
                 err: err
             });
-        } else if (err.stack.match(/node_modules\/handlebars\//)) {
+        // Catch handlebars / express-hbs errors, and render them as 400, rather than 500 errors as the server isn't broken
+        } else if (isDependencyInStack('handlebars', err) || isDependencyInStack('express-hbs', err)) {
             // Temporary handling of theme errors from handlebars
             // @TODO remove this when #10496 is solved properly
             err = new errors.IncorrectUsageError({
@@ -76,11 +87,14 @@ module.exports.prepareError = (err, req, res, next) => {
                 message: err.message,
                 statusCode: err.statusCode
             });
+        // For everything else, create a generic 500 error, with context set to the original error message
         } else {
             err = new errors.InternalServerError({
                 err: err,
-                message: err.message,
-                statusCode: err.statusCode
+                message: tpl(messages.genericError),
+                context: err.message,
+                statusCode: err.statusCode,
+                code: 'UNEXPECTED_ERROR'
             });
         }
     }
@@ -126,7 +140,7 @@ module.exports.jsonErrorRenderer = (err, req, res, next) => { // eslint-disable-
 };
 
 /**
- * 
+ *
  * @param {String} [cacheControlHeaderValue] cache-control header value
  */
 module.exports.prepareErrorCacheControl = (cacheControlHeaderValue) => {
