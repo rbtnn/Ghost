@@ -25,6 +25,7 @@ const BACKUP_TABLES = [
     'post_revisions',
     'email_batches',
     'email_recipients',
+    'email_recipient_failures',
     'members_cancel_events',
     'members_payment_events',
     'members_login_events',
@@ -42,7 +43,9 @@ const BACKUP_TABLES = [
     'jobs',
     'redirects',
     'members_click_events',
-    'members_feedback'
+    'members_feedback',
+    'suppressions',
+    'email_spam_complaint_events'
 ];
 
 // NOTE: exposing only tables which are going to be included in a "default" export file

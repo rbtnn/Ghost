@@ -835,6 +835,24 @@ module.exports = {
             ['email_id', 'member_email']
         ]
     },
+    email_recipient_failures: {
+        id: {type: 'string', maxlength: 24, nullable: false, primary: true},
+        email_id: {type: 'string', maxlength: 24, nullable: false, references: 'emails.id'},
+        member_id: {type: 'string', maxlength: 24, nullable: true},
+        email_recipient_id: {type: 'string', maxlength: 24, nullable: false, references: 'email_recipients.id'},
+        code: {type: 'integer', nullable: false, unsigned: true},
+        enhanced_code: {type: 'string', maxlength: 50, nullable: true},
+        message: {type: 'string', maxlength: 2000, nullable: false},
+        severity: {
+            type: 'string',
+            maxlength: 50,
+            nullable: false,
+            defaultTo: 'permanent',
+            validations: {isIn: [['temporary', 'permanent']]}
+        },
+        failed_at: {type: 'dateTime', nullable: false},
+        event_id: {type: 'string', maxlength: 255, nullable: true}
+    },
     tokens: {
         id: {type: 'string', maxlength: 24, nullable: false, primary: true},
         token: {type: 'string', maxlength: 32, nullable: false, index: true},
@@ -931,5 +949,32 @@ module.exports = {
         post_id: {type: 'string', maxlength: 24, nullable: false, references: 'posts.id', cascadeDelete: true},
         created_at: {type: 'dateTime', nullable: false},
         updated_at: {type: 'dateTime', nullable: true}
+    },
+    suppressions: {
+        id: {type: 'string', maxlength: 24, nullable: false, primary: true},
+        email_address: {type: 'string', maxlength: 191, nullable: false, unique: true, validations: {isEmail: true}},
+        email_id: {type: 'string', maxlength: 24, nullable: true, references: 'emails.id'},
+        reason: {
+            type: 'string',
+            maxlength: 50,
+            nullable: false,
+            validations: {
+                isIn: [[
+                    'spam',
+                    'bounce'
+                ]]
+            }
+        },
+        created_at: {type: 'dateTime', nullable: false}
+    },
+    email_spam_complaint_events: {
+        id: {type: 'string', maxlength: 24, nullable: false, primary: true},
+        member_id: {type: 'string', maxlength: 24, nullable: false, references: 'members.id', cascadeDelete: true},
+        email_id: {type: 'string', maxlength: 24, nullable: false, references: 'emails.id'},
+        email_address: {type: 'string', maxlength: 191, nullable: false, unique: false, validations: {isEmail: true}},
+        created_at: {type: 'dateTime', nullable: false},
+        '@@UNIQUE_CONSTRAINTS@@': [
+            ['email_id', 'member_id']
+        ]
     }
 };

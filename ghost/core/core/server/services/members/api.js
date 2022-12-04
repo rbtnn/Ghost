@@ -196,7 +196,8 @@ function createApiInstance(config) {
             Product: models.Product,
             Settings: models.Settings,
             Comment: models.Comment,
-            MemberFeedback: models.MemberFeedback
+            MemberFeedback: models.MemberFeedback,
+            EmailSpamComplaintEvent: models.EmailSpamComplaintEvent
         },
         stripeAPIService: stripeService.api,
         tiersService: tiersService,

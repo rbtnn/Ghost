@@ -5,10 +5,17 @@ const EmailBouncedEvent = require('../../lib/EmailBouncedEvent');
 describe('EmailBouncedEvent', function () {
     it('exports a static create method to create instances', function () {
         const event = EmailBouncedEvent.create({
+            id: 'id',
             email: 'test@test.test',
-            memberId: new ObjectID(),
-            emailId: new ObjectID(),
-            timestamp: new Date()
+            memberId: new ObjectID().toHexString(),
+            emailId: new ObjectID().toHexString(),
+            emailRecipientId: new ObjectID().toHexString(),
+            timestamp: new Date(),
+            error: {
+                message: 'test',
+                code: 1,
+                enhancedCode: '1.1'
+            }
         });
         assert(event instanceof EmailBouncedEvent);
     });

@@ -19,7 +19,7 @@ class MembersEventsServiceWrapper {
             models: {
                 MemberCreatedEvent: models.MemberCreatedEvent,
                 SubscriptionCreatedEvent: models.SubscriptionCreatedEvent
-            }, 
+            },
             labsService
         });
 
@@ -27,7 +27,7 @@ class MembersEventsServiceWrapper {
             services: {
                 settingsCache
             },
-            async getMembersApi() {
+            getMembersApi() {
                 return members.api;
             }
         });

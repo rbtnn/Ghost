@@ -29,7 +29,7 @@ class BatchSendingService {
     #db;
 
     /**
-     * @param {Object} dependencies 
+     * @param {Object} dependencies
      * @param {EmailRenderer} dependencies.emailRenderer
      * @param {SendingService} dependencies.sendingService
      * @param {JobsService} dependencies.jobsService
@@ -59,11 +59,12 @@ class BatchSendingService {
 
     /**
      * Schedules a background job that sends the email in the background if it is pending or failed.
-     * @param {Email} email 
+     * @param {Email} email
      * @returns {void}
      */
     scheduleEmail(email) {
         return this.#jobsService.addJob({
+            name: 'batch-sending-service-job',
             job: this.emailJob.bind(this),
             data: {emailId: email.id},
             offloaded: false
@@ -106,7 +107,7 @@ class BatchSendingService {
 
     /**
      * @private
-     * @param {Email} email 
+     * @param {Email} email
      * @throws {errors.EmailError} If one of the batches fails
      */
     async sendEmail(email) {
@@ -114,7 +115,7 @@ class BatchSendingService {
 
         // Load required relations
         const newsletter = await email.getLazyRelation('newsletter', {require: true});
-        const post = await email.getLazyRelation('post', {require: true});
+        const post = await email.getLazyRelation('post', {require: true, withRelated: ['posts_meta', 'authors']});
 
         let batches = await this.getBatches(email);
         if (batches.length === 0) {
@@ -142,9 +143,9 @@ class BatchSendingService {
     async createBatches({email, post, newsletter}) {
         logging.info(`Creating batches for email ${email.id}`);
 
-        const segments = await this.#emailRenderer.getSegments(post, newsletter);
+        const segments = this.#emailRenderer.getSegments(post);
         const batches = [];
-        const BATCH_SIZE = 500;
+        const BATCH_SIZE = this.#sendingService.getMaximumRecipients();
         let totalCount = 0;
 
         for (const segment of segments) {
@@ -160,7 +161,9 @@ class BatchSendingService {
                 logging.info(`Fetching members batch for email ${email.id} segment ${segment}, lastId: ${lastId}`);
 
                 const filter = segmentFilter + (lastId ? `+id:<${lastId}` : '');
-                members = await this.#models.Member.getFilteredCollectionQuery({filter, order: 'id DESC'}).select('members.id', 'members.uuid', 'members.email', 'members.name').limit(BATCH_SIZE + 1);
+                members = await this.#models.Member.getFilteredCollectionQuery({filter})
+                    .orderByRaw('id DESC')
+                    .select('members.id', 'members.uuid', 'members.email', 'members.name').limit(BATCH_SIZE + 1);
 
                 if (members.length > BATCH_SIZE) {
                     lastId = members[members.length - 2].id;
@@ -246,13 +249,23 @@ class BatchSendingService {
         logging.info(`Sending ${batches.length} batches for email ${email.id}`);
 
         // Loop batches and send them via the EmailProvider
-        // TODO: introduce concurrency when sending (need a replacement for bluebird)
         let succeededCount = 0;
-        for (const batch of batches) {
-            if (await this.sendBatch({email, batch, post, newsletter})) {
-                succeededCount += 1;
+        const queue = batches.slice();
+
+        // Bind this
+        let runNext;
+        runNext = async () => {
+            const batch = queue.shift();
+            if (batch) {
+                if (await this.sendBatch({email, batch, post, newsletter})) {
+                    succeededCount += 1;
+                }
+                await runNext();
             }
-        }
+        };
+
+        // Run maximum 10 at the same time
+        await Promise.all(new Array(10).fill(0).map(() => runNext()));
 
         if (succeededCount < batches.length) {
             if (succeededCount > 0) {
@@ -267,17 +280,17 @@ class BatchSendingService {
     }
 
     /**
-     * 
-     * @param {{email: Email, batch: EmailBatch, post: Post, newsletter: Newsletter}} data 
+     *
+     * @param {{email: Email, batch: EmailBatch, post: Post, newsletter: Newsletter}} data
      * @returns {Promise<boolean>} True when succeeded, false when failed with an error
      */
-    async sendBatch({email, batch, post, newsletter}) {
-        logging.info(`Sending batch ${batch.id} for email ${email.id}`);
+    async sendBatch({email, batch: originalBatch, post, newsletter}) {
+        logging.info(`Sending batch ${originalBatch.id} for email ${email.id}`);
 
         // Check the status of the email batch in a 'for update' transaction
-        batch = await this.updateStatusLock(this.#models.EmailBatch, batch.id, 'submitting', ['pending', 'failed']);
+        const batch = await this.updateStatusLock(this.#models.EmailBatch, originalBatch.id, 'submitting', ['pending', 'failed']);
         if (!batch) {
-            logging.error(`Tried sending email batch that is not pending or failed ${batch.id}; status: ${batch.get('status')}`);
+            logging.error(`Tried sending email batch that is not pending or failed ${originalBatch.id}`);
             return true;
         }
 
@@ -286,6 +299,7 @@ class BatchSendingService {
         try {
             const members = await this.getBatchMembers(batch.id);
             const response = await this.#sendingService.send({
+                emailId: email.id,
                 post,
                 newsletter,
                 segment: batch.get('member_segment'),
@@ -297,18 +311,22 @@ class BatchSendingService {
 
             await batch.save({
                 status: 'submitted',
-                provider_id: response.id
+                provider_id: response.id,
+                // reset error fields when sending succeeds
+                error_status_code: null,
+                error_message: null,
+                error_data: null
             }, {patch: true, require: false});
             succeeded = true;
         } catch (err) {
-            logging.error(`Error sending email batch ${batch.id}`, err);
+            logging.error(`Error sending email batch ${batch.id}`);
+            logging.error(err);
 
             await batch.save({
-                status: 'failed'
-                // TODO: error should be instance of EmailProviderError (see IEmailProviderService) + we should read error message
-                // error_status_code: err.status_code,
-                // error_message: err.message_short,
-                // error_data: err.message_full
+                status: 'failed',
+                error_status_code: err.statusCode,
+                error_message: err.message,
+                error_data: err.errorDetails
             }, {patch: true, require: false});
         }
 

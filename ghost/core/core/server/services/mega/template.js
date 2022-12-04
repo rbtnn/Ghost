@@ -1,3 +1,15 @@
+// ---------------------------------------------
+// ---------------------------------------------
+//
+// WARNING!!
+//
+// THIS FILE IS DEPRECATED. PLEASE ALSO MAKE IDENTICAL CHANGES IN THE EMAIL-SERVICE PACKAGE -> email-templates/template.hbs
+//
+// WARNING!!
+//
+// ---------------------------------------------
+// ---------------------------------------------
+
 const {escapeHtml: escape} = require('@tryghost/string');
 const feedbackButtons = require('./feedback-buttons');
 
