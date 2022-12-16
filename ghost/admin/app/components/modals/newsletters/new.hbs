@@ -14,6 +14,7 @@
                     class="gh-input miw-100 form-text"
                     value={{@data.newsletter.name}}
                     placeholder="Weekly Roundup"
+                    data-test-newsletter-title-input
                     {{on "input" (fn this.onInput "name")}}
                 />
                 <GhErrorMessage @errors={{@data.newsletter.errors}} @property="name" />
@@ -29,7 +30,7 @@
                 <GhErrorMessage @errors={{@data.newsletter.errors}} @property="description" />
             </GhFormGroup>
 
-            <GhFormGroup @classNames="flex justify-between items-start mb2">
+            <GhFormGroup class="flex justify-between items-start mb2">
                 <div class="mr3">
                     <label for="opt-in-existing" class="modal-fullsettings-title">Opt-in existing subscribers</label>
                     <p>

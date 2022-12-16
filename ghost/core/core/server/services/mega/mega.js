@@ -15,7 +15,6 @@ const db = require('../../data/db');
 const models = require('../../models');
 const postEmailSerializer = require('./post-email-serializer');
 const {getSegmentsFromHtml} = require('./segment-parser');
-const emailSuppressionList = require('../email-suppression-list');
 const labs = require('../../../shared/labs');
 
 // Used to listen to email.added and email.edited model events originally, I think to offload this - ideally would just use jobs now if possible
@@ -564,15 +563,6 @@ async function createEmailBatches({emailModel, memberRows, memberSegment, option
     debug('createEmailBatches: storing recipient list');
     const startOfRecipientStorage = Date.now();
     let rowsToBatch = memberRows;
-    if (labs.isSet('suppressionList')) {
-        const emails = memberRows.map(row => row.email);
-        const emailSuppressionData = await emailSuppressionList.getBulkSuppressionData(emails);
-        const emailSuppressedLookup = _.zipObject(emails, emailSuppressionData);
-        const filteredRows = memberRows.filter((row) => {
-            return emailSuppressedLookup[row.email].suppressed === false;
-        });
-        rowsToBatch = filteredRows;
-    }
     const batches = _.chunk(rowsToBatch, bulkEmailService.BATCH_SIZE);
     const batchIds = await Promise.mapSeries(batches, storeRecipientBatch);
     debug(`createEmailBatches: stored recipient list (${Date.now() - startOfRecipientStorage}ms)`);
@@ -581,19 +571,25 @@ async function createEmailBatches({emailModel, memberRows, memberSegment, option
     return batchIds;
 }
 
-const statusChangedHandler = (emailModel, options) => {
+const statusChangedHandler = async (emailModel, options) => {
     const emailRetried = emailModel.wasChanged()
         && emailModel.get('status') === 'pending'
         && emailModel.previous('status') === 'failed';
 
     if (emailRetried) {
-        pendingEmailHandler(emailModel, options);
+        await pendingEmailHandler(emailModel, options);
     }
 };
 
 function listen() {
-    events.on('email.added', pendingEmailHandler);
-    events.on('email.edited', statusChangedHandler);
+    events.on('email.added', (emailModel, options) => pendingEmailHandler(emailModel, options).catch((e) => {
+        logging.error('Error in email.added event handler');
+        logging.error(e);
+    }));
+    events.on('email.edited', (emailModel, options) => statusChangedHandler(emailModel, options).catch((e) => {
+        logging.error('Error in email.edited event handler');
+        logging.error(e);
+    }));
 }
 
 // Public API

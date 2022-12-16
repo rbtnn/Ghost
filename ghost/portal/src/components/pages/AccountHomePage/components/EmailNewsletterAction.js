@@ -18,7 +18,7 @@ function EmailNewsletterAction() {
 
     return (
         <section>
-            <div className='gh-portal-list-detail'>
+            <div className='gh-portal-list-detail email-newsletter'>
                 <h3>メール配信</h3>
                 <p>{label} {hasMemberGotEmailSuppression({member}) && subscribed && <button
                     className='gh-portal-btn-text gh-email-faq-page-button'
@@ -29,6 +29,7 @@ function EmailNewsletterAction() {
             </div>
             <div>
                 <Switch
+                    dataTestId="default-newsletter-toggle"
                     id="default-newsletter-toggle"
                     onToggle={(e) => {
                         onToggleSubscription(e, subscribed);

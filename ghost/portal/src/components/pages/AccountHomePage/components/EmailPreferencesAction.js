@@ -28,7 +28,9 @@ function EmailPreferencesAction() {
                     page,
                     lastPage: 'accountHome'
                 });
-            }}>設定</button>
+            }} data-test-button='manage-newsletters'>
+                設定
+            </button>
         </section>
     );
 }

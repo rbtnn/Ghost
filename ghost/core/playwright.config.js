@@ -6,20 +6,13 @@ const config = {
     use: {
         // Use a single browser since we can't simultaneously test multiple browsers
         browserName: 'chromium',
-        baseURL: process.env.TEST_URL ?? 'http://localhost:2368'
-    }
+        headless: !process.env.PLAYWRIGHT_DEBUG,
+        baseURL: process.env.TEST_URL ?? 'http://localhost:2369',
+        // TODO: Where to put this
+        storageState: 'playwright-state.json'
+    },
+    globalSetup: './test/e2e-browser/utils/global-setup',
+    globalTeardown: './test/e2e-browser/utils/global-teardown'
 };
-
-if (!process.env.TEST_URL) {
-    config.webServer = {
-        command: 'yarn start',
-        env: {
-            // TODO: Use `testing` when starting a server
-            NODE_ENV: 'development'
-        },
-        reuseExistingServer: !process.env.CI,
-        url: 'http://localhost:2368'
-    };
-}
 
 module.exports = config;

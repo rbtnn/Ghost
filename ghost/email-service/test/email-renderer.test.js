@@ -1,5 +1,6 @@
 const EmailRenderer = require('../lib/email-renderer');
 const assert = require('assert');
+const cheerio = require('cheerio');
 
 describe('Email renderer', function () {
     describe('buildReplacementDefinitions', function () {
@@ -367,6 +368,14 @@ describe('Email renderer', function () {
                     if (key === 'title') {
                         return 'Test Post';
                     }
+
+                    if (key === 'plaintext') {
+                        return 'Test plaintext for post';
+                    }
+
+                    if (key === 'custom_excerpt') {
+                        return null;
+                    }
                 },
                 getLazyRelation: () => {
                     return {
@@ -410,9 +419,12 @@ describe('Email renderer', function () {
                 options
             );
 
+            const $ = cheerio.load(response.html);
+
             response.plaintext.should.containEql('Test Post');
             response.plaintext.should.containEql('Unsubscribe [%%{unsubscribe_url}%%]');
             response.plaintext.should.containEql('http://example.com');
+            should($('.preheader').text()).eql('Test plaintext for post');
             response.html.should.containEql('Test Post');
             response.html.should.containEql('Unsubscribe');
             response.html.should.containEql('http://example.com');
@@ -514,6 +526,68 @@ describe('Email renderer', function () {
             responsePaid.html.should.containEql('some text for both');
             responsePaid.html.should.containEql('finishing part only for members');
             responsePaid.html.should.not.containEql('Become a paid member of Test Blog to get access to all');
+        });
+    });
+
+    describe('limitImageWidth', function () {
+        it('Limits width of local images', async function () {
+            const emailRenderer = new EmailRenderer({
+                imageSize: {
+                    getImageSizeFromUrl() {
+                        return {
+                            width: 2000
+                        };
+                    }
+                },
+                storageUtils: {
+                    isLocalImage(url) {
+                        return url === 'http://your-blog.com/content/images/2017/01/02/example.png';
+                    }
+                }
+            });
+            const response = await emailRenderer.limitImageWidth('http://your-blog.com/content/images/2017/01/02/example.png');
+            assert.equal(response.width, 600);
+            assert.equal(response.href, 'http://your-blog.com/content/images/size/w1200/2017/01/02/example.png');
+        });
+
+        it('Limits width of unsplash images', async function () {
+            const emailRenderer = new EmailRenderer({
+                imageSize: {
+                    getImageSizeFromUrl() {
+                        return {
+                            width: 2000
+                        };
+                    }
+                },
+                storageUtils: {
+                    isLocalImage(url) {
+                        return url === 'http://your-blog.com/content/images/2017/01/02/example.png';
+                    }
+                }
+            });
+            const response = await emailRenderer.limitImageWidth('https://images.unsplash.com/photo-1657816793628-191deb91e20f?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=MnwxMTc3M3wwfDF8YWxsfDJ8fHx8fHwyfHwxNjU3ODkzNjU5&ixlib=rb-1.2.1&q=80&w=2000');
+            assert.equal(response.width, 600);
+            assert.equal(response.href, 'https://images.unsplash.com/photo-1657816793628-191deb91e20f?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=MnwxMTc3M3wwfDF8YWxsfDJ8fHx8fHwyfHwxNjU3ODkzNjU5&ixlib=rb-1.2.1&q=80&w=1200');
+        });
+
+        it('Does not increase width of images', async function () {
+            const emailRenderer = new EmailRenderer({
+                imageSize: {
+                    getImageSizeFromUrl() {
+                        return {
+                            width: 300
+                        };
+                    }
+                },
+                storageUtils: {
+                    isLocalImage(url) {
+                        return url === 'http://your-blog.com/content/images/2017/01/02/example.png';
+                    }
+                }
+            });
+            const response = await emailRenderer.limitImageWidth('https://example.com/image.png');
+            assert.equal(response.width, 300);
+            assert.equal(response.href, 'https://example.com/image.png');
         });
     });
 });

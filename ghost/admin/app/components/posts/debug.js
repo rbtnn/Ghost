@@ -2,6 +2,8 @@ import Component from '@glimmer/component';
 import moment from 'moment-timezone';
 import {action} from '@ember/object';
 import {didCancel, task} from 'ember-concurrency';
+import {formatNumber} from 'ghost-admin/helpers/format-number';
+import {ghPluralize} from 'ghost-admin/helpers/gh-pluralize';
 import {inject as service} from '@ember/service';
 import {tracked} from '@glimmer/tracking';
 export default class Debug extends Component {
@@ -14,14 +16,24 @@ export default class Debug extends Component {
 
     @tracked emailBatches = null;
     @tracked recipientFailures = null;
+    @tracked loading = true;
 
     get post() {
         return this.args.post;
     }
 
     get emailError() {
+        // get failed batches count
+        let failedBatches = this.emailBatchesData?.filter((batch) => {
+            return batch.statusClass === 'failed';
+        }).length || 0;
+        // get total batch count
+        let totalBatches = this.emailBatchesData?.length || 0;
+
+        let details = (this.loading || !totalBatches) ? '' : `${failedBatches} of ${ghPluralize(totalBatches, 'batch')} failed to send, check below for more details.`;
         return {
-            message: this.post.email?.error || 'Failed to send email!'
+            message: this.post.email?.error || 'Failed to send email.',
+            details
         };
     }
 
@@ -30,8 +42,8 @@ export default class Debug extends Component {
             statusClass: this.post.email?.status,
             status: this.getStatusLabel(this.post.email?.status),
             recipientFilter: this.post.email?.recipientFilter,
-            createdAt: this.post.email.createdAtUTC ? moment(this.post.email.createdAtUTC).format('DD MMM, YYYY, HH:mm:ss') : '',
-            submittedAt: this.post.email.submittedAtUTC ? moment(this.post.email.submittedAtUTC).format('DD MMM, YYYY, HH:mm:ss') : '',
+            createdAt: this.post.email?.createdAtUTC ? moment(this.post.email.createdAtUTC).format('DD MMM, YYYY, HH:mm:ss') : '',
+            submittedAt: this.post.email?.submittedAtUTC ? moment(this.post.email.submittedAtUTC).format('DD MMM, YYYY, HH:mm:ss') : '',
             emailsSent: this.post.email?.emailCount,
             emailsDelivered: this.post.email?.deliveredCount,
             emailsFailed: this.post.email?.failedCount,
@@ -43,11 +55,11 @@ export default class Debug extends Component {
 
     get tabTotals() {
         return {
-            temporaryFailures: this.temporaryFailureData?.length || 0,
-            permanentFailures: this.permanentFailureData?.length || 0,
-            erroredBatches: this.emailBatchesData?.filter((batch) => {
+            temporaryFailures: formatNumber(this.temporaryFailureData?.length || 0),
+            permanentFailures: formatNumber(this.permanentFailureData?.length || 0),
+            erroredBatches: formatNumber(this.emailBatchesData?.filter((batch) => {
                 return batch.statusClass === 'failed';
-            }).length || 0
+            }).length || 0)
         };
     }
 
@@ -140,8 +152,10 @@ export default class Debug extends Component {
 
     @action
     loadData() {
-        this.fetchEmailBatches();
-        this.fetchRecipientFailures();
+        if (this.post.email) {
+            this.fetchEmailBatches();
+            this.fetchRecipientFailures();
+        }
     }
 
     async fetchEmailBatches() {
@@ -169,6 +183,7 @@ export default class Debug extends Component {
         let statsUrl = this.ghostPaths.url.api(`emails/${this.post.email.id}/batches`);
         let result = yield this.ajax.request(statsUrl, {data});
         this.emailBatches = result.batches;
+        this.loading = false;
     }
 
     async fetchRecipientFailures() {

@@ -70,8 +70,8 @@
         }
     },
     "times": {
-        "cannotScheduleAPostBeforeInMinutes": 2,
-        "publishAPostBySchedulerToleranceInMinutes": 2,
+        "cannotScheduleAPostBeforeInMinutes": -2,
+        "publishAPostBySchedulerToleranceInMinutes": 5,
         "getImageSizeTimeoutInMS": 5000
     },
     "maintenance": {
@@ -86,7 +86,8 @@
             "w2400": {"width": 2400}
         },
         "internalImageSizes": {
-            "icon": {"width": 256, "height": 256}
+            "icon": {"width": 256, "height": 256},
+            "email-header-image": {"width": 1200}
         }
     }
 }

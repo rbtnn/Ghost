@@ -523,7 +523,7 @@ export function subscriptionHasFreeTrial({sub} = {}) {
     return false;
 }
 
-function isInThePast(date) {
+export function isInThePast(date) {
     const today = new Date();
 
     // 👇️ OPTIONAL!
@@ -690,6 +690,14 @@ export const getSupportAddress = ({site}) => {
         return `${recipient}@${updatedDomain}`;
     }
     return supportAddress || '';
+};
+
+export const getDefaultNewsletterSender = ({site}) => {
+    const newsletters = getSiteNewsletters({site});
+    const defaultNewsletter = newsletters?.[0];
+    if (defaultNewsletter) {
+        return defaultNewsletter.sender_email || `noreply@${getSiteDomain({site})}`;
+    }
 };
 
 export const getSiteDomain = ({site}) => {

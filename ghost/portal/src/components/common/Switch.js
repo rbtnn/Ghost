@@ -72,7 +72,7 @@ export const SwitchStyles = `
     }
 `;
 
-function Switch({id, label = '', onToggle, checked = false}) {
+function Switch({id, label = '', onToggle, checked = false, dataTestId = 'switch-input'}) {
     const {action} = useContext(AppContext);
     const [isChecked, setIsChecked] = useState(checked);
     const isActionChanged = ['updateNewsletter:failed', 'updateNewsletter:success'].includes(action);
@@ -80,7 +80,7 @@ function Switch({id, label = '', onToggle, checked = false}) {
         setIsChecked(checked);
     }, [checked, isActionChanged]);
     return (
-        <div className="gh-portal-for-switch">
+        <div className="gh-portal-for-switch" data-test-switch={dataTestId}>
             <label className="switch" htmlFor={id}>
                 <input
                     type="checkbox"
@@ -92,7 +92,7 @@ function Switch({id, label = '', onToggle, checked = false}) {
                 <span className="input-toggle-component" onClick={(e) => {
                     setIsChecked(!isChecked);
                     onToggle(e, !isChecked);
-                }} data-testid="switch-input"></span>
+                }} data-testid={dataTestId}></span>
             </label>
         </div>
     );

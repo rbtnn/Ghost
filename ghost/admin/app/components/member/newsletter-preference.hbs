@@ -3,7 +3,7 @@
     {{#unless this.suppressionData.suppressed}}
         <div class="gh-member-newsletters">
             {{#each this.newsletters as |newsletter|}}
-                <div class="gh-member-newsletter-row">
+                <div class="gh-member-newsletter-row" data-test-member-settings-switch>
                     <div>
                         <h4 class="gh-member-newsletter-title">{{newsletter.name}}</h4>
                     </div>
@@ -46,7 +46,7 @@
                     Flagged as spam on {{this.suppressionData.date}}
                 {{/if}}
 
-                <a class="midgrey" href="javascript:void(0)" target="_blank" rel="noopener noreferrer">Learn more</a>
+                <a class="midgrey" href="https://ghost.org/help/disabled-emails" target="_blank" rel="noopener noreferrer">Learn more</a>
             </p>
         </div>
     {{/if}}

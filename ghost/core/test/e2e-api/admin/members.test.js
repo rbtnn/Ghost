@@ -1,4 +1,4 @@
-const {agentProvider, mockManager, fixtureManager, matchers} = require('../../utils/e2e-framework');
+const {agentProvider, mockManager, fixtureManager, matchers, sleep} = require('../../utils/e2e-framework');
 const {anyEtag, anyObjectId, anyUuid, anyISODateTime, anyISODate, anyString, anyArray, anyLocationFor, anyContentLength, anyErrorId, anyObject} = matchers;
 const ObjectId = require('bson-objectid').default;
 
@@ -7,6 +7,8 @@ const nock = require('nock');
 const should = require('should');
 const sinon = require('sinon');
 const testUtils = require('../../utils');
+const configUtils = require('../../utils/configUtils');
+
 const Papa = require('papaparse');
 
 const models = require('../../../core/server/models');
@@ -14,9 +16,11 @@ const membersService = require('../../../core/server/services/members');
 const memberAttributionService = require('../../../core/server/services/member-attribution');
 const urlService = require('../../../core/server/services/url');
 const urlUtils = require('../../../core/shared/url-utils');
+const {_updateVerificationTrigger} = require('../../../core/server/services/members');
+const settingsCache = require('../../../core/shared/settings-cache');
 
 /**
- * Assert that haystack and needles match, ignoring the order. 
+ * Assert that haystack and needles match, ignoring the order.
  */
 function matchArrayWithoutOrder(haystack, needles) {
     // Order shouldn't matter here
@@ -698,6 +702,71 @@ describe('Members API', function () {
                 }
             ]
         });
+    });
+
+    it('Can add a member and trigger host email verification limits', async function () {
+        configUtils.set('hostSettings:emailVerification', {
+            apiThreshold: 0,
+            adminThreshold: 1,
+            importThreshold: 0,
+            verified: false,
+            escalationAddress: 'test@example.com'
+        });
+        _updateVerificationTrigger();
+
+        assert.ok(!settingsCache.get('email_verification_required'), 'Email verification should NOT be required');
+
+        const member = {
+            name: 'pass verification',
+            email: 'memberPassVerifivation@test.com'
+        };
+
+        const {body: passBody} = await agent
+            .post(`/members/`)
+            .body({members: [member]})
+            .expectStatus(201)
+            .matchBodySnapshot({
+                members: new Array(1).fill(memberMatcherShallowIncludes)
+            })
+            .matchHeaderSnapshot({
+                etag: anyEtag,
+                location: anyLocationFor('members')
+            });
+        const memberPassVerification = passBody.members[0];
+
+        await sleep(100);
+        assert.ok(!settingsCache.get('email_verification_required'), 'Email verification should NOT be required');
+
+        const memberFailLimit = {
+            name: 'fail verification',
+            email: 'memberFailVerifivation@test.com'
+        };
+
+        const {body: failBody} = await agent
+            .post(`/members/`)
+            .body({members: [memberFailLimit]})
+            .expectStatus(201)
+            .matchBodySnapshot({
+                members: new Array(1).fill(memberMatcherShallowIncludes)
+            })
+            .matchHeaderSnapshot({
+                etag: anyEtag,
+                location: anyLocationFor('members')
+            });
+        const memberFailVerification = failBody.members[0];
+
+        await sleep(100);
+        assert.ok(settingsCache.get('email_verification_required'), 'Email verification should be required');
+        mockManager.assert.sentEmail({
+            subject: 'Email needs verification'
+        });
+
+        // state cleanup
+        await agent.delete(`/members/${memberPassVerification.id}`);
+        await agent.delete(`/members/${memberFailVerification.id}`);
+
+        configUtils.restore();
+        _updateVerificationTrigger();
     });
 
     it('Can add and send a signup confirmation email', async function () {
@@ -2261,6 +2330,75 @@ describe('Members API', function () {
             .post(`/members/`)
             .body({members: [member]})
             .expectStatus(422);
+    });
+
+    it('Setting subscribed when editing a member won\'t reset to default newsletters', async function () {
+        // First check that this newsletter is off by default, or this test would not make sense
+        const newsletter = await models.Newsletter.findOne({id: testUtils.DataGenerator.Content.newsletters[0].id}, {require: true});
+        assert.equal(newsletter.get('subscribe_on_signup'), false, 'This test expects the newsletter to be off by default');
+
+        // Add custom newsletter list to new member
+        const member = {
+            name: 'test newsletter',
+            email: 'memberTestChangeSubscribedAttribute@test.com',
+            newsletters: [
+                {
+                    id: testUtils.DataGenerator.Content.newsletters[0].id // This is off by default
+                },
+                {
+                    id: testUtils.DataGenerator.Content.newsletters[1].id
+                }
+            ]
+        };
+
+        const {body} = await agent
+            .post(`/members/`)
+            .body({members: [member]})
+            .expectStatus(201)
+            .matchBodySnapshot({
+                members: [{
+                    id: anyObjectId,
+                    uuid: anyUuid,
+                    created_at: anyISODateTime,
+                    updated_at: anyISODateTime,
+                    subscriptions: anyArray,
+                    labels: anyArray,
+                    newsletters: Array(2).fill(newsletterSnapshot)
+                }]
+            })
+            .matchHeaderSnapshot({
+                etag: anyEtag,
+                location: anyLocationFor('members')
+            });
+
+        const memberId = body.members[0].id;
+        const editedMember = {
+            subscribed: true // no change
+        };
+
+        // Edit member
+        const {body: body2} = await agent
+            .put(`/members/${memberId}`)
+            .body({members: [editedMember]})
+            .expectStatus(200)
+            .matchBodySnapshot({
+                members: [{
+                    id: anyObjectId,
+                    uuid: anyUuid,
+                    created_at: anyISODateTime,
+                    updated_at: anyISODateTime,
+                    subscriptions: anyArray,
+                    labels: anyArray,
+                    newsletters: Array(2).fill(newsletterSnapshot)
+                }]
+            })
+            .matchHeaderSnapshot({
+                etag: anyEtag
+            });
+        const changedMember = body2.members[0];
+        assert.equal(changedMember.newsletters.length, 2);
+        assert.ok(changedMember.newsletters.find(n => n.id === testUtils.DataGenerator.Content.newsletters[0].id), 'The member is still subscribed for a newsletter that is off by default');
+        assert.ok(changedMember.newsletters.find(n => n.id === testUtils.DataGenerator.Content.newsletters[1].id), 'The member is still subscribed for the newsletter it subscribed to');
     });
 
     it('Can add and send a signup confirmation email (old)', async function () {

@@ -1,20 +1,11 @@
 const sinon = require('sinon');
-const {agentProvider, fixtureManager, mockManager} = require('../../../utils/e2e-framework');
+const {agentProvider, fixtureManager, sleep} = require('../../../utils/e2e-framework');
 const assert = require('assert');
-const models = require('../../../../core/server/models');
 const domainEvents = require('@tryghost/domain-events');
 const MailgunClient = require('@tryghost/mailgun-client');
-const {run} = require('../../../../core/server/services/email-analytics/jobs/fetch-latest/run.js');
-const membersService = require('../../../../core/server/services/members');
 const {EmailDeliveredEvent} = require('@tryghost/email-events');
 
-async function sleep(ms) {
-    return new Promise((resolve) => {
-        setTimeout(resolve, ms);
-    });
-}
-
-async function resetFailures(emailId) {
+async function resetFailures(models, emailId) {
     await models.EmailRecipientFailure.destroy({
         destroyBy: {
             email_id: emailId
@@ -28,17 +19,23 @@ describe('EmailEventStorage', function () {
     let agent;
     let events = [];
     let jobsService;
+    let models;
+    let run;
+    let membersService;
 
     before(async function () {
         agent = await agentProvider.getAdminAPIAgent();
         await fixtureManager.init('newsletters', 'members:newsletters', 'members:emails');
         await agent.loginAsOwner();
 
-        // Only create reference to jobsService after Ghost boot
+        // Only reference services after Ghost boot
+        models = require('../../../../core/server/models');
+        run = require('../../../../core/server/services/email-analytics/jobs/fetch-latest/run.js').run;
+        membersService = require('../../../../core/server/services/members');
         jobsService = require('../../../../core/server/services/jobs');
 
         sinon.stub(MailgunClient.prototype, 'fetchEvents').callsFake(async function (_, batchHandler) {
-            const normalizedEvents = events.map(this.normalizeEvent) || [];
+            const normalizedEvents = (events.map(this.normalizeEvent) || []).filter(e => !!e);
             return [await batchHandler(normalizedEvents)];
         });
     });
@@ -411,7 +408,7 @@ describe('EmailEventStorage', function () {
         await models.EmailRecipient.edit({failed_at: null}, {
             id: emailRecipient.id
         });
-        await resetFailures(emailId);
+        await resetFailures(models, emailId);
 
         events = [{
             event: 'failed',
@@ -737,7 +734,7 @@ describe('EmailEventStorage', function () {
         const emailBatch = fixtureManager.get('email_batches', 0);
         const emailId = emailBatch.email_id;
 
-        const emailRecipient = fixtureManager.get('email_recipients', 0);
+        const emailRecipient = fixtureManager.get('email_recipients', 1);
         assert(emailRecipient.batch_id === emailBatch.id);
         const memberId = emailRecipient.member_id;
         const providerId = emailBatch.provider_id;
@@ -747,8 +744,12 @@ describe('EmailEventStorage', function () {
         );
 
         // Check not unsubscribed
-        const {body: {events: [notSpamEvent]}} = await agent.get(eventsURI);
-        assert.notEqual(notSpamEvent.type, 'email_complaint_event', 'This test requires a member that does not have a spam event');
+        const {body: {events: eventsBefore}} = await agent.get(eventsURI);
+        const existingSpamEvent = eventsBefore.find(event => event.type === 'email_complaint_event');
+        assert.equal(existingSpamEvent, null, 'This test requires a member that does not have a spam event');
+
+        const {body: {members: [member]}} = await agent.get(`/members/${memberId}`);
+        assert.equal(member.email_suppression.suppressed, false, 'This test requires a member that does not have a suppressed email');
 
         events = [{
             event: 'complained',
@@ -778,8 +779,13 @@ describe('EmailEventStorage', function () {
         await sleep(200);
 
         // Check if event exists
-        const {body: {events: [spamComplaintEvent]}} = await agent.get(eventsURI);
+        const {body: {events: eventsAfter}} = await agent.get(eventsURI);
+        const spamComplaintEvent = eventsAfter.find(event => event.type === 'email_complaint_event');
         assert.equal(spamComplaintEvent.type, 'email_complaint_event');
+
+        const {body: {members: [memberAfter]}} = await agent.get(`/members/${memberId}`);
+        assert.equal(memberAfter.email_suppression.suppressed, true, 'The member should have a suppressed email');
+        assert.equal(memberAfter.email_suppression.info.reason, 'spam');
     });
 
     it('Can handle unsubscribe events', async function () {
@@ -866,6 +872,25 @@ describe('EmailEventStorage', function () {
             domainEvents
         });
         assert.equal(result.unhandled, 1);
+        assert.deepEqual(result.emailIds, []);
+        assert.deepEqual(result.memberIds, []);
+    });
+
+    it('Ignores invalid events', async function () {
+        const emailBatch = fixtureManager.get('email_batches', 0);
+        const emailRecipient = fixtureManager.get('email_recipients', 0);
+        assert(emailRecipient.batch_id === emailBatch.id);
+
+        events = [{
+            event: 'ceci-nest-pas-un-event'
+        }];
+
+        // Fire event processing
+        // We use offloading to have correct coverage and usage of worker thread
+        const {eventStats: result} = await run({
+            domainEvents
+        });
+        assert.equal(result.unhandled, 0);
         assert.deepEqual(result.emailIds, []);
         assert.deepEqual(result.memberIds, []);
     });

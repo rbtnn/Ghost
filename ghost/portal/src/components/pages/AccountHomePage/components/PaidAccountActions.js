@@ -1,5 +1,5 @@
 import AppContext from 'AppContext';
-import {allowCompMemberUpgrade, getCompExpiry, getMemberSubscription, getMemberTierName, getUpdatedOfferPrice, hasMultipleProductsFeature, hasOnlyFreePlan, isComplimentaryMember, subscriptionHasFreeTrial} from 'utils/helpers';
+import {allowCompMemberUpgrade, getCompExpiry, getMemberSubscription, getMemberTierName, getUpdatedOfferPrice, hasMultipleProductsFeature, hasOnlyFreePlan, isComplimentaryMember, isInThePast, subscriptionHasFreeTrial} from 'utils/helpers';
 import {getDateString} from 'utils/date-time';
 import {ReactComponent as LoaderIcon} from 'images/icons/loader.svg';
 import {ReactComponent as OfferTagIcon} from 'images/icons/offer-tag.svg';
@@ -89,7 +89,12 @@ const PaidAccountActions = () => {
             return null;
         }
         return (
-            <button className='gh-portal-btn gh-portal-btn-list' onClick={e => openUpdatePlan(e)}>Change</button>
+            <button
+                className='gh-portal-btn gh-portal-btn-list' onClick={e => openUpdatePlan(e)}
+                data-test-button='change-plan'
+            >
+                Change
+            </button>
         );
     };
 
@@ -120,7 +125,13 @@ const PaidAccountActions = () => {
                     <h3>Billing info</h3>
                     <CardLabel defaultCardLast4={defaultCardLast4} />
                 </div>
-                <button className='gh-portal-btn gh-portal-btn-list' onClick={e => onEditBilling(e)}>{label}</button>
+                <button
+                    className='gh-portal-btn gh-portal-btn-list'
+                    onClick={e => onEditBilling(e)}
+                    data-test-button='update-billing'
+                >
+                    {label}
+                </button>
             </section>
         );
     };
@@ -176,6 +187,14 @@ function FreeTrialLabel({subscription, priceLabel}) {
 function getOfferLabel({offer, price, subscriptionStartDate}) {
     let offerLabel = '';
 
+    if (offer?.type === 'trial') {
+        return '';
+    }
+
+    if (offer?.duration === 'once') {
+        return '';
+    }
+
     if (offer) {
         const discountDuration = offer.duration;
         let durationLabel = '';
@@ -185,6 +204,10 @@ function getOfferLabel({offer, price, subscriptionStartDate}) {
             const durationInMonths = offer.duration_in_months || 0;
             let offerStartDate = new Date(subscriptionStartDate);
             let offerEndDate = new Date(offerStartDate.setMonth(offerStartDate.getMonth() + durationInMonths));
+            // don't show expired offers if the offer is not forever
+            if (isInThePast(offerEndDate)) {
+                return '';
+            }
             durationLabel = `Ends ${getDateString(offerEndDate)}`;
         }
         offerLabel = `${getUpdatedOfferPrice({offer, price, useFormatted: true})}/${price.interval}${durationLabel ? ` — ${durationLabel}` : ``}`;
@@ -193,4 +216,3 @@ function getOfferLabel({offer, price, subscriptionStartDate}) {
 }
 
 export default PaidAccountActions;
-

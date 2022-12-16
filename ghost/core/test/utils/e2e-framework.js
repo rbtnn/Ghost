@@ -385,7 +385,8 @@ module.exports = {
         getGhostAPIAgent,
         getAgentsWithFrontend
     },
-
+    // @NOTE: startGhost only exposed for playwright tests
+    startGhost,
     // Mocks and Stubs
     mockManager,
 
@@ -432,5 +433,6 @@ module.exports = {
     configUtils: require('./configUtils'),
     dbUtils: require('./db-utils'),
     urlUtils: require('./urlUtils'),
+    sleep: require('./sleep'),
     resetRateLimits
 };

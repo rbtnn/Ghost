@@ -1,22 +1,38 @@
 import AppContext from 'AppContext';
 import {useContext, useEffect} from 'react';
+import {hasCommentsEnabled, hasMultipleNewsletters} from 'utils/helpers';
 import CloseButton from 'components/common/CloseButton';
 import BackButton from 'components/common/BackButton';
 import ActionButton from 'components/common/ActionButton';
 import {ReactComponent as EmailDeliveryFailedIcon} from 'images/icons/email-delivery-failed.svg';
 
 export default function EmailSuppressedPage() {
-    const {brandColor, lastPage, onAction, action} = useContext(AppContext);
+    const {brandColor, lastPage, onAction, action, site} = useContext(AppContext);
 
     useEffect(() => {
         if (['removeEmailFromSuppressionList:success'].includes(action)) {
             onAction('refreshMemberData');
         }
 
-        if (['removeEmailFromSuppressionList:failed', 'refreshMemberData:success', 'refreshMemberData:failed'].includes(action)) {
+        if (['removeEmailFromSuppressionList:failed', 'refreshMemberData:failed'].includes(action)) {
             onAction('back');
         }
-    }, [action, onAction]);
+
+        if (['refreshMemberData:success'].includes(action)) {
+            const showEmailPreferences = hasMultipleNewsletters({site}) || hasCommentsEnabled({site});
+            if (showEmailPreferences) {
+                onAction('switchPage', {
+                    page: 'accountEmail',
+                    lastPage: 'accountHome'
+                });
+                onAction('showPopupNotification', {
+                    message: 'You have been successfully resubscribed'
+                });
+            } else {
+                onAction('back');
+            }
+        }
+    }, [action, onAction, site]);
 
     const isRunning = ['removeEmailFromSuppressionList:running', 'refreshMemberData:running'].includes(action);
 
@@ -36,27 +52,19 @@ export default function EmailSuppressedPage() {
             <EmailDeliveryFailedIcon className="gh-email-suppressed-page-icon" />
 
             <div className="gh-email-suppressed-page-text">
-                <h3 className="gh-portal-main-title gh-email-suppressed-page-title">Email disabled</h3>
-
+                <h3 className="gh-portal-main-title gh-email-suppressed-page-title">Emails disabled</h3>
                 <p>
-                    All newsletters have been disabled on your account. <br/> This can happen due to a spam complaint or
-                    permanent failure (bounce).
+                    You're not receiving emails because you either marked a recent message as spam, or because messages could not be delivered to your provided email address. 
                 </p>
-
-                <button
-                    className="gh-portal-btn-text gh-email-faq-page-button"
-                    onClick={() => onAction('switchPage', {page: 'emailSuppressionFAQ', lastPage: 'emailSuppressed'})}
-                >
-                    Learn more about why this happens
-                </button>
             </div>
 
             <ActionButton
+                dataTestId={'resubscribe-email'}
                 classes="gh-portal-confirm-button"
                 onClick={handleSubmit}
                 disabled={isRunning}
                 brandColor={brandColor}
-                label="Resubscribe your email"
+                label="Re-enable emails"
                 isRunning={isRunning}
             />
         </div>
