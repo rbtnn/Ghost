@@ -3189,11 +3189,11 @@ module.exports = {
                 const memberRows = await models.Member.getFilteredCollectionQuery({}).select('members.*').distinct();
                 for (var i = 0; i < memberRows.length; i++) {
                     if ((memberRows[i].uuid === frame.data.uuid) && (memberRows[i].status !== 'free')) {
-                        return res.end(await models.Post.findAll({ filter: 'tag:-podcast' })
+                        return res.end(await models.Post.findAll({ filter: 'tag:-podcast+visibility:paid' })
                             .then((response) => {
                                 let text = head_text;
                                 for (let o of response) {
-                                    if ((o.get('visibility') == 'paid') && o.get('canonical_url')) {
+                                    if (o.get('canonical_url')) {
                                         const title = o.get('title');
                                         const url = 'https://backspace.fm/' + o.get('slug') + '/';
                                         const published_at = (new Date(o.get('published_at'))).toUTCString();
