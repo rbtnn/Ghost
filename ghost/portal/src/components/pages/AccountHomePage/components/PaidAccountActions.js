@@ -31,7 +31,7 @@ const PaidAccountActions = () => {
         let label = '';
         if (price) {
             const {amount = 0, currency, interval} = price;
-            label = `${Intl.NumberFormat('en', {currency, style: 'currency'}).format(amount / 100)}/${interval}`;
+            label = `${Intl.NumberFormat('en', {currency, style: 'currency'}).format(amount)}/${interval}`;
         }
         let offerLabelStr = getOfferLabel({price, offer, subscriptionStartDate: startDate});
         const compExpiry = getCompExpiry({member});
@@ -93,7 +93,7 @@ const PaidAccountActions = () => {
                 className='gh-portal-btn gh-portal-btn-list' onClick={e => openUpdatePlan(e)}
                 data-test-button='change-plan'
             >
-                Change
+                更新
             </button>
         );
     };
@@ -114,7 +114,7 @@ const PaidAccountActions = () => {
         const {action} = useContext(AppContext);
         const label = action === 'editBilling:running' ? (
             <LoaderIcon className='gh-portal-billing-button-loader' />
-        ) : 'Update';
+        ) : '更新';
         if (isComplimentary) {
             return null;
         }
@@ -122,7 +122,7 @@ const PaidAccountActions = () => {
         return (
             <section>
                 <div className='gh-portal-list-detail'>
-                    <h3>Billing info</h3>
+                    <h3>支払い設定</h3>
                     <CardLabel defaultCardLast4={defaultCardLast4} />
                 </div>
                 <button
