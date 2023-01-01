@@ -3189,7 +3189,7 @@ module.exports = {
                 const memberRows = await models.Member.getFilteredCollectionQuery({}).select('members.*').distinct();
                 for (var i = 0; i < memberRows.length; i++) {
                     if ((memberRows[i].uuid === frame.data.uuid) && (memberRows[i].status !== 'free')) {
-                        return res.end(await models.Post.findAll({ filter: 'tag:-podcast+visibility:paid' })
+                        return res.end(await models.Post.findAll({ filter: config.get('bsm_podcast').filter })
                             .then((response) => {
                                 let text = head_text;
                                 for (let o of response) {
