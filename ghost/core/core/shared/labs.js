@@ -17,7 +17,8 @@ const messages = {
 const GA_FEATURES = [
     'sourceAttribution',
     'memberAttribution',
-    'audienceFeedback'
+    'audienceFeedback',
+    'themeErrorsNotification'
 ];
 
 // NOTE: this allowlist is meant to be used to filter out any unexpected
