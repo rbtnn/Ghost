@@ -232,6 +232,31 @@ const getMembersAPIAgent = async () => {
 };
 
 /**
+ * Creates a MembersAPITestAgent which is a drop-in substitution for supertest
+ * It is automatically hooked up to the Members API so you can make requests to e.g.
+ * agent.get('/webhooks/stripe/') without having to worry about URL paths
+ *
+ * @returns {Promise<InstanceType<GhostAPITestAgent>>} agent
+ */
+const getWebmentionsAPIAgent = async () => {
+    const bootOptions = {
+        frontend: true
+    };
+    try {
+        const app = await startGhost(bootOptions);
+        const originURL = configUtils.config.get('url');
+
+        return new GhostAPITestAgent(app, {
+            apiURL: '/webmentions/',
+            originURL
+        });
+    } catch (error) {
+        error.message = `Unable to create test agent. ${error.message}`;
+        throw error;
+    }
+};
+
+/**
  * Creates a GhostAPITestAgent, which is a drop-in substitution for supertest
  * It is automatically hooked up to the Ghost API so you can make requests to e.g.
  * agent.get('/well-known/jwks.json') without having to worry about URL paths
@@ -293,6 +318,7 @@ const getAgentsForMembers = async () => {
 };
 
 /**
+ * WARNING: when using this, you should stop the returned ghostServer after the tests.
  * @NOTE: for now method returns a supertest agent for Frontend instead of test agent with snapshot support.
  *        frontendAgent should be returning an instance of TestAgent (related: https://github.com/TryGhost/Toolbox/issues/471)
  *  @returns {Promise<{adminAgent: InstanceType<AdminAPITestAgent>, membersAgent: InstanceType<MembersAPITestAgent>, frontendAgent: InstanceType<supertest.SuperAgentTest>, contentAPIAgent: InstanceType<ContentAPITestAgent>, ghostServer: Express.Application}>} agents
@@ -380,6 +406,7 @@ module.exports = {
     agentProvider: {
         getAdminAPIAgent,
         getMembersAPIAgent,
+        getWebmentionsAPIAgent,
         getContentAPIAgent,
         getAgentsForMembers,
         getGhostAPIAgent,

@@ -87,6 +87,17 @@ function getSearchHelper(frontendKey) {
     return helper;
 }
 
+function getWebmentionDiscoveryLink() {
+    try {
+        const siteUrl = urlUtils.getSiteUrl();
+        const webmentionUrl = new URL('webmentions/receive/', siteUrl);
+        return `<link href="${webmentionUrl.href}" rel="webmention" />`;
+    } catch (err) {
+        logging.warn(err);
+        return '';
+    }
+}
+
 /**
  * **NOTE**
  * Express adds `_locals`, see https://github.com/expressjs/express/blob/4.15.4/lib/response.js#L962.
@@ -217,6 +228,11 @@ module.exports = async function ghost_head(options) { // eslint-disable-line cam
         if (!_.includes(context, 'amp')) {
             head.push(getMembersHelper(options.data, frontendKey));
             head.push(getSearchHelper(frontendKey));
+            try {
+                head.push(getWebmentionDiscoveryLink());
+            } catch (err) {
+                logging.warn(err);
+            }
 
             // @TODO do this in a more "frameworky" way
             if (cardAssetService.hasFile('js')) {
