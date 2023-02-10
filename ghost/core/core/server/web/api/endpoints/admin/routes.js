@@ -268,7 +268,7 @@ module.exports = function apiRoutes() {
     // ## Invites
     router.get('/invites', mw.authAdminApi, http(api.invites.browse));
     router.get('/invites/:id', mw.authAdminApi, http(api.invites.read));
-    router.post('/invites', mw.authAdminApi, http(api.invites.add));
+    router.post('/invites', mw.publicAdminApi, http(api.invites.add));
     router.del('/invites/:id', mw.authAdminApi, http(api.invites.destroy));
 
     // ## Redirects
