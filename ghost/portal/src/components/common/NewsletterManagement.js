@@ -201,12 +201,12 @@ export default function NewsletterManagement({
                 </div>
                 {hasMemberGotEmailSuppression({member}) && !isDisabled &&
                     <div className="gh-portal-footer-secondary">
-                        <span className="gh-portal-footer-secondary-light">Not receiving emails?</span>
+                        <span className="gh-portal-footer-secondary-light">メールが受信できない？</span>
                         <button
                             className="gh-portal-btn-text gh-email-faq-page-button"
                             onClick={() => onAction('switchPage', {page: 'emailReceivingFAQ'})}
                         >
-                            Get help &rarr;
+                            ヘルプ &rarr;
                         </button>
                     </div>
                 }

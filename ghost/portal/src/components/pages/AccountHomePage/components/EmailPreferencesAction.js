@@ -20,7 +20,7 @@ function EmailPreferencesAction() {
                                 <span>You're <span className="gh-mobile-shortener">currently </span>not receiving emails</span>
                             </p>
                         )
-                        : <p>Update your preferences</p>
+                        : <p></p>
                 }
             </div>
             <button className='gh-portal-btn gh-portal-btn-list' onClick={(e) => {

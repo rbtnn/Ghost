@@ -24,35 +24,35 @@ export default function EmailReceivingPage() {
             </header>
 
             <div class="gh-longform">
-                <h3>Help! I'm not receiving emails</h3>
+                <h3>助けて！メールが受信できない</h3>
 
-                <p>If you're not receiving the email newsletter you've subscribed to, here are few things to check.</p>
+                <p>もし購読したメール通知が受信できない場合、以下の点を確認してください。</p>
 
-                <h4>Verify your email address is correct</h4>
+                <h4>メールアドレスが正しいか確認</h4>
 
-                <p>The email address we have for you is <strong>{member.email}</strong> &mdash; if that's not correct, you can update it in your <button className="gh-portal-btn-text" onClick={() => onAction('switchPage', {lastPage: 'emailReceivingFAQ', page: 'accountProfile'})}>account settings area</button>.</p>
+                <p>貴方のメールアドレスは<strong>{member.email}</strong>です。 もしこれが正しくない場合、<button className="gh-portal-btn-text" onClick={() => onAction('switchPage', {lastPage: 'emailReceivingFAQ', page: 'accountProfile'})}>アカウント設定</button>からメールアドレスを設定できます。</p>
 
-                <h4>Check spam & promotions folders</h4>
+                <h4>迷惑メールやプロモーションフォルダの確認</h4>
 
-                <p>Make sure emails aren't accidentally ending up in the Spam or Promotions folders of your inbox. If they are, click on "Mark as not spam" and/or "Move to inbox".</p>
+                <p>メールが誤って受信トレイの迷惑メールやプロモーションフォルダに入っていないことを確認してください。そうである場合は、[スパムではないとしてマークする] および/または [受信トレイに移動] をクリックします。</p>
 
-                <h4>Create a new contact</h4>
+                <h4>連絡先リストに追加</h4>
 
-                <p>In your email client add <strong>{defaultNewsletterSenderEmail}</strong> to your contacts list. This signals to your mail provider that emails sent from this address should be trusted.</p>
+                <p>メールクライアントの連絡先リストに<strong>{defaultNewsletterSenderEmail}</strong>を追加します。 これはこのアドレスから送信されたメールが信頼できるものであることをメールプロバイダーに知らせます。</p>
 
-                <h4>Send an email and say hi!</h4>
+                <h4>メールの送信</h4>
 
-                <p>Send an email to <strong>{defaultNewsletterSenderEmail}</strong> and say hello. This can also help signal to your mail provider that emails to-and-from this address should be trusted.</p>
+                <p><strong>{defaultNewsletterSenderEmail}</strong>にメールを送信します。 これは、このアドレスとの間のメールが信頼できるものであることをメールプロバイダーに知らせるのにも役立ちます。</p>
 
-                <h4>Check with your mail provider</h4>
+                <h4>自身のメールプロバイダーの確認</h4>
 
-                <p>If you have a corporate or government email account, reach out to your IT department and ask them to allow emails to be received from <strong>{defaultNewsletterSenderEmail}</strong></p>
+                <p>企業または政府のメールアカウントをお持ちの場合は、IT部門に連絡して、<strong>{defaultNewsletterSenderEmail}</strong>からのメールの受信を許可するよう依頼してください。</p>
 
-                <h4>Get in touch for help</h4>
+                <h4>もしそれでも解決しないなら</h4>
 
-                <p>If you've completed all these checks and you're still not receiving emails, you can reach out to get support by contacting <a href={supportAddress} onClick={() => {
+                <p>これらのチェックをすべて完了してもメールが届かない場合は、<a href={supportAddress} onClick={() => {
                     supportAddress && window.open(supportAddress);
-                }}>{supportAddressEmail}</a>.</p>
+                }}>{supportAddressEmail}</a>に連絡してサポートを受けることができます。</p>
             </div>
         </div>
     );

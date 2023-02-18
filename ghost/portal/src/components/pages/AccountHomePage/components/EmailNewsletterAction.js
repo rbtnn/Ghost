@@ -24,7 +24,7 @@ function EmailNewsletterAction() {
                     className='gh-portal-btn-text gh-email-faq-page-button'
                     onClick={() => onAction('switchPage', {page: 'emailReceivingFAQ', lastPage: 'accountHome'})}
                 >
-                    Not receiving emails?
+                    メールが受信できない？
                 </button>}</p>
             </div>
             <div>
