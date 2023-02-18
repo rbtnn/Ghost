@@ -1,6 +1,7 @@
 const ObjectID = require('bson-objectid').default;
 const {ValidationError} = require('@tryghost/errors');
 const MentionCreatedEvent = require('./MentionCreatedEvent');
+const cheerio = require('cheerio');
 
 module.exports = class Mention {
     /** @type {Array} */
@@ -10,6 +11,21 @@ module.exports = class Mention {
     #id;
     get id() {
         return this.#id;
+    }
+
+    /** @type {boolean} */
+    #verified = false;
+    get verified() {
+        return this.#verified;
+    }
+
+    /**
+     * @param {string} html
+     */
+    verify(html) {
+        const $ = cheerio.load(html);
+        const hasTargetUrl = $('a[href*="' + this.target.href + '"], img[src*="' + this.target.href + '"], video[src*="' + this.target.href + '"]').length > 0;
+        this.#verified = hasTargetUrl;
     }
 
     /** @type {URL} */
@@ -78,6 +94,51 @@ module.exports = class Mention {
         return this.#sourceFeaturedImage;
     }
 
+    /**
+     * @param {object} metadata
+     */
+    setSourceMetadata(metadata) {
+        /** @type {string} */
+        let sourceTitle = validateString(metadata.sourceTitle, 2000, 'sourceTitle');
+        if (sourceTitle === null) {
+            sourceTitle = this.#source.host;
+        }
+        /** @type {string | null} */
+        const sourceExcerpt = validateString(metadata.sourceExcerpt, 2000, 'sourceExcerpt');
+        /** @type {string | null} */
+        const sourceSiteTitle = validateString(metadata.sourceSiteTitle, 2000, 'sourceSiteTitle');
+        /** @type {string | null} */
+        const sourceAuthor = validateString(metadata.sourceAuthor, 2000, 'sourceAuthor');
+
+        /** @type {URL | null} */
+        let sourceFavicon = null;
+        if (metadata.sourceFavicon instanceof URL) {
+            sourceFavicon = metadata.sourceFavicon;
+        } else if (metadata.sourceFavicon) {
+            sourceFavicon = new URL(metadata.sourceFavicon);
+        }
+
+        /** @type {URL | null} */
+        let sourceFeaturedImage = null;
+        if (metadata.sourceFeaturedImage instanceof URL) {
+            sourceFeaturedImage = metadata.sourceFeaturedImage;
+        } else if (metadata.sourceFeaturedImage) {
+            sourceFeaturedImage = new URL(metadata.sourceFeaturedImage);
+        }
+
+        this.#sourceTitle = sourceTitle;
+        this.#sourceExcerpt = sourceExcerpt;
+        this.#sourceSiteTitle = sourceSiteTitle;
+        this.#sourceAuthor = sourceAuthor;
+        this.#sourceFavicon = sourceFavicon;
+        this.#sourceFeaturedImage = sourceFeaturedImage;
+    }
+
+    #deleted = false;
+    delete() {
+        this.#deleted = true;
+    }
+
     toJSON() {
         return {
             id: this.id,
@@ -91,7 +152,8 @@ module.exports = class Mention {
             sourceAuthor: this.sourceAuthor,
             sourceExcerpt: this.sourceExcerpt,
             sourceFavicon: this.sourceFavicon,
-            sourceFeaturedImage: this.sourceFeaturedImage
+            sourceFeaturedImage: this.sourceFeaturedImage,
+            verified: this.verified
         };
     }
 
@@ -103,12 +165,7 @@ module.exports = class Mention {
         this.#timestamp = data.timestamp;
         this.#payload = data.payload;
         this.#resourceId = data.resourceId;
-        this.#sourceTitle = data.sourceTitle;
-        this.#sourceSiteTitle = data.sourceSiteTitle;
-        this.#sourceAuthor = data.sourceAuthor;
-        this.#sourceExcerpt = data.sourceExcerpt;
-        this.#sourceFavicon = data.sourceFavicon;
-        this.#sourceFeaturedImage = data.sourceFeaturedImage;
+        this.#verified = data.verified;
     }
 
     /**
@@ -166,6 +223,10 @@ module.exports = class Mention {
         let payload;
         payload = data.payload ? JSON.parse(JSON.stringify(data.payload)) : null;
 
+        /** @type boolean */
+        let verified;
+        verified = isNew ? false : !!data.verified;
+
         /** @type {ObjectID | null} */
         let resourceId = null;
         if (data.resourceId) {
@@ -176,34 +237,6 @@ module.exports = class Mention {
             }
         }
 
-        /** @type {string} */
-        let sourceTitle = validateString(data.sourceTitle, 2000, 'sourceTitle');
-        if (sourceTitle === null) {
-            sourceTitle = source.host;
-        }
-        /** @type {string | null} */
-        const sourceExcerpt = validateString(data.sourceExcerpt, 2000, 'sourceExcerpt');
-        /** @type {string | null} */
-        const sourceSiteTitle = validateString(data.sourceSiteTitle, 2000, 'sourceSiteTitle');
-        /** @type {string | null} */
-        const sourceAuthor = validateString(data.sourceAuthor, 2000, 'sourceAuthor');
-
-        /** @type {URL | null} */
-        let sourceFavicon = null;
-        if (data.sourceFavicon instanceof URL) {
-            sourceFavicon = data.sourceFavicon;
-        } else if (data.sourceFavicon) {
-            sourceFavicon = new URL(data.sourceFavicon);
-        }
-
-        /** @type {URL | null} */
-        let sourceFeaturedImage = null;
-        if (data.sourceFeaturedImage instanceof URL) {
-            sourceFeaturedImage = data.sourceFeaturedImage;
-        } else if (data.sourceFeaturedImage) {
-            sourceFeaturedImage = new URL(data.sourceFeaturedImage);
-        }
-
         const mention = new Mention({
             id,
             source,
@@ -211,18 +244,23 @@ module.exports = class Mention {
             timestamp,
             payload,
             resourceId,
-            sourceTitle,
-            sourceSiteTitle,
-            sourceAuthor,
-            sourceExcerpt,
-            sourceFavicon,
-            sourceFeaturedImage
+            verified
         });
+
+        mention.setSourceMetadata(data);
 
         if (isNew) {
             mention.events.push(MentionCreatedEvent.create({mention}));
         }
         return mention;
+    }
+
+    /**
+     * @param {Mention} mention
+     * @returns {boolean}
+     */
+    static isDeleted(mention) {
+        return mention.#deleted;
     }
 };
 

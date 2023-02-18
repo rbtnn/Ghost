@@ -203,22 +203,9 @@
                 <div class="gh-expandable-block">
                     <div class="gh-expandable-header">
                         <div>
-                            <h4 class="gh-expandable-title">Suppression list</h4>
-                            <p class="gh-expandable-description">
-                                Allows checking whether a member's email is blocked and removing emails from the suppression list.
-                            </p>
-                        </div>
-                        <div class="for-switch">
-                            <GhFeatureFlag @flag="suppressionList" />
-                        </div>
-                    </div>
-                </div>
-                <div class="gh-expandable-block">
-                    <div class="gh-expandable-header">
-                        <div>
                             <h4 class="gh-expandable-title">Webmentions</h4>
                             <p class="gh-expandable-description">
-                                Allow receiving webmentions from external sites and sending webmentions when linking external sites in posts.
+                                Allows receiving webmentions from external sites and viewing them on the dashboard.
                             </p>
                         </div>
                         <div class="for-switch">
@@ -229,20 +216,7 @@
                 <div class="gh-expandable-block">
                     <div class="gh-expandable-header">
                         <div>
-                            <h4 class="gh-expandable-title">Webmention Email Notifications</h4>
-                            <p class="gh-expandable-description">
-                                Receive email notifications when a webmention is received.
-                            </p>
-                        </div>
-                        <div class="for-switch">
-                            <GhFeatureFlag @flag="webmentionEmail" />
-                        </div>
-                    </div>
-                </div>
-                <div class="gh-expandable-block">
-                    <div class="gh-expandable-header">
-                        <div>
-                            <h4 class="gh-expandable-title">External attribution</h4>
+                            <h4 class="gh-expandable-title">Outbound Link Tagging</h4>
                             <p class="gh-expandable-description">
                                 Adds ?ref to external links in web posts and adds a setting to control this for both web and newsletters.
                             </p>
@@ -262,6 +236,32 @@
                         </div>
                         <div class="for-switch">
                             <GhFeatureFlag @flag="emailErrors" />
+                        </div>
+                    </div>
+                </div>
+                <div class="gh-expandable-block">
+                    <div class="gh-expandable-header">
+                        <div>
+                            <h4 class="gh-expandable-title">Milestone emails</h4>
+                            <p class="gh-expandable-description">
+                                Send emails for reaching specific milestones.
+                            </p>
+                        </div>
+                        <div class="for-switch">
+                            <GhFeatureFlag @flag="milestoneEmails" />
+                        </div>
+                    </div>
+                </div>
+                <div class="gh-expandable-block">
+                    <div class="gh-expandable-header">
+                        <div>
+                            <h4 class="gh-expandable-title">Websockets</h4>
+                            <p class="gh-expandable-description">
+                                Test out Websockets functionality at <code>/ghost/#/websockets</code>.
+                            </p>
+                        </div>
+                        <div class="for-switch">
+                            <GhFeatureFlag @flag="websockets" />
                         </div>
                     </div>
                 </div>

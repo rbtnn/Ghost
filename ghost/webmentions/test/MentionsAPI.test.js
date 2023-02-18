@@ -3,6 +3,7 @@ const ObjectID = require('bson-objectid');
 const Mention = require('../lib/Mention');
 const MentionsAPI = require('../lib/MentionsAPI');
 const InMemoryMentionRepository = require('../lib/InMemoryMentionRepository');
+const sinon = require('sinon');
 
 const mockRoutingService = {
     async pageExists() {
@@ -30,14 +31,33 @@ const mockWebmentionMetadata = {
     }
 };
 
+const mockWebmentionRequest = {
+    async fetch() {
+        return {
+            html: `<p>Some HTML and a <a href='http://target.com/'>mentioned url</a></p>`
+        };
+    }
+};
+
+function addMinutes(date, minutes) {
+    date.setMinutes(date.getMinutes() + minutes);
+  
+    return date;
+}
+
 describe('MentionsAPI', function () {
+    beforeEach(function () {
+        sinon.restore();
+    });
+
     it('Can list paginated mentions', async function () {
         const repository = new InMemoryMentionRepository();
         const api = new MentionsAPI({
             repository,
             routingService: mockRoutingService,
             resourceService: mockResourceService,
-            webmentionMetadata: mockWebmentionMetadata
+            webmentionMetadata: mockWebmentionMetadata,
+            webmentionRequest: mockWebmentionRequest
         });
 
         const mention = await api.processWebmention({
@@ -62,7 +82,8 @@ describe('MentionsAPI', function () {
             repository,
             routingService: mockRoutingService,
             resourceService: mockResourceService,
-            webmentionMetadata: mockWebmentionMetadata
+            webmentionMetadata: mockWebmentionMetadata,
+            webmentionRequest: mockWebmentionRequest
         });
 
         const mention = await api.processWebmention({
@@ -86,7 +107,8 @@ describe('MentionsAPI', function () {
             repository,
             routingService: mockRoutingService,
             resourceService: mockResourceService,
-            webmentionMetadata: mockWebmentionMetadata
+            webmentionMetadata: mockWebmentionMetadata,
+            webmentionRequest: mockWebmentionRequest
         });
 
         const mentionOne = await api.processWebmention({
@@ -94,7 +116,6 @@ describe('MentionsAPI', function () {
             target: new URL('https://target.com'),
             payload: {}
         });
-
         const mentionTwo = await api.processWebmention({
             source: new URL('https://source.com'),
             target: new URL('https://target.com'),
@@ -113,13 +134,88 @@ describe('MentionsAPI', function () {
         assert(page.data[0].id === mentionTwo.id);
     });
 
+    it('Can list mentions in descending order', async function () {
+        const repository = new InMemoryMentionRepository();
+        const api = new MentionsAPI({
+            repository,
+            routingService: mockRoutingService,
+            resourceService: mockResourceService,
+            webmentionMetadata: mockWebmentionMetadata,
+            webmentionRequest: mockWebmentionRequest
+        });
+
+        const mentionOne = await api.processWebmention({
+            source: new URL('https://source.com'),
+            target: new URL('https://target.com'),
+            payload: {}
+        });
+
+        sinon.useFakeTimers(addMinutes(new Date(), 10).getTime());
+
+        const mentionTwo = await api.processWebmention({
+            source: new URL('https://source2.com'),
+            target: new URL('https://target.com'),
+            payload: {}
+        });
+
+        assert(mentionOne instanceof Mention);
+        assert(mentionTwo instanceof Mention);
+
+        const page = await api.listMentions({
+            limit: 'all',
+            order: 'created_at desc'
+        });
+
+        assert(page.meta.pagination.total === 2);
+        assert(page.data[0].id === mentionTwo.id, 'First mention should be the second one in descending order');
+        assert(page.data[1].id === mentionOne.id, 'Second mention should be the first one in descending order');
+    });
+
+    it('Can list mentions in ascending order', async function () {
+        const repository = new InMemoryMentionRepository();
+        const api = new MentionsAPI({
+            repository,
+            routingService: mockRoutingService,
+            resourceService: mockResourceService,
+            webmentionMetadata: mockWebmentionMetadata,
+            webmentionRequest: mockWebmentionRequest
+        });
+
+        const mentionOne = await api.processWebmention({
+            source: new URL('https://source.com'),
+            target: new URL('https://target.com'),
+            payload: {}
+        });
+
+        sinon.useFakeTimers(addMinutes(new Date(), 10).getTime());
+
+        const mentionTwo = await api.processWebmention({
+            source: new URL('https://source2.com'),
+            target: new URL('https://target.com'),
+            payload: {}
+        });
+
+        assert(mentionOne instanceof Mention);
+        assert(mentionTwo instanceof Mention);
+
+        const page = await api.listMentions({
+            limit: 'all',
+            order: 'created_at asc'
+        });
+
+        assert(page.meta.pagination.total === 2);
+        assert(page.data[0].id === mentionOne.id, 'First mention should be the first one in ascending order');
+        assert(page.data[1].id === mentionTwo.id, 'Second mention should be the second one in ascending order');
+    });
+
     it('Can handle updating mentions', async function () {
         const repository = new InMemoryMentionRepository();
         const api = new MentionsAPI({
             repository,
             routingService: mockRoutingService,
             resourceService: mockResourceService,
-            webmentionMetadata: mockWebmentionMetadata
+            webmentionMetadata: mockWebmentionMetadata,
+            webmentionRequest: mockWebmentionRequest
         });
 
         const mentionOne = await api.processWebmention({
@@ -156,7 +252,8 @@ describe('MentionsAPI', function () {
                 }
             },
             resourceService: mockResourceService,
-            webmentionMetadata: mockWebmentionMetadata
+            webmentionMetadata: mockWebmentionMetadata,
+            webmentionRequest: mockWebmentionRequest
         });
 
         let errored = false;
@@ -186,7 +283,8 @@ describe('MentionsAPI', function () {
                     };
                 }
             },
-            webmentionMetadata: mockWebmentionMetadata
+            webmentionMetadata: mockWebmentionMetadata,
+            webmentionRequest: mockWebmentionRequest
         });
 
         const mention = await api.processWebmention({
@@ -202,5 +300,139 @@ describe('MentionsAPI', function () {
         });
 
         assert.equal(page.data[0].id, mention.id);
+    });
+
+    it('Will delete an existing mention if the target page does not exist', async function () {
+        const repository = new InMemoryMentionRepository();
+        const api = new MentionsAPI({
+            repository,
+            routingService: {
+                pageExists: sinon.stub().onFirstCall().resolves(true).onSecondCall().resolves(false)
+            },
+            resourceService: {
+                async getByURL() {
+                    return {
+                        type: 'post',
+                        id: new ObjectID
+                    };
+                }
+            },
+            webmentionMetadata: mockWebmentionMetadata,
+            webmentionRequest: mockWebmentionRequest
+        });
+
+        checkFirstMention: {
+            const mention = await api.processWebmention({
+                source: new URL('https://source.com'),
+                target: new URL('https://target.com'),
+                payload: {}
+            });
+
+            const page = await api.listMentions({
+                limit: 'all'
+            });
+
+            assert.equal(page.data[0].id, mention.id);
+            break checkFirstMention;
+        }
+
+        checkMentionDeleted: {
+            await api.processWebmention({
+                source: new URL('https://source.com'),
+                target: new URL('https://target.com'),
+                payload: {}
+            });
+
+            const page = await api.listMentions({
+                limit: 'all'
+            });
+
+            assert.equal(page.data.length, 0);
+            break checkMentionDeleted;
+        }
+    });
+
+    it('Will delete an existing mention if the source page does not exist', async function () {
+        const repository = new InMemoryMentionRepository();
+        const api = new MentionsAPI({
+            repository,
+            routingService: mockRoutingService,
+            resourceService: {
+                async getByURL() {
+                    return {
+                        type: 'post',
+                        id: new ObjectID
+                    };
+                }
+            },
+            webmentionMetadata: {
+                fetch: sinon.stub()
+                    .onFirstCall().resolves(mockWebmentionMetadata.fetch())
+                    .onSecondCall().rejects()
+            },
+            webmentionRequest: mockWebmentionRequest
+        });
+
+        checkFirstMention: {
+            const mention = await api.processWebmention({
+                source: new URL('https://source.com'),
+                target: new URL('https://target.com'),
+                payload: {}
+            });
+
+            const page = await api.listMentions({
+                limit: 'all'
+            });
+
+            assert.equal(page.data[0].id, mention.id);
+            break checkFirstMention;
+        }
+
+        checkMentionDeleted: {
+            await api.processWebmention({
+                source: new URL('https://source.com'),
+                target: new URL('https://target.com'),
+                payload: {}
+            });
+
+            const page = await api.listMentions({
+                limit: 'all'
+            });
+
+            assert.equal(page.data.length, 0);
+            break checkMentionDeleted;
+        }
+    });
+
+    it('Will throw for new mentions if the source page is not found', async function () {
+        const repository = new InMemoryMentionRepository();
+        const api = new MentionsAPI({
+            repository,
+            routingService: mockRoutingService,
+            resourceService: {
+                async getByURL() {
+                    return {
+                        type: 'post',
+                        id: new ObjectID
+                    };
+                }
+            },
+            webmentionMetadata: {
+                fetch: sinon.stub().rejects(new Error(''))
+            }
+        });
+
+        let error = null;
+        try {
+            await api.processWebmention({
+                source: new URL('https://source.com'),
+                target: new URL('https://target.com'),
+                payload: {}
+            });
+        } catch (err) {
+            error = err;
+        } finally {
+            assert(error);
+        }
     });
 });

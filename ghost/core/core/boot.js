@@ -132,6 +132,19 @@ async function initCore({ghostServer, config, bootLogger, frontend}) {
         });
         debug('End: Job Service');
 
+        // Mentions Job Service allows mentions to be processed in the background
+        debug('Begin: Mentions Job Service');
+        const mentionsJobService = require('./server/services/mentions-jobs');
+
+        if (config.get('server:testmode')) {
+            mentionsJobService.initTestMode();
+        }
+
+        ghostServer.registerCleanupTask(async () => {
+            await mentionsJobService.shutdown();
+        });
+        debug('End: Mentions Job Service');
+
         ghostServer.registerCleanupTask(async () => {
             await urlService.shutdown();
         });
@@ -165,7 +178,7 @@ async function initServicesForFrontend({bootLogger}) {
     debug('End: Link Redirects');
 
     debug('Begin: Themes');
-    // customThemSettingsService.api must be initialized before any theme activation occurs
+    // customThemeSettingsService.api must be initialized before any theme activation occurs
     const customThemeSettingsService = require('./server/services/custom-theme-settings');
     customThemeSettingsService.init();
 
@@ -294,6 +307,9 @@ async function initServices({config}) {
     const emailService = require('./server/services/email-service');
     const emailAnalytics = require('./server/services/email-analytics');
     const mentionsService = require('./server/services/mentions');
+    const tagsPublic = require('./server/services/tags-public');
+    const postsPublic = require('./server/services/posts-public');
+    const slackNotifications = require('./server/services/slack-notifications');
 
     const urlUtils = require('./shared/url-utils');
 
@@ -311,6 +327,8 @@ async function initServices({config}) {
         staffService.init(),
         members.init(),
         tiers.init(),
+        tagsPublic.init(),
+        postsPublic.init(),
         membersEvents.init(),
         permissions.init(),
         xmlrpc.listen(),
@@ -327,7 +345,8 @@ async function initServices({config}) {
         }),
         comments.init(),
         linkTracking.init(),
-        emailSuppressionList.init()
+        emailSuppressionList.init(),
+        slackNotifications.init()
     ]);
     debug('End: Services');
 
@@ -367,6 +386,9 @@ async function initBackgroundServices({config}) {
 
     const updateCheck = require('./server/update-check');
     updateCheck.scheduleRecurringJobs();
+
+    const milestonesService = require('./server/services/milestones');
+    milestonesService.initAndRun();
 
     debug('End: initBackgroundServices');
 }
@@ -464,6 +486,13 @@ async function bootGhost({backend = true, frontend = true, server = true} = {}) 
 
         if (frontend) {
             await initDynamicRouting();
+        }
+
+        // TODO: move this to the correct place once we figure out where that is
+        if (ghostServer) {
+            //  NOTE: changes in this labs setting requires server reboot since we don't re-init services after changes a labs flag
+            const websockets = require('./server/services/websockets');
+            await websockets.init(ghostServer);
         }
 
         await initServices({config});

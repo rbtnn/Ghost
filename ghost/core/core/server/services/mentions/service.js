@@ -1,5 +1,6 @@
 const MentionController = require('./MentionController');
 const WebmentionMetadata = require('./WebmentionMetadata');
+const WebmentionRequest = require('./WebmentionRequest');
 const {
     MentionsAPI,
     MentionSendingService,
@@ -13,9 +14,10 @@ const events = require('../../lib/common/events');
 const externalRequest = require('../../../server/lib/request-external.js');
 const urlUtils = require('../../../shared/url-utils');
 const outputSerializerUrlUtil = require('../../../server/api/endpoints/utils/serializers/output/utils/url');
-const labs = require('../../../shared/labs');
 const urlService = require('../url');
+const settingsCache = require('../../../shared/settings-cache');
 const DomainEvents = require('@tryghost/domain-events');
+const jobsService = require('../mentions-jobs');
 
 function getPostUrl(post) {
     const jsonModel = {};
@@ -31,6 +33,7 @@ module.exports = {
             DomainEvents
         });
         const webmentionMetadata = new WebmentionMetadata();
+        const webmentionRequest = new WebmentionRequest();
         const discoveryService = new MentionDiscoveryService({externalRequest});
         const resourceService = new ResourceService({
             urlUtils,
@@ -46,18 +49,58 @@ module.exports = {
         const api = new MentionsAPI({
             repository,
             webmentionMetadata,
+            webmentionRequest,
             resourceService,
             routingService
         });
 
-        this.controller.init({api});
+        this.controller.init({
+            api,
+            jobService: {
+                async addJob(name, fn) {
+                    jobsService.addJob({
+                        name,
+                        job: fn,
+                        offloaded: false
+                    });
+                }
+            },
+            mentionResourceService: {
+                async getByID(id) {
+                    if (!id) {
+                        return null;
+                    }
+
+                    const post = await models.Post.findOne({id: id.toHexString()});
+
+                    if (!post) {
+                        return null;
+                    }
+
+                    return {
+                        id: id,
+                        name: post.get('title'),
+                        type: 'post'
+                    };
+                }
+            }
+        });
 
         const sendingService = new MentionSendingService({
             discoveryService,
             externalRequest,
             getSiteUrl: () => urlUtils.urlFor('home', true),
             getPostUrl: post => getPostUrl(post),
-            isEnabled: () => labs.isSet('webmentions')
+            isEnabled: () => !settingsCache.get('is_private'),
+            jobService: {
+                async addJob(name, fn) {
+                    jobsService.addJob({
+                        name,
+                        job: fn,
+                        offloaded: false
+                    });
+                }
+            }
         });
         sendingService.listen(events);
     }

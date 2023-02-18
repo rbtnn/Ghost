@@ -7,6 +7,13 @@ const sinon = require('sinon');
 const logging = require('@tryghost/logging');
 const {createModel} = require('./utils/index.js');
 
+// mock up job service
+let jobService = {
+    async addJob(name, fn) {
+        return fn();
+    }
+};
+
 describe('MentionSendingService', function () {
     let errorLogStub;
 
@@ -27,9 +34,9 @@ describe('MentionSendingService', function () {
     });
 
     describe('listen', function () {
-        it('Calls on post.edited', async function () {
+        it('Calls on post.published, post.published.edited, post.unpublished', async function () {
             const service = new MentionSendingService({});
-            const stub = sinon.stub(service, 'sendForEditedPost').resolves();
+            const stub = sinon.stub(service, 'sendForPost').resolves();
             let callback;
             const events = {
                 on: sinon.stub().callsFake((event, c) => {
@@ -37,19 +44,39 @@ describe('MentionSendingService', function () {
                 })
             };
             service.listen(events);
-            sinon.assert.calledOnce(events.on);
+            sinon.assert.calledThrice(events.on);
             await callback({});
             sinon.assert.calledOnce(stub);
         });
     });
 
-    describe('sendForEditedPost', function () {
+    describe('sendForPost', function () {
         it('Ignores if disabled', async function () {
             const service = new MentionSendingService({
                 isEnabled: () => false
             });
             const stub = sinon.stub(service, 'sendAll');
-            await service.sendForEditedPost({});
+            await service.sendForPost({});
+            sinon.assert.notCalled(stub);
+        });
+
+        it('Ignores if importing data', async function () {
+            const service = new MentionSendingService({
+                isEnabled: () => true
+            });
+            const stub = sinon.stub(service, 'sendAll');
+            let options = {importing: true};
+            await service.sendForPost({}, options);
+            sinon.assert.notCalled(stub);
+        });
+
+        it('Ignores if internal context', async function () {
+            const service = new MentionSendingService({
+                isEnabled: () => true
+            });
+            const stub = sinon.stub(service, 'sendAll');
+            let options = {context: {internal: true}};
+            await service.sendForPost({}, options);
             sinon.assert.notCalled(stub);
         });
 
@@ -58,7 +85,7 @@ describe('MentionSendingService', function () {
                 isEnabled: () => true
             });
             const stub = sinon.stub(service, 'sendAll');
-            await service.sendForEditedPost(createModel({
+            await service.sendForPost(createModel({
                 status: 'draft',
                 html: 'changed',
                 previous: {
@@ -74,7 +101,7 @@ describe('MentionSendingService', function () {
                 isEnabled: () => true
             });
             const stub = sinon.stub(service, 'sendAll');
-            await service.sendForEditedPost(createModel({
+            await service.sendForPost(createModel({
                 status: 'published',
                 html: 'same',
                 previous: {
@@ -90,7 +117,7 @@ describe('MentionSendingService', function () {
                 isEnabled: () => true
             });
             const stub = sinon.stub(service, 'sendAll');
-            await service.sendForEditedPost(createModel({
+            await service.sendForPost(createModel({
                 status: 'send',
                 html: 'changed',
                 previous: {
@@ -104,10 +131,11 @@ describe('MentionSendingService', function () {
         it('Sends on publish', async function () {
             const service = new MentionSendingService({
                 isEnabled: () => true,
-                getPostUrl: () => 'https://site.com/post/'
+                getPostUrl: () => 'https://site.com/post/',
+                jobService: jobService
             });
             const stub = sinon.stub(service, 'sendAll');
-            await service.sendForEditedPost(createModel({
+            await service.sendForPost(createModel({
                 status: 'published',
                 html: 'same',
                 previous: {
@@ -125,10 +153,11 @@ describe('MentionSendingService', function () {
         it('Sends on html change', async function () {
             const service = new MentionSendingService({
                 isEnabled: () => true,
-                getPostUrl: () => 'https://site.com/post/'
+                getPostUrl: () => 'https://site.com/post/',
+                jobService: jobService
             });
             const stub = sinon.stub(service, 'sendAll');
-            await service.sendForEditedPost(createModel({
+            await service.sendForPost(createModel({
                 status: 'published',
                 html: 'updated',
                 previous: {
@@ -149,7 +178,7 @@ describe('MentionSendingService', function () {
                 getPostUrl: () => 'https://site.com/post/'
             });
             sinon.stub(service, 'sendAll').rejects(new Error('Internal error test'));
-            await service.sendForEditedPost(createModel({
+            await service.sendForPost(createModel({
                 status: 'published',
                 html: 'same',
                 previous: {
@@ -158,6 +187,24 @@ describe('MentionSendingService', function () {
                 }
             }));
             assert(errorLogStub.calledTwice);
+        });
+
+        it('Sends no mentions for posts without html and previous html', async function () {
+            const service = new MentionSendingService({
+                isEnabled: () => true,
+                getPostUrl: () => 'https://site.com/post/',
+                jobService: jobService
+            });
+            const stub = sinon.stub(service, 'sendAll');
+            await service.sendForPost(createModel({
+                status: 'published',
+                html: '',
+                previous: {
+                    status: 'draft',
+                    html: ''
+                }
+            }));
+            assert(stub.notCalled);
         });
     });
 
@@ -245,13 +292,24 @@ describe('MentionSendingService', function () {
                 getSiteUrl: () => new URL('https://site.com'),
                 discoveryService: {
                     getEndpoint: async () => new URL('https://example.org/webmentions-test')
-                }
+                },
+                jobService: jobService
             });
             await service.sendAll({url: new URL('https://site.com'),
                 html: `<a href="https://example.com">Example</a>`,
                 previousHtml: `<a href="https://typo.com">Example</a>`});
             assert.strictEqual(scope.isDone(), true);
             assert.equal(counter, 2);
+        });
+
+        // cheerio must be served a string
+        it('Does not evaluate links for an empty post', async function () {
+            const service = new MentionSendingService({
+                isEnabled: () => true
+            });
+            const linksStub = sinon.stub(service, 'getLinks');
+            await service.sendAll({html: ``,previousHtml: ``});
+            sinon.assert.notCalled(linksStub);
         });
     });
 
@@ -324,7 +382,7 @@ describe('MentionSendingService', function () {
         it('Can handle 202 accepted responses', async function () {
             const scope = nock('https://example.org')
                 .persist()
-                .post('/webmentions-test', `source=${encodeURIComponent('https://example.com/source')}&target=${encodeURIComponent('https://target.com/target')}`)
+                .post('/webmentions-test', `source=${encodeURIComponent('https://example.com/source')}&target=${encodeURIComponent('https://target.com/target')}&source_is_ghost=true`)
                 .reply(202);
 
             const service = new MentionSendingService({externalRequest});
@@ -339,7 +397,7 @@ describe('MentionSendingService', function () {
         it('Can handle 201 created responses', async function () {
             const scope = nock('https://example.org')
                 .persist()
-                .post('/webmentions-test', `source=${encodeURIComponent('https://example.com/source')}&target=${encodeURIComponent('https://target.com/target')}`)
+                .post('/webmentions-test', `source=${encodeURIComponent('https://example.com/source')}&target=${encodeURIComponent('https://target.com/target')}&source_is_ghost=true`)
                 .reply(201);
 
             const service = new MentionSendingService({externalRequest});

@@ -1,4 +1,4 @@
-<section class="gh-canvas">
+<section class="gh-canvas" {{scroll-top}}>
     <GhCanvasHeader class="gh-canvas-header">
         <h2 class="gh-canvas-title" data-test-screen-title>
             Mentions
@@ -9,9 +9,8 @@
         {{#if this.mentionsList}}
             {{#each this.mentionsList as |mention|}}
                 <div class="gh-mention-card">
-                    {{!-- TODO: show the title of your post instead of a link --}}
                     {{!-- TODO: link to the post analytics page of your post --}}
-                    <p class="gh-mention-your-post">Your post <a href={{mention.target}} class="gh-mention-your-post-link">{{mention.target}}</a> was mentioned in:</p>
+                    <p class="gh-mention-your-post">Your {{if (eq mention.resource.type "post") "post" "page"}} <a href={{mention.target}} class="gh-mention-your-post-link">{{if mention.resource mention.resource.name mention.target}}</a> was mentioned in:</p>
                     <a href="{{mention.source}}" class="gh-mention-container" rel="noreferrer noopener" target="_blank">
                         <div class="gh-mention-content">
                             <h3 class="gh-mention-title">{{if mention.sourceTitle mention.sourceTitle mention.target}}</h3>
@@ -28,7 +27,7 @@
                                 {{#if mention.sourceAuthor}}
                                     <span class="gh-mention-author">{{mention.sourceAuthor}}</span>
                                 {{/if}}
-                                <span class="gh-mention-timestamp">{{gh-format-post-time mention.timestamp}}</span>
+                                <span class="gh-mention-timestamp" title={{gh-format-post-time mention.timestamp}}>{{moment-from-now mention.timestamp}}</span>
                             </div>
                         </div>
                         {{#if mention.sourceFeaturedImage}}

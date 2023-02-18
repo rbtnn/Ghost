@@ -27,16 +27,17 @@ const GA_FEATURES = [
 //       input for the "labs" setting value
 const BETA_FEATURES = [
     'activitypub',
-    'emailErrors'
+    'webmentions',
+    'emailErrors',
+    'milestoneEmails'
 ];
 
 const ALPHA_FEATURES = [
     'urlCache',
     'beforeAfterCard',
     'lexicalEditor',
-    'webmentions',
-    'webmentionEmail',
-    'outboundLinkTagging'
+    'outboundLinkTagging',
+    'websockets'
 ];
 
 module.exports.GA_KEYS = [...GA_FEATURES];

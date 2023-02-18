@@ -58,7 +58,7 @@ class EmailServiceWrapper {
             settingsHelpers,
             renderers: {
                 mobiledoc: mobiledocLib.mobiledocHtmlRenderer,
-                lexical: lexicalLib.lexicalHtmlRenderer
+                lexical: lexicalLib
             },
             imageSize,
             urlUtils,
@@ -67,7 +67,8 @@ class EmailServiceWrapper {
             linkReplacer,
             linkTracking,
             memberAttributionService: memberAttribution.service,
-            audienceFeedbackService: audienceFeedback.service
+            audienceFeedbackService: audienceFeedback.service,
+            outboundLinkTagger: memberAttribution.outboundLinkTagger
         });
 
         const sendingService = new SendingService({
