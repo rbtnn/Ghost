@@ -97,7 +97,7 @@ export default class SigninPage extends React.Component {
     }
 
     renderSignupMessage() {
-        const brandColor = this.context.brandColor;
+        const {brandColor} = this.context;
         return (
             <div className='gh-portal-signup-message'>
                 <div>まだアカウントを作成してませんか？</div>
@@ -143,7 +143,6 @@ export default class SigninPage extends React.Component {
 
     renderFormHeader() {
         // const siteTitle = this.context.site.title || 'Site Title';
-
         return (
             <header className='gh-portal-signin-header'>
                 {this.renderSiteLogo()}

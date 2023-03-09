@@ -1,4 +1,9 @@
 const DomainEvents = require('@tryghost/domain-events');
+const logging = require('@tryghost/logging');
+const models = require('../../models');
+const BookshelfMilestoneRepository = require('./BookshelfMilestoneRepository');
+
+const JOB_TIMEOUT = 1000 * 60 * 60 * 24 * (Math.floor(Math.random() * 4)); // 0 - 4 days;
 
 const getStripeLiveEnabled = () => {
     const settingsCache = require('../../../shared/settings-cache');
@@ -28,19 +33,23 @@ module.exports = {
             const db = require('../../data/db');
             const MilestoneQueries = require('./MilestoneQueries');
 
-            const {
-                MilestonesService,
-                InMemoryMilestoneRepository
-            } = require('@tryghost/milestones');
+            const {MilestonesService} = require('@tryghost/milestones');
             const config = require('../../../shared/config');
             const milestonesConfig = config.get('milestones');
 
-            const repository = new InMemoryMilestoneRepository({DomainEvents});
-            const queries = new MilestoneQueries({db});
+            const repository = new BookshelfMilestoneRepository({
+                DomainEvents,
+                MilestoneModel: models.Milestone
+            });
+
+            const queries = new MilestoneQueries({
+                db,
+                minDaysSinceImported: milestonesConfig?.minDaysSinceImported || 7
+            });
 
             this.api = new MilestonesService({
                 repository,
-                milestonesConfig, // avoid using getters and pass as JSON
+                milestonesConfig,
                 queries
             });
         }
@@ -69,10 +78,39 @@ module.exports = {
     },
 
     /**
+     *
+     * @param {number} [customTimeout]
+     *
+     *  @returns {Promise<object>}
+     */
+    async scheduleRun(customTimeout) {
+        const timeOut = customTimeout || JOB_TIMEOUT;
+
+        const today = new Date();
+        const msNow = today.getMilliseconds();
+        const newMs = msNow + timeOut;
+        const jobDate = today.setMilliseconds(newMs);
+
+        logging.info(`Running milestone emails job on ${new Date(jobDate).toString()}`);
+
+        return new Promise((resolve) => {
+            setTimeout(async () => {
+                const result = await this.run();
+                return resolve(result);
+            }, timeOut);
+        });
+    },
+
+    /**
+     * @param {number} [customTimeout]
+     * Only used temporary for testing purposes.
+     * Will be removed, after job scheduling implementation.
+     *
      * @returns {Promise<object>}
      */
-    async initAndRun() {
+    async initAndRun(customTimeout) {
         await this.init();
-        return await this.run();
+
+        return this.scheduleRun(customTimeout);
     }
 };

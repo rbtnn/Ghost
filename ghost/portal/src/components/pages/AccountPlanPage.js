@@ -110,11 +110,11 @@ const CancelSubscriptionButton = ({member, onCancelSubscription, action, brandCo
 
 // For confirmation flows
 const PlanConfirmationSection = ({plan, type, onConfirm}) => {
-    const {site, action, member, brandColor} = useContext(AppContext);
+    const {site, action, member, brandColor, t} = useContext(AppContext);
     const [reason, setReason] = useState('');
     const subscription = getMemberSubscription({member});
     const isRunning = ['updateSubscription:running', 'checkoutPlan:running', 'cancelSubscription:running'].includes(action);
-    const label = 'Confirm';
+    const label = t('Confirm');
     let planStartDate = getDateString(subscription.current_period_end);
     const currentActivePlan = getMemberActivePrice({member});
     if (currentActivePlan.id !== plan.id) {
@@ -123,7 +123,7 @@ const PlanConfirmationSection = ({plan, type, onConfirm}) => {
     const priceString = formatNumber(plan.price);
     const planStartMessage = `${plan.currency_symbol}${priceString}/${plan.interval} – Starting ${planStartDate}`;
     const product = getProductFromPrice({site, priceId: plan?.id});
-    const priceLabel = hasMultipleProductsFeature({site}) ? product?.name : 'Price';
+    const priceLabel = hasMultipleProductsFeature({site}) ? product?.name : t('Price');
     if (type === 'changePlan') {
         return (
             <div className='gh-portal-logged-out-form-container'>

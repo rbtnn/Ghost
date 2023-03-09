@@ -1,4 +1,5 @@
 const errors = require('@tryghost/errors');
+const logging = require('@tryghost/logging');
 const Mention = require('./Mention');
 
 /**
@@ -21,6 +22,7 @@ const Mention = require('./Mention');
  * @prop {string} [order]
  * @prop {number} page
  * @prop {number} limit
+ * @prop {boolean} [unique] Only return unique mentions by source
  */
 
 /**
@@ -28,6 +30,7 @@ const Mention = require('./Mention');
  * @prop {string} [filter] A valid NQL string
  * @prop {string} [order]
  * @prop {'all'} limit
+ * @prop {boolean} [unique] Only return unique mentions by source
  */
 
 /**
@@ -65,16 +68,12 @@ const Mention = require('./Mention');
  * @prop {string} author
  * @prop {URL} image
  * @prop {URL} favicon
+ * @prop {string} body
  */
 
 /**
  * @typedef {object} IWebmentionMetadata
  * @prop {(url: URL) => Promise<WebmentionMetadata>} fetch
- */
-
-/**
- * @typedef {object} IWebmentionRequest
- * @prop {(url: URL) => Promise<{html: string}>} fetch
  */
 
 module.exports = class MentionsAPI {
@@ -86,8 +85,6 @@ module.exports = class MentionsAPI {
     #routingService;
     /** @type {IWebmentionMetadata} */
     #webmentionMetadata;
-    /** @type {IWebmentionRequest} */
-    #webmentionRequest;
 
     /**
      * @param {object} deps
@@ -95,14 +92,12 @@ module.exports = class MentionsAPI {
      * @param {IResourceService} deps.resourceService
      * @param {IRoutingService} deps.routingService
      * @param {IWebmentionMetadata} deps.webmentionMetadata
-     * @param {IWebmentionRequest} deps.webmentionRequest
      */
     constructor(deps) {
         this.#repository = deps.repository;
         this.#resourceService = deps.resourceService;
         this.#routingService = deps.routingService;
         this.#webmentionMetadata = deps.webmentionMetadata;
-        this.#webmentionRequest = deps.webmentionRequest;
     }
 
     /**
@@ -117,14 +112,16 @@ module.exports = class MentionsAPI {
             pageOptions = {
                 filter: options.filter,
                 limit: options.limit,
-                order: options.order
+                order: options.order,
+                unique: options.unique ?? false
             };
         } else {
             pageOptions = {
                 filter: options.filter,
                 limit: options.limit,
                 page: options.page,
-                order: options.order
+                order: options.order,
+                unique: options.unique ?? false
             };
         }
 
@@ -160,7 +157,6 @@ module.exports = class MentionsAPI {
         }
 
         const resourceInfo = await this.#resourceService.getByURL(webmention.target);
-
         let metadata;
         try {
             metadata = await this.#webmentionMetadata.fetch(webmention.source);
@@ -187,7 +183,8 @@ module.exports = class MentionsAPI {
                 target: webmention.target,
                 timestamp: new Date(),
                 payload: webmention.payload,
-                resourceId: resourceInfo.type === 'post' ? resourceInfo.id : null,
+                resourceId: resourceInfo.id ? resourceInfo.id.toHexString() : null,
+                resourceType: resourceInfo.type,
                 sourceTitle: metadata.title,
                 sourceSiteTitle: metadata.siteTitle,
                 sourceAuthor: metadata.author,
@@ -197,9 +194,12 @@ module.exports = class MentionsAPI {
             });
         }
 
-        const responseBody = await this.#webmentionRequest.fetch(webmention.source);
-        if (responseBody?.html) {
-            mention.verify(responseBody.html);
+        if (metadata?.body) {
+            try {
+                mention.verify(metadata.body);
+            } catch (e) {
+                logging.error(e);
+            }
         }
 
         await this.#repository.save(mention);

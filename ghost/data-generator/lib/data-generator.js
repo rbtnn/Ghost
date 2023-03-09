@@ -30,7 +30,11 @@ const {
     EmailBatchesImporter,
     EmailRecipientsImporter,
     RedirectsImporter,
-    MembersClickEventsImporter
+    MembersClickEventsImporter,
+    OffersImporter,
+    LabelsImporter,
+    MembersLabelsImporter,
+    RolesUsersImporter
 } = tables;
 const path = require('path');
 const fs = require('fs/promises');
@@ -96,6 +100,10 @@ class DataGenerator {
             const tableNames = Object.values(tables).map(importer => importer.table).reverse();
             for (const table of tableNames) {
                 this.logger.debug(`Clearing table ${table}`);
+                if (table === 'roles_users') {
+                    await transaction(table).del().whereNot('user_id', '1');
+                    continue;
+                }
                 if (table === 'users') {
                     // Avoid deleting the admin user
                     await transaction(table).del().whereNot('id', '1');
@@ -118,6 +126,7 @@ class DataGenerator {
         let stripeProducts;
         let stripePrices;
         let benefits;
+        let labels;
 
         // Use an existant set of data for a more realisitic looking site
         if (this.useBaseData) {
@@ -153,7 +162,7 @@ class DataGenerator {
                 data: baseData.posts
             });
             await postsImporter.addNewsletters({posts});
-            posts = await transaction.select('id', 'newsletter_id', 'published_at', 'slug').from('posts');
+            posts = await transaction.select('id', 'newsletter_id', 'published_at', 'slug', 'status', 'visibility', 'title').from('posts');
 
             tags = await jsonImporter.import({
                 name: 'tags',
@@ -186,8 +195,13 @@ class DataGenerator {
                 rows: ['stripe_price_id', 'interval', 'stripe_product_id', 'currency', 'amount', 'nickname']
             });
 
+            labels = await jsonImporter.import({
+                name: 'labels',
+                data: baseData.labels
+            });
+
             // Import settings
-            await transaction('settings').delete();
+            await transaction('settings').del();
             await jsonImporter.import({
                 name: 'settings',
                 data: baseData.settings
@@ -210,7 +224,12 @@ class DataGenerator {
             });
             posts = await postsImporter.import({
                 amount: this.modelQuantities.posts,
-                rows: ['newsletter_id', 'published_at', 'slug']
+                rows: ['newsletter_id', 'published_at', 'slug', 'status', 'visibility', 'title']
+            });
+
+            await postsImporter.import({
+                amount: 3,
+                type: 'page'
             });
 
             const tagsImporter = new TagsImporter(transaction, {
@@ -248,6 +267,9 @@ class DataGenerator {
             const productsBenefitsImporter = new ProductsBenefitsImporter(transaction, {benefits});
             // Up to 5 benefits for each product
             await productsBenefitsImporter.importForEach(products, {amount: 5});
+
+            const labelsImporter = new LabelsImporter(transaction);
+            labels = await labelsImporter.import({amount: 10});
 
             this.logger.info('Completed random base data generation');
         }
@@ -322,7 +344,7 @@ class DataGenerator {
         });
         const membersStripeCustomersSubscriptions = await membersStripeCustomersSubscriptionsImporter.importForEach(subscriptions, {
             amount: 1,
-            rows: ['mrr', 'plan_id', 'subscription_id']
+            rows: ['mrr', 'plan_id', 'ghost_subscription_id']
         });
 
         const membersSubscribeEventsImporter = new MembersSubscribeEventsImporter(transaction, {newsletters, subscriptions});
@@ -347,7 +369,7 @@ class DataGenerator {
         await mentionsImporter.importForEach(posts, {amount: 4});
 
         const emailsImporter = new EmailsImporter(transaction, {newsletters, members, membersSubscribeEvents});
-        const emails = await emailsImporter.importForEach(posts, {
+        const emails = await emailsImporter.importForEach(posts.filter(post => post.newsletter_id), {
             amount: 1,
             rows: ['created_at', 'email_count', 'delivered_count', 'opened_count', 'failed_count', 'newsletter_id', 'post_id']
         });
@@ -364,14 +386,30 @@ class DataGenerator {
             rows: ['opened_at', 'email_id', 'member_id']
         });
 
+        await membersImporter.addOpenRate({emailRecipients});
+
         const redirectsImporter = new RedirectsImporter(transaction);
-        const redirects = await redirectsImporter.importForEach(posts, {
+        const redirects = await redirectsImporter.importForEach(posts.filter(post => post.newsletter_id), {
             amount: 10,
             rows: ['post_id']
         });
 
         const membersClickEventsImporter = new MembersClickEventsImporter(transaction, {redirects, emails});
         await membersClickEventsImporter.importForEach(emailRecipients, {amount: 2});
+
+        const offersImporter = new OffersImporter(transaction, {products: products.filter(product => product.name !== 'Free')});
+        await offersImporter.import({amount: 2});
+
+        const membersLabelsImporter = new MembersLabelsImporter(transaction, {labels});
+        await membersLabelsImporter.importForEach(members, {
+            amount: 1
+        });
+
+        const roles = await transaction.select('id', 'name').from('roles');
+        const rolesUsersImporter = new RolesUsersImporter(transaction, {roles});
+        await rolesUsersImporter.importForEach(users, {amount: 1});
+
+        // TODO: Members labels
 
         // TODO: Email clicks - redirect, members_click_events (relies on emails)
 
@@ -394,7 +432,7 @@ class DataGenerator {
         };
 
         const importMentions = async () => {
-            const posts = await transaction.select('id', 'newsletter_id', 'published_at', 'slug').from('posts');
+            const posts = await transaction.select('id', 'newsletter_id', 'published_at', 'slug', 'status', 'visibility').from('posts');
             this.logger.info(`Importing up to ${posts.length * 4} mentions`);
 
             const mentionsImporter = new MentionsImporter(transaction, {baseUrl: this.baseUrl});

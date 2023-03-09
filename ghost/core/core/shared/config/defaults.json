@@ -176,7 +176,7 @@
     },
     "portal": {
         "url": "https://cdn.jsdelivr.net/ghost/portal@~{version}/umd/portal.min.js",
-        "version": "2.24"
+        "version": "2.25"
     },
     "sodoSearch": {
         "url": "https://cdn.jsdelivr.net/ghost/sodo-search@~{version}/umd/sodo-search.min.js",
@@ -213,6 +213,9 @@
                     "values": [100, 1000, 10000, 50000, 100000, 250000, 500000, 1000000]
                 }
             ],
-            "members": [100, 1000, 10000, 25000, 50000, 100000, 250000, 500000, 1000000]
+            "members": [100, 1000, 10000, 25000, 50000, 100000, 250000, 500000, 1000000],
+            "minDaysSinceImported": 7,
+            "minDaysSinceLastEmail": 14,
+            "maxPercentageFromMilestone": 0.1
         }
 }

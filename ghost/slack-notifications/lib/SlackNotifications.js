@@ -49,16 +49,16 @@ class SlackNotifications {
      * @param {object} eventData
      * @param {import('@tryghost/milestones/lib/InMemoryMilestoneRepository').Milestone} eventData.milestone
      * @param {object} [eventData.meta]
-     * @param {'import'|'email'} [eventData.meta.reason]
-     * @param {number} [eventData.meta.currentARR]
-     * @param {number} [eventData.meta.currentMembers]
+     * @param {'import'|'email'|'tooFar'} [eventData.meta.reason]
+     * @param {number} [eventData.meta.currentValue]
      *
      * @returns {Promise<void>}
      */
     async notifyMilestoneReceived({milestone, meta}) {
         const hasImportedMembers = meta?.reason === 'import' ? 'has imported members' : null;
         const lastEmailTooSoon = meta?.reason === 'email' ? 'last email too recent' : null;
-        const emailNotSentReason = hasImportedMembers || lastEmailTooSoon;
+        const tooFarFromMilestone = meta?.reason === 'tooFar' ? 'too far from milestone' : null;
+        const emailNotSentReason = hasImportedMembers || lastEmailTooSoon || tooFarFromMilestone;
         const milestoneTypePretty = milestone.type === 'arr' ? 'ARR' : 'Members';
         const valueFormatted = this.#getFormattedAmount({amount: milestone.value, currency: milestone?.currency});
         const emailSentText = milestone?.emailSentAt ? this.#getFormattedDate(milestone?.emailSentAt) : `no / ${emailNotSentReason}`;
@@ -78,10 +78,10 @@ class SlackNotifications {
                 ]
             };
 
-            if (meta?.currentARR) {
+            if (meta?.currentValue) {
                 valueSection.fields.push({
                     type: 'mrkdwn',
-                    text: `*Current ARR:*\n${this.#getFormattedAmount({amount: meta.currentARR, currency: milestone?.currency})}`
+                    text: `*Current ARR:*\n${this.#getFormattedAmount({amount: meta.currentValue, currency: milestone?.currency})}`
                 });
             }
         } else {
@@ -94,10 +94,10 @@ class SlackNotifications {
                     }
                 ]
             };
-            if (meta?.currentMembers) {
+            if (meta?.currentValue) {
                 valueSection.fields.push({
                     type: 'mrkdwn',
-                    text: `*Current Members:*\n${this.#getFormattedAmount({amount: meta.currentMembers})}`
+                    text: `*Current Members:*\n${this.#getFormattedAmount({amount: meta.currentValue})}`
                 });
             }
         }

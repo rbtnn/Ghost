@@ -13,6 +13,7 @@ module.exports = {
     docName: 'posts',
 
     browse: {
+        cache: postsPublicService.api?.cache,
         options: [
             'include',
             'filter',
@@ -36,7 +37,7 @@ module.exports = {
         },
         permissions: true,
         query(frame) {
-            return postsPublicService.api.browse(frame.options);
+            return models.Post.findPage(frame.options);
         }
     },
 

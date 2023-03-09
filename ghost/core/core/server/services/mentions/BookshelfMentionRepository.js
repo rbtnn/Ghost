@@ -49,6 +49,7 @@ module.exports = class BookshelfMentionRepository {
             timestamp: model.get('created_at'),
             payload,
             resourceId: model.get('resource_id'),
+            resourceType: model.get('resource_type'),
             sourceTitle: model.get('source_title'),
             sourceSiteTitle: model.get('source_site_title'),
             sourceAuthor: model.get('source_author'),
@@ -64,7 +65,18 @@ module.exports = class BookshelfMentionRepository {
      * @returns {Promise<Page<import('@tryghost/webmentions/lib/Mention')>>}
      */
     async getPage(options) {
-        const page = await this.#MentionModel.findPage(options);
+        /**
+         * @type {GetPageOptions & {whereRaw?: string}}
+         */
+        const _options = {
+            ...options
+        };
+        delete _options.unique;
+        if (options.unique) {
+            _options.whereRaw = 'NOT EXISTS (select id from mentions as m where m.id > mentions.id and m.source = mentions.source)';
+        }
+
+        const page = await this.#MentionModel.findPage(_options);
 
         return {
             data: await Promise.all(page.data.map(model => this.#modelToMention(model))),
@@ -106,7 +118,7 @@ module.exports = class BookshelfMentionRepository {
             source_favicon: mention.sourceFavicon?.href,
             target: mention.target.href,
             resource_id: mention.resourceId?.toHexString(),
-            resource_type: mention.resourceId ? 'post' : null,
+            resource_type: mention.resourceType,
             payload: mention.payload ? JSON.stringify(mention.payload) : null,
             deleted: Mention.isDeleted(mention),
             verified: mention.verified

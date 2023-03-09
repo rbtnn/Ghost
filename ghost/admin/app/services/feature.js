@@ -60,7 +60,6 @@ export default class FeatureService extends Service {
 
     // labs flags
     @feature('urlCache') urlCache;
-    @feature('beforeAfterCard') beforeAfterCard;
     @feature('memberAttribution') memberAttribution;
     @feature('sourceAttribution') sourceAttribution;
     @feature('lexicalEditor') lexicalEditor;
@@ -68,10 +67,12 @@ export default class FeatureService extends Service {
     @feature('suppressionList') suppressionList;
     @feature('emailStability') emailStability;
     @feature('webmentions') webmentions;
-    @feature('outboundLinkTagging') outboundLinkTagging;
+    @feature('webmentionEmails') webmentionEmails;
     @feature('emailErrors') emailErrors;
     @feature('milestoneEmails') milestoneEmails;
     @feature('websockets') websockets;
+    @feature('stripeAutomaticTax') stripeAutomaticTax;
+    @feature('mediaInliner') mediaInliner;
 
     _user = null;
 

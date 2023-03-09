@@ -47,13 +47,15 @@ export default class MagicLinkPage extends React.Component {
     }
 
     renderLoginMessage() {
+        const {t} = this.context;
+
         return (
             <>
                 <div
                     style={{color: '#1d1d1d', fontWeight: 'bold', cursor: 'pointer'}}
                     onClick={() => this.context.onAction('switchPage', {page: 'signin'})}
                 >
-                    Back to Log in
+                    {t('Back to Log in')}
                 </div>
             </>
         );

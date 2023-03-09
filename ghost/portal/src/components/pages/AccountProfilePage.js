@@ -75,8 +75,10 @@ export default class AccountProfilePage extends React.Component {
     }
 
     renderDeleteAccountButton() {
+        const {t} = this.context;
+
         return (
-            <div style={{cursor: 'pointer', color: 'red'}} role='button'>Delete account</div>
+            <div style={{cursor: 'pointer', color: 'red'}} role='button'>{t('Delete account')}</div>
         );
     }
 

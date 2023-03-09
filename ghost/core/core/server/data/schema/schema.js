@@ -155,6 +155,7 @@ module.exports = {
         paid_subscription_started_notification: {type: 'boolean', nullable: false, defaultTo: true},
         paid_subscription_canceled_notification: {type: 'boolean', nullable: false, defaultTo: false},
         mention_notifications: {type: 'boolean', nullable: false, defaultTo: true},
+        milestone_notifications: {type: 'boolean', nullable: false, defaultTo: true},
         created_at: {type: 'dateTime', nullable: false},
         created_by: {type: 'string', maxlength: 24, nullable: false},
         updated_at: {type: 'dateTime', nullable: true},
@@ -997,5 +998,13 @@ module.exports = {
         payload: {type: 'text', maxlength: 65535, nullable: true},
         deleted: {type: 'boolean', nullable: false, defaultTo: false},
         verified: {type: 'boolean', nullable: false, defaultTo: false}
+    },
+    milestones: {
+        id: {type: 'string', maxlength: 24, nullable: false, primary: true},
+        type: {type: 'string', maxlength: 24, nullable: false},
+        value: {type: 'integer', nullable: false},
+        currency: {type: 'string', maxlength: 24, nullable: true},
+        created_at: {type: 'dateTime', nullable: false},
+        email_sent_at: {type: 'dateTime', nullable: true}
     }
 };

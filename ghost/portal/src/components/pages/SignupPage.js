@@ -361,7 +361,7 @@ class SignupPage extends React.Component {
     }
 
     getInputFields({state, fieldNames}) {
-        const {portal_name: portalName} = this.context.site;
+        const {site: {portal_name: portalName}} = this.context;
 
         const errors = state.errors || {};
         const fields = [
@@ -400,7 +400,7 @@ class SignupPage extends React.Component {
     }
 
     renderSubmitButton() {
-        const {action, site, brandColor, pageQuery} = this.context;
+        const {action, site, brandColor, pageQuery, t} = this.context;
 
         if (isInviteOnlySite({site, pageQuery})) {
             return null;
@@ -417,7 +417,7 @@ class SignupPage extends React.Component {
 
         let isRunning = false;
         if (action === 'signup:running') {
-            label = 'Sending...';
+            label = t('Sending...');
             isRunning = true;
         }
         let retry = false;
@@ -456,11 +456,11 @@ class SignupPage extends React.Component {
     }
 
     renderFreeTrialMessage() {
-        const {site} = this.context;
+        const {site, t} = this.context;
         if (hasFreeTrialTier({site}) && !isInviteOnlySite({site})) {
             return (
                 <p className='gh-portal-free-trial-notification' data-testid="free-trial-notification-text">
-                    After a free trial ends, you will be charged the regular price for the tier you’ve chosen. You can always cancel before then.
+                    {t('After a free trial ends, you will be charged the regular price for the tier you\'ve chosen. You can always cancel before then.')}
                 </p>
             );
         }
@@ -489,7 +489,7 @@ class SignupPage extends React.Component {
 
     renderForm() {
         const fields = this.getInputFields({state: this.state});
-        const {site, pageQuery} = this.context;
+        const {site, pageQuery, t} = this.context;
 
         if (this.state.showNewsletterSelection) {
             return (
@@ -512,7 +512,7 @@ class SignupPage extends React.Component {
                             className='gh-portal-invite-only-notification'
                             data-testid="invite-only-notification-text"
                         >
-                                This site is invite-only, contact the owner for access.
+                            {t('This site is invite-only, contact the owner for access.')}
                         </p>
                         {this.renderLoginMessage()}
                     </div>

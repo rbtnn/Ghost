@@ -20,7 +20,9 @@ const GA_FEATURES = [
     'memberAttribution',
     'audienceFeedback',
     'themeErrorsNotification',
-    'emailStability'
+    'emailStability',
+    'emailErrors',
+    'outboundLinkTagging'
 ];
 
 // NOTE: this allowlist is meant to be used to filter out any unexpected
@@ -28,16 +30,16 @@ const GA_FEATURES = [
 const BETA_FEATURES = [
     'activitypub',
     'webmentions',
-    'emailErrors',
     'milestoneEmails'
 ];
 
 const ALPHA_FEATURES = [
     'urlCache',
-    'beforeAfterCard',
+    'mediaInliner',
     'lexicalEditor',
-    'outboundLinkTagging',
-    'websockets'
+    'websockets',
+    'webmentionEmails',
+    'stripeAutomaticTax'
 ];
 
 module.exports.GA_KEYS = [...GA_FEATURES];

@@ -148,11 +148,12 @@ class StaffServiceEmails {
         if (mention.resourceId) {
             try {
                 const postModel = await this.models.Post.findOne({id: mention.resourceId.toString()});
+                // console.log(postModel.toJSON());
                 if (postModel) {
                     resource = {
                         id: postModel.id,
                         name: postModel.get('title'),
-                        type: 'post'
+                        type: postModel.get('type') || 'post'
                     };
                 }
             } catch (err) {
@@ -167,9 +168,11 @@ class StaffServiceEmails {
                 targetUrl: mention.target,
                 sourceUrl: mention.source,
                 sourceTitle: mention.sourceTitle,
+                sourceExcerpt: mention.sourceExcerpt,
                 sourceSiteTitle: mention.sourceSiteTitle,
                 sourceFavicon: mention.sourceFavicon,
                 sourceAuthor: mention.sourceAuthor,
+                sourceFeaturedImage: mention.sourceFeaturedImage,
                 resource,
                 siteTitle: this.settingsCache.get('title'),
                 siteUrl: this.urlUtils.getSiteUrl(),
@@ -179,6 +182,7 @@ class StaffServiceEmails {
                 toEmail: to,
                 staffUrl: this.urlUtils.urlJoin(this.urlUtils.urlFor('admin', true), '#', `/settings/staff/${user.slug}`)
             };
+
             const {html, text} = await this.renderEmailTemplate('new-mention-received', templateData);
 
             await this.sendMail({
@@ -187,6 +191,24 @@ class StaffServiceEmails {
                 html,
                 text
             });
+        }
+    }
+
+    /**
+     *
+     * @param {object} eventData
+     * @param {object} eventData.milestone
+     *
+     * @returns {Promise<void>}
+     */
+    async notifyMilestoneReceived({milestone}) {
+        const users = await this.models.User.getEmailAlertUsers('milestone-received');
+
+        // TODO: send email with correct templates
+        for (const user of users) {
+            const to = user.email;
+
+            this.logging.info(`Will send email to ${to} for ${milestone.type} / ${milestone.value} milestone.`);
         }
     }
 
@@ -223,7 +245,7 @@ class StaffServiceEmails {
     /** @private */
     getFormattedAmount({amount = 0, currency}) {
         if (!currency) {
-            return '';
+            return amount > 0 ? Intl.NumberFormat().format(amount) : '';
         }
 
         return Intl.NumberFormat('en', {

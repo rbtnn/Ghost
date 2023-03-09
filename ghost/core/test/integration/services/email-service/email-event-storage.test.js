@@ -25,6 +25,13 @@ describe('EmailEventStorage', function () {
     let membersService;
 
     before(async function () {
+        // Stub queries before boot
+        const queries = require('../../../../core/server/services/email-analytics/lib/queries');
+        sinon.stub(queries, 'getLastSeenEventTimestamp').callsFake(async function () {
+            // This is required because otherwise the last event timestamp will be now, and that is too close to NOW to start fetching new events
+            return new Date(2000, 0, 1);
+        });
+
         agent = await agentProvider.getAdminAPIAgent();
         await fixtureManager.init('newsletters', 'members:newsletters', 'members:emails');
         await agent.loginAsOwner();
@@ -66,7 +73,7 @@ describe('EmailEventStorage', function () {
                 }
             },
             // unix timestamp
-            timestamp: Math.round(timestamp.getTime() / 1000)
+            timestamp: timestamp.getTime() / 1000
         }];
 
         const initialModel = await models.EmailRecipient.findOne({
@@ -78,9 +85,7 @@ describe('EmailEventStorage', function () {
         // Fire event processing
         // We use offloading to have correct coverage and usage of worker thread
         const result = await emailAnalytics.fetchLatest();
-        assert.equal(result.delivered, 1);
-        assert.deepEqual(result.emailIds, [emailId]);
-        assert.deepEqual(result.memberIds, [memberId]);
+        assert.equal(result, 1);
 
         // Since this is all event based we should wait for all dispatched events to be completed.
         await DomainEvents.allSettled();
@@ -129,9 +134,7 @@ describe('EmailEventStorage', function () {
 
         // Fire event processing
         const result = await emailAnalytics.fetchLatest();
-        assert.equal(result.delivered, 1);
-        assert.deepEqual(result.emailIds, [emailId]);
-        assert.deepEqual(result.memberIds, [memberId]);
+        assert.equal(result, 1);
 
         // Since this is all event based we should wait for all dispatched events to be completed.
         await DomainEvents.allSettled();
@@ -177,9 +180,7 @@ describe('EmailEventStorage', function () {
 
         // Fire event processing
         const result = await emailAnalytics.fetchLatest();
-        assert.equal(result.opened, 1);
-        assert.deepEqual(result.emailIds, [emailId]);
-        assert.deepEqual(result.memberIds, [memberId]);
+        assert.equal(result, 1);
 
         // Since this is all event based we should wait for all dispatched events to be completed.
         await DomainEvents.allSettled();
@@ -259,9 +260,7 @@ describe('EmailEventStorage', function () {
 
         // Fire event processing
         const result = await emailAnalytics.fetchLatest();
-        assert.equal(result.permanentFailed, 1);
-        assert.deepEqual(result.emailIds, [emailId]);
-        assert.deepEqual(result.memberIds, [memberId]);
+        assert.equal(result, 1);
 
         // Since this is all event based we should wait for all dispatched events to be completed.
         await DomainEvents.allSettled();
@@ -357,9 +356,7 @@ describe('EmailEventStorage', function () {
 
         // Fire event processing
         const result = await emailAnalytics.fetchLatest();
-        assert.equal(result.permanentFailed, 1);
-        assert.deepEqual(result.emailIds, [emailId]);
-        assert.deepEqual(result.memberIds, [memberId]);
+        assert.equal(result, 1);
 
         // Since this is all event based we should wait for all dispatched events to be completed.
         await DomainEvents.allSettled();
@@ -454,9 +451,7 @@ describe('EmailEventStorage', function () {
 
         // Fire event processing
         const result = await emailAnalytics.fetchLatest();
-        assert.equal(result.permanentFailed, 1);
-        assert.deepEqual(result.emailIds, [emailId]);
-        assert.deepEqual(result.memberIds, [memberId]);
+        assert.equal(result, 1);
 
         // Since this is all event based we should wait for all dispatched events to be completed.
         await DomainEvents.allSettled();
@@ -546,9 +541,7 @@ describe('EmailEventStorage', function () {
 
         // Fire event processing
         const result = await emailAnalytics.fetchLatest();
-        assert.equal(result.permanentFailed, 1);
-        assert.deepEqual(result.emailIds, [emailId]);
-        assert.deepEqual(result.memberIds, [memberId]);
+        assert.equal(result, 1);
 
         // Since this is all event based we should wait for all dispatched events to be completed.
         await DomainEvents.allSettled();
@@ -664,9 +657,7 @@ describe('EmailEventStorage', function () {
 
         // Fire event processing
         const result = await emailAnalytics.fetchLatest();
-        assert.equal(result.temporaryFailed, 1);
-        assert.deepEqual(result.emailIds, [emailId]);
-        assert.deepEqual(result.memberIds, [memberId]);
+        assert.equal(result, 1);
 
         // Since this is all event based we should wait for all dispatched events to be completed.
         await DomainEvents.allSettled();
@@ -768,9 +759,7 @@ describe('EmailEventStorage', function () {
 
         // Fire event processing
         const result = await emailAnalytics.fetchLatest();
-        assert.equal(result.temporaryFailed, 1);
-        assert.deepEqual(result.emailIds, [emailId]);
-        assert.deepEqual(result.memberIds, [memberId]);
+        assert.equal(result, 1);
 
         // Since this is all event based we should wait for all dispatched events to be completed.
         await DomainEvents.allSettled();
@@ -872,9 +861,7 @@ describe('EmailEventStorage', function () {
 
         // Fire event processing
         const result = await emailAnalytics.fetchLatest();
-        assert.equal(result.temporaryFailed, 1);
-        assert.deepEqual(result.emailIds, [emailId]);
-        assert.deepEqual(result.memberIds, [memberId]);
+        assert.equal(result, 1);
 
         // Since this is all event based we should wait for all dispatched events to be completed.
         await DomainEvents.allSettled();
@@ -976,9 +963,7 @@ describe('EmailEventStorage', function () {
 
         // Fire event processing
         const result = await emailAnalytics.fetchLatest();
-        assert.equal(result.permanentFailed, 1);
-        assert.deepEqual(result.emailIds, [emailId]);
-        assert.deepEqual(result.memberIds, [memberId]);
+        assert.equal(result, 1);
 
         // Since this is all event based we should wait for all dispatched events to be completed.
         await DomainEvents.allSettled();
@@ -1042,9 +1027,7 @@ describe('EmailEventStorage', function () {
 
         // Fire event processing
         const result = await emailAnalytics.fetchLatest();
-        assert.equal(result.complained, 1);
-        assert.deepEqual(result.emailIds, [emailId]);
-        assert.deepEqual(result.memberIds, [memberId]);
+        assert.equal(result, 1);
 
         // Since this is all event based we should wait for all dispatched events to be completed.
         await DomainEvents.allSettled();
@@ -1093,9 +1076,7 @@ describe('EmailEventStorage', function () {
 
         // Fire event processing
         const result = await emailAnalytics.fetchLatest();
-        assert.equal(result.unsubscribed, 1);
-        assert.deepEqual(result.emailIds, [emailId]);
-        assert.deepEqual(result.memberIds, [memberId]);
+        assert.equal(result, 1);
 
         // Since this is all event based we should wait for all dispatched events to be completed.
         await DomainEvents.allSettled();
@@ -1132,9 +1113,7 @@ describe('EmailEventStorage', function () {
 
         // Fire event processing
         const result = await emailAnalytics.fetchLatest();
-        assert.equal(result.unhandled, 1);
-        assert.deepEqual(result.emailIds, []);
-        assert.deepEqual(result.memberIds, []);
+        assert.equal(result, 1);
     });
 
     it('Ignores invalid events', async function () {
@@ -1148,8 +1127,6 @@ describe('EmailEventStorage', function () {
 
         // Fire event processing
         const result = await emailAnalytics.fetchLatest();
-        assert.equal(result.unhandled, 0);
-        assert.deepEqual(result.emailIds, []);
-        assert.deepEqual(result.memberIds, []);
+        assert.equal(result, 0);
     });
 });

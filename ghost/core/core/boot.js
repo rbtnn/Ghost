@@ -310,6 +310,7 @@ async function initServices({config}) {
     const tagsPublic = require('./server/services/tags-public');
     const postsPublic = require('./server/services/posts-public');
     const slackNotifications = require('./server/services/slack-notifications');
+    const mediaInliner = require('./server/services/media-inliner');
 
     const urlUtils = require('./shared/url-utils');
 
@@ -346,13 +347,14 @@ async function initServices({config}) {
         comments.init(),
         linkTracking.init(),
         emailSuppressionList.init(),
-        slackNotifications.init()
+        slackNotifications.init(),
+        mediaInliner.init()
     ]);
     debug('End: Services');
 
     // Initialize analytics events
     if (config.get('segment:key')) {
-        require('./server/analytics-events').init();
+        require('./server/services/segment').init();
     }
 
     debug('End: initServices');
