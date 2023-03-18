@@ -40,6 +40,9 @@ const {stopGhost} = require('./e2e-utils');
 const adapterManager = require('../../core/server/services/adapter-manager');
 const DomainEvents = require('@tryghost/domain-events');
 
+// Require additional assertions which help us keep our tests small and clear
+require('./assertions');
+
 /**
  * @param {Object} [options={}]
  * @param {Boolean} [options.backend] Boot the backend
@@ -81,6 +84,9 @@ const startGhost = async (options = {}) => {
     if (bootOptions.frontend) {
         await urlServiceUtils.isFinished();
     }
+
+    // Disable network in tests at the start
+    mockManager.disableNetwork();
 
     return ghostServer;
 };
@@ -477,6 +483,5 @@ module.exports = {
     configUtils: require('./configUtils'),
     dbUtils: require('./db-utils'),
     urlUtils: require('./urlUtils'),
-    sleep: require('./sleep'),
     resetRateLimits
 };

@@ -18,12 +18,12 @@
     "lib"
   ],
   "devDependencies": {
-    "sinon": "15.0.1"
+    "sinon": "15.0.2"
   },
   "dependencies": {
     "@tryghost/debug": "0.1.22",
-    "@tryghost/kg-default-cards": "6.0.4",
-    "@tryghost/string": "0.2.2",
+    "@tryghost/kg-default-cards": "6.0.5",
+    "@tryghost/string": "0.2.3",
     "lodash": "^4.17.21",
     "papaparse": "^5.3.2",
     "simple-dom": "^1.4.0"

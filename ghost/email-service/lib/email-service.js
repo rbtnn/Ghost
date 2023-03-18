@@ -18,7 +18,8 @@ const logging = require('@tryghost/logging');
 const messages = {
     archivedNewsletterError: 'Cannot send email to archived newsletters',
     missingNewsletterError: 'The post does not have a newsletter relation',
-    emailSendingDisabled: `Email sending is temporarily disabled because your account is currently in review. You should have an email about this from us already, but you can also reach us any time at support@ghost.org`
+    emailSendingDisabled: `Email sending is temporarily disabled because your account is currently in review. You should have an email about this from us already, but you can also reach us any time at support@ghost.org`,
+    retryEmailStatusError: 'Can only retry emails for published posts'
 };
 
 class EmailService {
@@ -156,9 +157,40 @@ class EmailService {
         return email;
     }
     async retryEmail(email) {
+        // Block accidentaly retrying non-published posts (can happen due to bugs in frontend)
+        const post = await email.getLazyRelation('post');
+        if (post.get('status') !== 'published' && post.get('status') !== 'sent') {
+            throw new errors.IncorrectUsageError({
+                message: tpl(messages.retryEmailStatusError)
+            });
+        }
+
         await this.checkLimits();
+
+        // Change email status back to 'pending' before scheduling
+        // so we have a immediate response when retrying an email (schedule can take a while to kick off sometimes)
+        if (email.get('status') === 'failed') {
+            await email.save({status: 'pending'}, {patch: true});
+        }
+
         this.#batchSendingService.scheduleEmail(email);
         return email;
+    }
+
+    /**
+     * @return {import('./email-renderer').MemberLike}
+     */
+    getDefaultExampleMember() {
+        /**
+         * @type {import('./email-renderer').MemberLike}
+         */
+        return {
+            id: 'example-id',
+            uuid: 'example-uuid',
+            email: 'jamie@example.com',
+            name: 'Jamie Larson',
+            createdAt: new Date()
+        };
     }
 
     /**
@@ -170,12 +202,7 @@ class EmailService {
         /**
          * @type {import('./email-renderer').MemberLike}
          */
-        const exampleMember = {
-            id: 'example-id',
-            uuid: 'example-uuid',
-            email: 'jamie@example.com',
-            name: 'Jamie Larson'
-        };
+        const exampleMember = this.getDefaultExampleMember();
 
         // fetch any matching members so that replacements use expected values
         if (email) {
@@ -185,6 +212,7 @@ class EmailService {
                 exampleMember.uuid = member.get('uuid');
                 exampleMember.email = member.get('email');
                 exampleMember.name = member.get('name');
+                exampleMember.createdAt = member.get('created_at');
             } else {
                 exampleMember.name = ''; // Force empty name to simulate name fallbacks
                 exampleMember.email = email;
@@ -192,6 +220,22 @@ class EmailService {
         }
 
         return exampleMember;
+    }
+
+    /**
+     * Do a manual replacement of tokens with values for a member (normally only used for previews)
+     *
+     * @param {string} htmlOrPlaintext
+     * @param {import('./email-renderer').ReplacementDefinition[]} replacements
+     * @param {import('./email-renderer').MemberLike} member
+     * @return {string}
+     */
+    replaceDefinitions(htmlOrPlaintext, replacements, member) {
+        // Do manual replacements with an example member
+        for (const replacement of replacements) {
+            htmlOrPlaintext = htmlOrPlaintext.replace(replacement.token, replacement.getValue(member));
+        }
+        return htmlOrPlaintext;
     }
 
     /**
@@ -207,16 +251,10 @@ class EmailService {
         const subject = this.#emailRenderer.getSubject(post);
         let {html, plaintext, replacements} = await this.#emailRenderer.renderBody(post, newsletter, segment, {clickTrackingEnabled: false});
 
-        // Do manual replacements with an example member
-        for (const replacement of replacements) {
-            html = html.replace(replacement.token, replacement.getValue(exampleMember));
-            plaintext = plaintext.replace(replacement.token, replacement.getValue(exampleMember));
-        }
-
         return {
             subject,
-            html,
-            plaintext
+            html: this.replaceDefinitions(html, replacements, exampleMember),
+            plaintext: this.replaceDefinitions(plaintext, replacements, exampleMember)
         };
     }
 

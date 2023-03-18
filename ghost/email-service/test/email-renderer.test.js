@@ -5,6 +5,60 @@ const {createModel} = require('./utils');
 const linkReplacer = require('@tryghost/link-replacer');
 const sinon = require('sinon');
 const logging = require('@tryghost/logging');
+const {HtmlValidate} = require('html-validate');
+
+function validateHtml(html) {
+    const htmlvalidate = new HtmlValidate({
+        extends: [
+            'html-validate:document',
+            'html-validate:standard'
+        ],
+        rules: {
+            // We need deprecated attrs for legacy tables in older email clients
+            'no-deprecated-attr': 'off',
+
+            // Don't care that the first <hx> isn't <h1>
+            'heading-level': 'off'
+        },
+        elements: [
+            'html5',
+            // By default, html-validate requires the 'lang' attribute on the <html> tag. We don't really want that for now.
+            {
+                html: {
+                    attributes: {
+                        lang: {
+                            required: false
+                        }
+                    }
+                }
+            }
+        ]
+    });
+    const report = htmlvalidate.validateString(html);
+
+    // Improve debugging and show a snippet of the invalid HTML instead of just the line number or a huge HTML-dump
+    const parsedErrors = [];
+
+    if (!report.valid) {
+        const lines = html.split('\n');
+        const messages = report.results[0].messages;
+
+        for (const item of messages) {
+            if (item.severity !== 2) {
+                // Ignore warnings
+                continue;
+            }
+            const start = Math.max(item.line - 4, 0);
+            const end = Math.min(item.line + 4, lines.length - 1);
+
+            const _html = lines.slice(start, end).map(l => l.trim()).join('\n');
+            parsedErrors.push(`${item.ruleId}: ${item.message}\n   At line ${item.line}, col ${item.column}\n   HTML-snippet:\n${_html}`);
+        }
+    }
+
+    // Fail if invalid HTML
+    assert.equal(report.valid, true, 'Expected valid HTML without warnings, got errors:\n' + parsedErrors.join('\n\n'));
+}
 
 describe('Email renderer', function () {
     let logStub;
@@ -26,6 +80,16 @@ describe('Email renderer', function () {
             emailRenderer = new EmailRenderer({
                 urlUtils: {
                     urlFor: () => 'http://example.com/subdirectory'
+                },
+                labs: {
+                    isSet: () => true
+                },
+                settingsCache: {
+                    get: (key) => {
+                        if (key === 'timezone') {
+                            return 'UTC';
+                        }
+                    }
                 }
             });
             newsletter = createModel({
@@ -35,19 +99,20 @@ describe('Email renderer', function () {
                 id: '456',
                 uuid: 'myuuid',
                 name: 'Test User',
-                email: 'test@example.com'
+                email: 'test@example.com',
+                createdAt: new Date(2023, 2, 13, 12, 0)
             };
         });
 
         it('returns an empty list of replacements if nothing is used', function () {
             const html = 'Hello world';
-            const replacements = emailRenderer.buildReplacementDefinitions({html, newsletter});
+            const replacements = emailRenderer.buildReplacementDefinitions({html, newsletterUuid: newsletter.get('uuid')});
             assert.equal(replacements.length, 0);
         });
 
         it('returns a replacement if it is used', function () {
             const html = 'Hello world %%{uuid}%%';
-            const replacements = emailRenderer.buildReplacementDefinitions({html, newsletter});
+            const replacements = emailRenderer.buildReplacementDefinitions({html, newsletterUuid: newsletter.get('uuid')});
             assert.equal(replacements.length, 1);
             assert.equal(replacements[0].token.toString(), '/%%\\{uuid\\}%%/g');
             assert.equal(replacements[0].id, 'uuid');
@@ -56,7 +121,7 @@ describe('Email renderer', function () {
 
         it('returns a replacement only once if used multiple times', function () {
             const html = 'Hello world %%{uuid}%% And %%{uuid}%%';
-            const replacements = emailRenderer.buildReplacementDefinitions({html, newsletter});
+            const replacements = emailRenderer.buildReplacementDefinitions({html, newsletterUuid: newsletter.get('uuid')});
             assert.equal(replacements.length, 1);
             assert.equal(replacements[0].token.toString(), '/%%\\{uuid\\}%%/g');
             assert.equal(replacements[0].id, 'uuid');
@@ -65,7 +130,7 @@ describe('Email renderer', function () {
 
         it('returns correct first name', function () {
             const html = 'Hello %%{first_name}%%,';
-            const replacements = emailRenderer.buildReplacementDefinitions({html, newsletter});
+            const replacements = emailRenderer.buildReplacementDefinitions({html, newsletterUuid: newsletter.get('uuid')});
             assert.equal(replacements.length, 1);
             assert.equal(replacements[0].token.toString(), '/%%\\{first_name\\}%%/g');
             assert.equal(replacements[0].id, 'first_name');
@@ -74,18 +139,55 @@ describe('Email renderer', function () {
 
         it('returns correct unsubscribe url', function () {
             const html = 'Hello %%{unsubscribe_url}%%,';
-            const replacements = emailRenderer.buildReplacementDefinitions({html, newsletter});
+            const replacements = emailRenderer.buildReplacementDefinitions({html, newsletterUuid: newsletter.get('uuid')});
             assert.equal(replacements.length, 1);
             assert.equal(replacements[0].token.toString(), '/%%\\{unsubscribe_url\\}%%/g');
             assert.equal(replacements[0].id, 'unsubscribe_url');
             assert.equal(replacements[0].getValue(member), `http://example.com/subdirectory/unsubscribe/?uuid=myuuid&newsletter=newsletteruuid`);
         });
 
+        it('returns correct name', function () {
+            const html = 'Hello %%{name}%%,';
+            const replacements = emailRenderer.buildReplacementDefinitions({html, newsletterUuid: newsletter.get('uuid')});
+            assert.equal(replacements.length, 1);
+            assert.equal(replacements[0].token.toString(), '/%%\\{name\\}%%/g');
+            assert.equal(replacements[0].id, 'name');
+            assert.equal(replacements[0].getValue(member), 'Test User');
+        });
+
+        it('returns correct email', function () {
+            const html = 'Hello %%{email}%%,';
+            const replacements = emailRenderer.buildReplacementDefinitions({html, newsletterUuid: newsletter.get('uuid')});
+            assert.equal(replacements.length, 1);
+            assert.equal(replacements[0].token.toString(), '/%%\\{email\\}%%/g');
+            assert.equal(replacements[0].id, 'email');
+            assert.equal(replacements[0].getValue(member), 'test@example.com');
+        });
+
+        it('returns correct createdAt', function () {
+            const html = 'Hello %%{created_at}%%,';
+            const replacements = emailRenderer.buildReplacementDefinitions({html, newsletterUuid: newsletter.get('uuid')});
+            assert.equal(replacements.length, 1);
+            assert.equal(replacements[0].token.toString(), '/%%\\{created_at\\}%%/g');
+            assert.equal(replacements[0].id, 'created_at');
+            assert.equal(replacements[0].getValue(member), '13 March 2023');
+        });
+
+        it('returns missing created at', function () {
+            member.createdAt = null;
+            const html = 'Hello %%{created_at}%%,';
+            const replacements = emailRenderer.buildReplacementDefinitions({html, newsletterUuid: newsletter.get('uuid')});
+            assert.equal(replacements.length, 1);
+            assert.equal(replacements[0].token.toString(), '/%%\\{created_at\\}%%/g');
+            assert.equal(replacements[0].id, 'created_at');
+            assert.equal(replacements[0].getValue(member), '');
+        });
+
         it('supports fallback values', function () {
             const html = 'Hey %%{first_name, "there"}%%,';
-            const replacements = emailRenderer.buildReplacementDefinitions({html, newsletter});
+            const replacements = emailRenderer.buildReplacementDefinitions({html, newsletterUuid: newsletter.get('uuid')});
             assert.equal(replacements.length, 1);
-            assert.equal(replacements[0].token.toString(), '/%%\\{first_name, "there"\\}%%/g');
+            assert.equal(replacements[0].token.toString(), '/%%\\{first_name, (?:"|&quot;)there(?:"|&quot;)\\}%%/g');
             assert.equal(replacements[0].id, 'first_name_2');
             assert.equal(replacements[0].getValue(member), 'Test');
 
@@ -95,16 +197,16 @@ describe('Email renderer', function () {
 
         it('supports combination of multiple fallback values', function () {
             const html = 'Hey %%{first_name, "there"}%%, %%{first_name, "member"}%% %%{first_name}%% %%{first_name, "there"}%%';
-            const replacements = emailRenderer.buildReplacementDefinitions({html, newsletter});
+            const replacements = emailRenderer.buildReplacementDefinitions({html, newsletterUuid: newsletter.get('uuid')});
             assert.equal(replacements.length, 3);
-            assert.equal(replacements[0].token.toString(), '/%%\\{first_name, "there"\\}%%/g');
+            assert.equal(replacements[0].token.toString(), '/%%\\{first_name, (?:"|&quot;)there(?:"|&quot;)\\}%%/g');
             assert.equal(replacements[0].id, 'first_name_2');
             assert.equal(replacements[0].getValue(member), 'Test');
 
             // In case of empty name
             assert.equal(replacements[0].getValue({name: ''}), 'there');
 
-            assert.equal(replacements[1].token.toString(), '/%%\\{first_name, "member"\\}%%/g');
+            assert.equal(replacements[1].token.toString(), '/%%\\{first_name, (?:"|&quot;)member(?:"|&quot;)\\}%%/g');
             assert.equal(replacements[1].id, 'first_name_3');
             assert.equal(replacements[1].getValue(member), 'Test');
 
@@ -124,6 +226,9 @@ describe('Email renderer', function () {
         const emailRenderer = new EmailRenderer({
             urlUtils: {
                 urlFor: () => 'http://example.com'
+            },
+            labs: {
+                isSet: () => true
             }
         });
 
@@ -166,6 +271,9 @@ describe('Email renderer', function () {
                 getNoReplyAddress: () => {
                     return 'reply@example.com';
                 }
+            },
+            labs: {
+                isSet: () => true
             }
         });
 
@@ -223,6 +331,9 @@ describe('Email renderer', function () {
                 getNoReplyAddress: () => {
                     return 'reply@example.com';
                 }
+            },
+            labs: {
+                isSet: () => true
             }
         });
 
@@ -263,6 +374,9 @@ describe('Email renderer', function () {
             },
             getPostUrl: () => {
                 return 'http://example.com/post-id';
+            },
+            labs: {
+                isSet: () => true
             }
         });
 
@@ -299,6 +413,9 @@ describe('Email renderer', function () {
                 },
                 getPostUrl: () => {
                     return 'http://example.com/post-id';
+                },
+                labs: {
+                    isSet: () => true
                 }
             });
 
@@ -324,6 +441,9 @@ describe('Email renderer', function () {
                 },
                 getPostUrl: () => {
                     return 'http://example.com/post-id';
+                },
+                labs: {
+                    isSet: () => true
                 }
             });
 
@@ -341,6 +461,8 @@ describe('Email renderer', function () {
 
     describe('renderBody', function () {
         let renderedPost = '<p>Lexical Test</p>';
+        let postUrl = 'http://example.com';
+        let customSettings = {};
         let emailRenderer = new EmailRenderer({
             audienceFeedbackService: {
                 buildLink: (_uuid, _postId, score) => {
@@ -360,6 +482,9 @@ describe('Email renderer', function () {
             },
             settingsCache: {
                 get: (key) => {
+                    if (customSettings[key]) {
+                        return customSettings[key];
+                    }
                     if (key === 'accent_color') {
                         return '#ffffff';
                     }
@@ -375,7 +500,7 @@ describe('Email renderer', function () {
                 }
             },
             getPostUrl: () => {
-                return 'http://example.com';
+                return postUrl;
             },
             renderers: {
                 lexical: {
@@ -408,6 +533,9 @@ describe('Email renderer', function () {
                     u.searchParams.append('source_tracking', newsletter?.get('name') ?? 'site');
                     return u;
                 }
+            },
+            labs: {
+                isSet: () => true
             }
         });
         let basePost;
@@ -430,6 +558,8 @@ describe('Email renderer', function () {
                 }),
                 loaded: ['posts_meta']
             };
+            postUrl = 'http://example.com';
+            customSettings = {};
         });
 
         it('returns feedback buttons and unsubcribe links', async function () {
@@ -438,7 +568,8 @@ describe('Email renderer', function () {
                 header_image: null,
                 name: 'Test Newsletter',
                 show_badge: false,
-                feedback_enabled: true
+                feedback_enabled: true,
+                show_post_title_section: true
             });
             const segment = null;
             const options = {};
@@ -487,7 +618,8 @@ describe('Email renderer', function () {
                 header_image: null,
                 name: 'Test Newsletter',
                 show_badge: false,
-                feedback_enabled: true
+                feedback_enabled: true,
+                show_post_title_section: true
             });
             const segment = null;
             const options = {};
@@ -519,7 +651,8 @@ describe('Email renderer', function () {
                 header_image: null,
                 name: 'Test Newsletter',
                 show_badge: false,
-                feedback_enabled: true
+                feedback_enabled: true,
+                show_post_title_section: true
             });
             const segment = null;
             const options = {};
@@ -545,7 +678,8 @@ describe('Email renderer', function () {
 
                 show_header_icon: true,
                 show_header_title: true,
-                show_header_name: true
+                show_header_name: true,
+                show_post_title_section: true
             });
             const segment = null;
             const options = {};
@@ -572,7 +706,8 @@ describe('Email renderer', function () {
 
                 show_header_icon: true,
                 show_header_title: false,
-                show_header_name: true
+                show_header_name: true,
+                show_post_title_section: true
             });
             const segment = null;
             const options = {};
@@ -644,7 +779,8 @@ describe('Email renderer', function () {
                 header_image: null,
                 name: 'Test Newsletter',
                 show_badge: true,
-                feedback_enabled: true
+                feedback_enabled: true,
+                show_post_title_section: true
             });
             const segment = null;
             const options = {
@@ -682,6 +818,8 @@ describe('Email renderer', function () {
                 `http://tracked-link.com/?m=%%{uuid}%%&url=http%3A%2F%2Fexample.com%2F%3Fsource_tracking%3DTest%2BNewsletter%26post_tracking%3Dadded`,
                 `http://tracked-link.com/?m=%%{uuid}%%&url=https%3A%2F%2Fexternal-domain.com%2F%3Fref%3D123%26source_tracking%3Dsite`,
                 `http://tracked-link.com/?m=%%{uuid}%%&url=https%3A%2F%2Fexample.com%2F%3Fref%3D123%26source_tracking%3DTest%2BNewsletter%26post_tracking%3Dadded`,
+                `http://feedback-link.com/?score=1&uuid=%%{uuid}%%`,
+                `http://feedback-link.com/?score=0&uuid=%%{uuid}%%`,
                 `http://feedback-link.com/?score=1&uuid=%%{uuid}%%`,
                 `http://feedback-link.com/?score=0&uuid=%%{uuid}%%`,
                 `%%{unsubscribe_url}%%`,
@@ -788,10 +926,65 @@ describe('Email renderer', function () {
             responsePaid.html.should.containEql('finishing part only for members');
             responsePaid.html.should.not.containEql('Become a paid member of Test Blog to get access to all');
         });
+
+        it('should output valid HTML and escape HTML characters in mobiledoc', async function () {
+            const post = createModel({
+                ...basePost,
+                title: 'This is\' a blog po"st test <3</body>',
+                excerpt: 'This is a blog post test <3</body>',
+                authors: [
+                    createModel({
+                        name: 'This is a blog post test <3</body>'
+                    })
+                ],
+                posts_meta: createModel({
+                    feature_image_alt: 'This is a blog post test <3</body>',
+                    feature_image_caption: 'This is escaped in the frontend'
+                })
+            });
+            postUrl = 'https://testpost.com/t&es<3t-post"</body>/';
+            customSettings = {
+                icon: 'icon2<3</body>'
+            };
+
+            const newsletter = createModel({
+                feedback_enabled: true,
+                name: 'My newsletter <3</body>',
+                header_image: 'https://testpost.com/test-post</body>/',
+                show_header_icon: true,
+                show_header_title: true,
+                show_feature_image: true,
+                title_font_category: 'sans-serif',
+                title_alignment: 'center',
+                body_font_category: 'serif',
+                show_badge: true,
+                show_header_name: true,
+                // Note: we don't need to check the footer content because this should contain valid HTML (not text)
+                footer_content: '<span>Footer content with valid HTML</span>'
+            });
+            const segment = null;
+            const options = {};
+
+            const response = await emailRenderer.renderBody(
+                post,
+                newsletter,
+                segment,
+                options
+            );
+
+            validateHtml(response.html);
+
+            // Check footer content is not escaped
+            assert.equal(response.html.includes('<span>Footer content with valid HTML</span>'), true, 'Should include footer content without escaping');
+
+            // Check doesn't contain the non escaped string '<3'
+            assert.equal(response.html.includes('<3'), false, 'Should escape HTML characters');
+        });
     });
 
     describe('getTemplateData', function () {
         let settings = {};
+        let labsEnabled = true;
         const emailRenderer = new EmailRenderer({
             audienceFeedbackService: {
                 buildLink: (_uuid, _postId, score) => {
@@ -816,11 +1009,15 @@ describe('Email renderer', function () {
             },
             getPostUrl: () => {
                 return 'http://example.com';
+            },
+            labs: {
+                isSet: () => labsEnabled
             }
         });
 
         beforeEach(function () {
             settings = {};
+            labsEnabled = true;
         });
 
         it('uses default accent color', async function () {
@@ -892,6 +1089,136 @@ describe('Email renderer', function () {
                 meta: 'post-meta post-meta-left',
                 body: 'post-content-sans-serif'
             });
+        });
+
+        it('show comment CTA is enabled if labs disabled', async function () {
+            labsEnabled = false;
+            settings.comments_enabled = 'all';
+            const html = '';
+            const post = createModel({
+                posts_meta: createModel({}),
+                loaded: ['posts_meta'],
+                published_at: new Date(0)
+            });
+            const newsletter = createModel({
+                title_font_category: 'serif',
+                title_alignment: 'left',
+                body_font_category: 'sans_serif',
+                show_comment_cta: true
+            });
+            const data = await emailRenderer.getTemplateData({post, newsletter, html, addPaywall: false});
+            assert.equal(data.newsletter.showCommentCta, true);
+        });
+
+        it('show comment CTA is disabled if comments disabled', async function () {
+            labsEnabled = true;
+            settings.comments_enabled = 'off';
+            const html = '';
+            const post = createModel({
+                posts_meta: createModel({}),
+                loaded: ['posts_meta'],
+                published_at: new Date(0)
+            });
+            const newsletter = createModel({
+                title_font_category: 'serif',
+                title_alignment: 'left',
+                body_font_category: 'sans_serif',
+                show_comment_cta: true
+            });
+            const data = await emailRenderer.getTemplateData({post, newsletter, html, addPaywall: false});
+            assert.equal(data.newsletter.showCommentCta, false);
+        });
+
+        it('show comment CTA is disabled if disabled', async function () {
+            labsEnabled = true;
+            settings.comments_enabled = 'all';
+            const html = '';
+            const post = createModel({
+                posts_meta: createModel({}),
+                loaded: ['posts_meta'],
+                published_at: new Date(0)
+            });
+            const newsletter = createModel({
+                title_font_category: 'serif',
+                title_alignment: 'left',
+                body_font_category: 'sans_serif',
+                show_comment_cta: false
+            });
+            const data = await emailRenderer.getTemplateData({post, newsletter, html, addPaywall: false});
+            assert.equal(data.newsletter.showCommentCta, false);
+        });
+
+        it('show comment CTA is enabled if all enabled', async function () {
+            labsEnabled = true;
+            settings.comments_enabled = 'all';
+            const html = '';
+            const post = createModel({
+                posts_meta: createModel({}),
+                loaded: ['posts_meta'],
+                published_at: new Date(0)
+            });
+            const newsletter = createModel({
+                title_font_category: 'serif',
+                title_alignment: 'left',
+                body_font_category: 'sans_serif',
+                show_comment_cta: true
+            });
+            const data = await emailRenderer.getTemplateData({post, newsletter, html, addPaywall: false});
+            assert.equal(data.newsletter.showCommentCta, true);
+        });
+
+        it('showSubscriptionDetails is disabled if labs disabled', async function () {
+            labsEnabled = false;
+            const html = '';
+            const post = createModel({
+                posts_meta: createModel({}),
+                loaded: ['posts_meta'],
+                published_at: new Date(0)
+            });
+            const newsletter = createModel({
+                title_font_category: 'serif',
+                title_alignment: 'left',
+                body_font_category: 'sans_serif',
+                show_subscription_details: true
+            });
+            const data = await emailRenderer.getTemplateData({post, newsletter, html, addPaywall: false});
+            assert.equal(data.newsletter.showSubscriptionDetails, false);
+        });
+
+        it('showSubscriptionDetails works is enabled', async function () {
+            labsEnabled = true;
+            const html = '';
+            const post = createModel({
+                posts_meta: createModel({}),
+                loaded: ['posts_meta'],
+                published_at: new Date(0)
+            });
+            const newsletter = createModel({
+                title_font_category: 'serif',
+                title_alignment: 'left',
+                body_font_category: 'sans_serif',
+                show_subscription_details: true
+            });
+            const data = await emailRenderer.getTemplateData({post, newsletter, html, addPaywall: false});
+            assert.equal(data.newsletter.showSubscriptionDetails, true);
+        });
+
+        it('showSubscriptionDetails can be disabled', async function () {
+            labsEnabled = true;
+            const html = '';
+            const post = createModel({
+                posts_meta: createModel({}),
+                loaded: ['posts_meta'],
+                published_at: new Date(0)
+            });
+            const newsletter = createModel({
+                title_font_category: 'serif',
+                title_alignment: 'left',
+                body_font_category: 'sans_serif',
+                show_subscription_details: false
+            });
+            const data = await emailRenderer.getTemplateData({post, newsletter, html, addPaywall: false});
+            assert.equal(data.newsletter.showSubscriptionDetails, false);
         });
     });
 

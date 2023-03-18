@@ -2,6 +2,7 @@ const errors = require('@tryghost/errors');
 const sinon = require('sinon');
 const assert = require('assert');
 const nock = require('nock');
+const MailgunClient = require('@tryghost/mailgun-client/lib/mailgun-client');
 
 // Helper services
 const configUtils = require('./configUtils');
@@ -19,9 +20,12 @@ const labs = require('../../core/shared/labs');
 const events = require('../../core/server/lib/common/events');
 const settingsCache = require('../../core/shared/settings-cache');
 const dnsPromises = require('dns').promises;
+const StripeMocker = require('./stripe-mocker');
 
 let fakedLabsFlags = {};
+let allowedNetworkDomains = [];
 const originalLabsIsSet = labs.isSet;
+const stripeMocker = new StripeMocker();
 
 /**
  * Stripe Mocks
@@ -35,17 +39,48 @@ const disableStripe = async () => {
     await stripeService.disconnect();
 };
 
-const mockStripe = () => {
-    nock.disableNetConnect();
-};
-
 const disableNetwork = () => {
     nock.disableNetConnect();
 
     // externalRequest does dns lookup; stub to make sure we don't fail with fake domain names
-    sinon.stub(dnsPromises, 'lookup').callsFake(() => {
-        return Promise.resolve({address: '123.123.123.123', family: 4});
+    if (!dnsPromises.lookup.restore) {
+        sinon.stub(dnsPromises, 'lookup').callsFake(() => {
+            return Promise.resolve({address: '123.123.123.123', family: 4});
+        });
+    }
+
+    // Allow localhost
+    // Multiple enableNetConnect with different hosts overwrite each other, so we need to add one and use the allowedNetworkDomains variable
+    nock.enableNetConnect((host) => {
+        if (host.includes('127.0.0.1')) {
+            return true;
+        }
+        for (const h of allowedNetworkDomains) {
+            if (host.includes(h)) {
+                return true;
+            }
+        }
+        return false;
     });
+};
+
+const allowStripe = () => {
+    disableNetwork();
+    allowedNetworkDomains.push('stripe.com');
+};
+
+const mockStripe = () => {
+    disableNetwork();
+    stripeMocker.stub();
+};
+
+const mockSlack = () => {
+    disableNetwork();
+
+    nock(/hooks.slack.com/)
+        .persist()
+        .post('/')
+        .reply(200, 'ok');
 };
 
 /**
@@ -66,6 +101,26 @@ const mockMail = (response = 'Mail is disabled') => {
     mocks.mockMailReceiver = mockMailReceiver;
 
     return mockMailReceiver;
+};
+
+const mockMailgun = (customStubbedSend) => {
+    mockSetting('mailgun_api_key', 'test');
+    mockSetting('mailgun_domain', 'example.com');
+    mockSetting('mailgun_base_url', 'test');
+
+    const stubbedSend = customStubbedSend ?? sinon.fake.resolves({
+        id: `<${new Date().getTime()}.${0}.5817@samples.mailgun.org>`
+    });
+
+    // We need to stub the Mailgun client before starting Ghost
+    sinon.stub(MailgunClient.prototype, 'getInstance').returns({
+        // @ts-ignore
+        messages: {
+            create: async function () {
+                return await stubbedSend.call(this, ...arguments);
+            }
+        }
+    });
 };
 
 const mockWebhookRequests = () => {
@@ -202,14 +257,19 @@ const restore = () => {
     fakedLabsFlags = {};
     fakedSettings = {};
     emailCount = 0;
+    allowedNetworkDomains = [];
     nock.cleanAll();
     nock.enableNetConnect();
+    stripeMocker.reset();
 
     if (mocks.webhookMockReceiver) {
         mocks.webhookMockReceiver.reset();
     }
 
     mailService.GhostMailer.prototype.send = originalMailServiceSend;
+
+    // Disable network again after restoring sinon
+    disableNetwork();
 };
 
 module.exports = {
@@ -217,12 +277,16 @@ module.exports = {
     mockMail,
     disableStripe,
     mockStripe,
+    mockSlack,
+    allowStripe,
+    mockMailgun,
     mockLabsEnabled,
     mockLabsDisabled,
     mockWebhookRequests,
     mockSetting,
     disableNetwork,
     restore,
+    stripeMocker,
     assert: {
         sentEmailCount,
         sentEmail,

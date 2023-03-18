@@ -497,10 +497,6 @@
     height: 18px;
 }
 
-.gh-header-img-desc {
-    padding: 6px 0;
-}
-
 .modal-fullsettings-uploader h4 {
     margin: 0 !important;
     padding: 0;
@@ -633,7 +629,6 @@
     flex-direction: column;
     justify-content: space-between;
     flex-grow: 1;
-    overflow-y: auto;
     padding: 0;
     margin-bottom: 24px;
 }
@@ -659,6 +654,7 @@
     font-weight: 400;
     font-size: 1.45rem;
     transition: none;
+    z-index: 0;
 }
 
 .modal-fullsettings-tab:hover {
@@ -698,6 +694,10 @@
     padding-bottom: 24px;
 }
 
+.modal-fullsettings-tab-expanded .gh-setting-first {
+    padding-top: 0;
+}
+
 .modal-fullsettings-form-labs .for-checkbox .input-toggle-component {
     background: var(--white);
 }
@@ -722,13 +722,6 @@
     width: 100%;
     height: 90px;
     padding: 2.4rem;
-}
-
-.modal-fullsettings-preview-container-labs {
-    overflow: hidden;
-    background: var(--white);
-    height: 100vh;
-    overflow-y: scroll;
 }
 
 .modal-fullsettings-bottom {

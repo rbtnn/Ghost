@@ -280,7 +280,7 @@ figure blockquote p {
 }
 
 .header-image {
-    padding-top: 16px;
+    padding-top: 24px;
 }
 
 .site-icon {
@@ -330,7 +330,7 @@ figure blockquote p {
 }
 
 .post-title {
-    padding-bottom: 10px;
+    padding-bottom: 16px;
     font-size: 42px;
     line-height: 1.1em;
     font-weight: 700;
@@ -356,30 +356,55 @@ figure blockquote p {
 
 .post-meta,
 .view-online {
-    padding-bottom: 50px;
     color: #738a94;
     font-size: 13px;
-    letter-spacing: 0.2px;
-    text-transform: uppercase;
-    text-align: center;
+    letter-spacing: 0.1px;
 }
 
 .post-meta-left {
     text-align: left;
 }
 
+.view-online {
+    text-align: right;
+}
+
+.post-meta-center,
+.post-meta-center.view-online {
+    display: inline-block;
+    width: 100% !important;
+    text-align: center;
+}
+
+.post-meta-center.view-online {
+    text-decoration: underline;
+}
+
 .post-meta-date {
     white-space: nowrap;
 }
 
-.view-online {
-    text-align: right;
+.comment-link {
+    color: #738a94;
+    font-size: 13px;
+    letter-spacing: 0.1px;
+}
+
+.comment-link img {
+    width: 16px;
+    height: 16px;
+    margin-bottom: 1px;
+    vertical-align: middle;
 }
 
 .view-online-link {
     word-wrap: none;
     white-space: nowrap;
-    color: #15212A;
+    color: #738a94;
+}
+
+.feature-image-row:first-child > td {
+    padding-top: 24px;
 }
 
 .feature-image {
@@ -399,6 +424,24 @@ figure blockquote p {
     color: #738a94;
 }
 
+.feedback-buttons {
+    width: auto !important;
+    margin: auto; 
+}
+
+.feedback-buttons-mobile {
+    display: none !important;
+    width: auto !important;
+    margin: auto !important; 
+}
+
+.feedback-button-mobile-text {
+    color: #15212A;
+    font-size: 13px !important;
+    font-weight: 500;
+    margin-bottom: 0;
+}
+
 .post-content {
     max-width: 600px !important;
     font-family: Georgia, serif;
@@ -416,6 +459,10 @@ figure blockquote p {
     color: #15212A;
     padding-bottom: 20px;
     border-bottom: 1px solid #e5eff5;
+}
+
+.post-content-row:first-child > td, .header-image-row + .post-content-row > td {
+    padding-top: 52px;
 }
 
 .post-content a,
@@ -976,13 +1023,29 @@ a[data-flickr-embed] img {
         padding-bottom: 15px !important;
     }
 
-    table.body .post-meta {
+    table.body .post-meta,
+    table.body .post-meta-date {
         white-space: normal !important;
         font-size: 12px !important;
         line-height: 1.5em;
     }
 
+    table.body .post-meta,
+    table.body .view-online {
+        display: inline-block;
+    }
+
+    table.body .post-meta.author-date {
+        width: 100%;
+    }
+
+    table.body .view-online {
+        text-decoration: underline;
+    }
+
+
     table.body .view-online-link,
+    table.body .comment-link,
     table.body .footer,
     table.body .footer a {
         font-size: 12px !important;
@@ -991,6 +1054,20 @@ a[data-flickr-embed] img {
     table.body .post-title a {
         font-size: 32px !important;
         line-height: 1.15em !important;
+    }
+
+    table.feedback-buttons {
+        display: none !important;
+    }
+
+    table.feedback-buttons-mobile {
+        display: table !important;
+        width: 100% !important;
+        max-width: 390px;
+    }
+
+    table.body .feedback-button-mobile-text {
+        font-size: 13px !important;
     }
 
     table.body .kg-bookmark-card {

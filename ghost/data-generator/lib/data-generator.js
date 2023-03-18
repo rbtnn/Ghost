@@ -34,7 +34,8 @@ const {
     OffersImporter,
     LabelsImporter,
     MembersLabelsImporter,
-    RolesUsersImporter
+    RolesUsersImporter,
+    MembersFeedbackImporter
 } = tables;
 const path = require('path');
 const fs = require('fs/promises');
@@ -224,13 +225,13 @@ class DataGenerator {
             });
             posts = await postsImporter.import({
                 amount: this.modelQuantities.posts,
-                rows: ['newsletter_id', 'published_at', 'slug', 'status', 'visibility', 'title']
+                rows: ['newsletter_id', 'published_at', 'slug', 'status', 'visibility', 'title', 'type']
             });
-
-            await postsImporter.import({
+            posts.push(...await postsImporter.import({
                 amount: 3,
-                type: 'page'
-            });
+                type: 'page',
+                rows: ['newsletter_id', 'published_at', 'slug', 'status', 'visibility', 'title', 'type']
+            }));
 
             const tagsImporter = new TagsImporter(transaction, {
                 users
@@ -313,7 +314,7 @@ class DataGenerator {
             amount: 3
         });
 
-        const membersCreatedEventsImporter = new MembersCreatedEventsImporter(transaction);
+        const membersCreatedEventsImporter = new MembersCreatedEventsImporter(transaction, {baseUrl: this.baseUrl, posts});
         await membersCreatedEventsImporter.importForEach(members, {amount: 1});
 
         const membersLoginEventsImporter = new MembersLoginEventsImporter(transaction);
@@ -361,7 +362,7 @@ class DataGenerator {
         });
         await membersPaidSubscriptionEventsImporter.importForEach(subscriptions, {amount: 1});
 
-        const membersSubscriptionCreatedEventsImporter = new MembersSubscriptionCreatedEventsImporter(transaction, {subscriptions});
+        const membersSubscriptionCreatedEventsImporter = new MembersSubscriptionCreatedEventsImporter(transaction, {subscriptions, posts});
         await membersSubscriptionCreatedEventsImporter.importForEach(membersStripeCustomersSubscriptions, {amount: 1});
 
         const mentionsImporter = new MentionsImporter(transaction, {baseUrl: this.baseUrl});
@@ -409,11 +410,8 @@ class DataGenerator {
         const rolesUsersImporter = new RolesUsersImporter(transaction, {roles});
         await rolesUsersImporter.importForEach(users, {amount: 1});
 
-        // TODO: Members labels
-
-        // TODO: Email clicks - redirect, members_click_events (relies on emails)
-
-        // TODO: Feedback - members_feedback (relies on members and posts)
+        const membersFeedbackImporter = new MembersFeedbackImporter(transaction, {emails});
+        await membersFeedbackImporter.importForEach(emailRecipients, {amount: 1});
 
         await transaction.commit();
 

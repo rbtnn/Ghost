@@ -25,8 +25,15 @@ function getPostUrl(post) {
 }
 
 module.exports = {
+    /** @type {import('@tryghost/webmentions/lib/MentionsAPI')} */
+    api: null,
     controller: new MentionController(),
+    didInit: false,
     async init() {
+        if (this.didInit) {
+            return;
+        }
+        this.didInit = true;
         const repository = new BookshelfMentionRepository({
             MentionModel: models.Mention,
             DomainEvents
@@ -50,6 +57,8 @@ module.exports = {
             resourceService,
             routingService
         });
+
+        this.api = api;
 
         this.controller.init({
             api,
@@ -97,6 +106,6 @@ module.exports = {
                 }
             }
         });
-        sendingService.listen(events); 
+        sendingService.listen(events);
     }
 };

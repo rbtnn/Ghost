@@ -1,3 +1,4 @@
+import React from 'react';
 import * as Sentry from '@sentry/react';
 import TriggerButton from './components/TriggerButton';
 import Notification from './components/Notification';
@@ -13,7 +14,7 @@ import NotificationParser from './utils/notifications';
 import {allowCompMemberUpgrade, createPopupNotification, getCurrencySymbol, getFirstpromoterId, getPriceIdFromPageQuery, getProductCadenceFromPrice, getProductFromId, getQueryPrice, getSiteDomain, isActiveOffer, isComplimentaryMember, isInviteOnlySite, isPaidMember, isSentryEventAllowed, removePortalLinkFromUrl} from './utils/helpers';
 import {handleDataAttributes} from './data-attributes';
 
-const React = require('react');
+import i18nLib from '@tryghost/i18n';
 
 const DEV_MODE_DATA = {
     showPopup: true,
@@ -156,7 +157,7 @@ export default class App extends React.Component {
         try {
             // Fetch data from API, links, preview, dev sources
             const {site, member, page, showPopup, popupNotification, lastPage, pageQuery, pageData} = await this.fetchData();
-            const i18n = require('@tryghost/i18n')(/*site.locale || */ 'en', 'portal'); // TODO: uncomment when you want to enable i18n translations
+            const i18n = i18nLib(/*site.locale || */ 'en', 'portal'); // TODO: uncomment when you want to enable i18n translations
             const state = {
                 site,
                 member,
@@ -508,7 +509,8 @@ export default class App extends React.Component {
             return null;
         }
         const {portal_sentry: portalSentry, portal_version: portalVersion, version: ghostVersion} = site;
-        const appVersion = process.env.REACT_APP_VERSION || portalVersion;
+        // eslint-disable-next-line no-undef
+        const appVersion = REACT_APP_VERSION || portalVersion;
         const releaseTag = `portal@${appVersion}|ghost@${ghostVersion}`;
         if (portalSentry && portalSentry.dsn) {
             Sentry.init({
@@ -534,7 +536,12 @@ export default class App extends React.Component {
             return null;
         }
         const firstPromoterId = getFirstpromoterId({site});
-        const siteDomain = getSiteDomain({site});
+        let siteDomain = getSiteDomain({site});
+        // Replace any leading subdomain and prefix the siteDomain with
+        // a `.` to allow the FPROM cookie to be accessible across all subdomains
+        // or the root.
+        siteDomain = siteDomain?.replace(/^(\S*\.)?(\S*\.\S*)$/i, '.$2');
+
         if (firstPromoterId && siteDomain) {
             const t = document.createElement('script');
             t.type = 'text/javascript';

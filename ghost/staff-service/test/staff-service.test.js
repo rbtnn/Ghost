@@ -2,8 +2,10 @@
 // const testUtils = require('./utils');
 const sinon = require('sinon');
 const {MemberCreatedEvent, SubscriptionCancelledEvent, SubscriptionActivatedEvent} = require('@tryghost/member-events');
-const {MentionCreatedEvent} = require('@tryghost/webmentions');
 const {MilestoneCreatedEvent} = require('@tryghost/milestones');
+
+// Stuff we are testing
+const DomainEvents = require('@tryghost/domain-events');
 
 require('./utils');
 const StaffService = require('../index');
@@ -186,12 +188,70 @@ describe('StaffService', function () {
         describe('subscribeEvents', function () {
             it('subscribes to events', async function () {
                 service.subscribeEvents();
-                subscribeStub.callCount.should.eql(5);
+                subscribeStub.callCount.should.eql(4);
                 subscribeStub.calledWith(SubscriptionActivatedEvent).should.be.true();
                 subscribeStub.calledWith(SubscriptionCancelledEvent).should.be.true();
                 subscribeStub.calledWith(MemberCreatedEvent).should.be.true();
-                subscribeStub.calledWith(MentionCreatedEvent).should.be.true();
                 subscribeStub.calledWith(MilestoneCreatedEvent).should.be.true();
+            });
+
+            it('listens to events', async function () {
+                service = new StaffService({
+                    logging: {
+                        info: loggingInfoStub,
+                        warn: () => {},
+                        error: () => {}
+                    },
+                    models: {
+                        User: {
+                            getEmailAlertUsers: getEmailAlertUsersStub
+                        }
+                    },
+                    mailer: {
+                        send: mailStub
+                    },
+                    DomainEvents,
+                    settingsCache,
+                    urlUtils,
+                    settingsHelpers
+                });
+                service.subscribeEvents();
+                sinon.spy(service, 'handleEvent');
+                DomainEvents.dispatch(MemberCreatedEvent.create({
+                    source: 'member',
+                    memberId: 'member-2'
+                }));
+                await DomainEvents.allSettled();
+                service.handleEvent.calledWith(MemberCreatedEvent).should.be.true();
+
+                DomainEvents.dispatch(SubscriptionActivatedEvent.create({
+                    source: 'member',
+                    memberId: 'member-1',
+                    subscriptionId: 'sub-1',
+                    offerId: 'offer-1',
+                    tierId: 'tier-1'
+                }));
+                await DomainEvents.allSettled();
+                service.handleEvent.calledWith(SubscriptionActivatedEvent).should.be.true();
+
+                DomainEvents.dispatch(SubscriptionCancelledEvent.create({
+                    source: 'member',
+                    memberId: 'member-1',
+                    subscriptionId: 'sub-1',
+                    tierId: 'tier-1'
+                }));
+                await DomainEvents.allSettled();
+                service.handleEvent.calledWith(SubscriptionCancelledEvent).should.be.true();
+
+                DomainEvents.dispatch(MilestoneCreatedEvent.create({
+                    milestone: {
+                        type: 'arr',
+                        value: '100',
+                        currency: 'usd'
+                    }
+                }));
+                await DomainEvents.allSettled();
+                service.handleEvent.calledWith(MilestoneCreatedEvent).should.be.true();
             });
         });
 
@@ -336,21 +396,6 @@ describe('StaffService', function () {
                 ).should.be.true();
             });
 
-            it('handles new mention notification', async function () {
-                await service.handleEvent(MentionCreatedEvent, {
-                    data: {
-                        mention: {
-                            source: 'https://exmaple.com/some-post',
-                            target: 'https://exmaple.com/some-mentioned-post',
-                            sourceSiteTitle: 'Exmaple'
-                        }
-                    }
-                });
-                mailStub.calledWith(
-                    sinon.match({subject: `💌 New mention from: Exmaple`})
-                ).should.be.true();
-            });
-
             it('handles milestone created event', async function () {
                 await service.handleEvent(MilestoneCreatedEvent, {
                     data: {
@@ -377,7 +422,7 @@ describe('StaffService', function () {
                     created_at: '2022-08-01T07:30:39.882Z'
                 };
 
-                await service.emails.notifyFreeMemberSignup(member, options);
+                await service.emails.notifyFreeMemberSignup({member}, options);
 
                 mailStub.calledOnce.should.be.true();
                 testCommonMailData(stubs);
@@ -402,7 +447,7 @@ describe('StaffService', function () {
                     created_at: '2022-08-01T07:30:39.882Z'
                 };
 
-                await service.emails.notifyFreeMemberSignup(member, options);
+                await service.emails.notifyFreeMemberSignup({member}, options);
 
                 mailStub.calledOnce.should.be.true();
                 testCommonMailData(stubs);
@@ -416,6 +461,56 @@ describe('StaffService', function () {
                 ).should.be.true();
                 mailStub.calledWith(
                     sinon.match.has('html', sinon.match('Created on 1 Aug 2022 &#8226; France'))
+                ).should.be.true();
+            });
+
+            it('sends free member signup alert with attribution', async function () {
+                const member = {
+                    name: 'Ghost',
+                    email: 'member@example.com',
+                    id: 'abc',
+                    geolocation: '{"country": "France"}',
+                    created_at: '2022-08-01T07:30:39.882Z'
+                };
+
+                const attribution = {
+                    referrerSource: 'Twitter',
+                    title: 'Welcome Post',
+                    url: 'https://example.com/welcome'
+                };
+
+                await service.emails.notifyFreeMemberSignup({member, attribution}, options);
+
+                mailStub.calledOnce.should.be.true();
+                testCommonMailData(stubs);
+                getEmailAlertUsersStub.calledWith('free-signup').should.be.true();
+
+                mailStub.calledWith(
+                    sinon.match({subject: '🥳 Free member signup: Ghost'})
+                ).should.be.true();
+                mailStub.calledWith(
+                    sinon.match.has('html', sinon.match('🥳 Free member signup: Ghost'))
+                ).should.be.true();
+                mailStub.calledWith(
+                    sinon.match.has('html', sinon.match('Created on 1 Aug 2022 &#8226; France'))
+                ).should.be.true();
+
+                mailStub.calledWith(
+                    sinon.match.has('html', sinon.match('Source'))
+                ).should.be.true();
+
+                mailStub.calledWith(
+                    sinon.match.has('html', sinon.match('Twitter'))
+                ).should.be.true();
+
+                // check attribution page
+                mailStub.calledWith(
+                    sinon.match.has('html', sinon.match('Welcome Post'))
+                ).should.be.true();
+
+                // check attribution url
+                mailStub.calledWith(
+                    sinon.match.has('html', sinon.match('https://example.com/welcome'))
                 ).should.be.true();
             });
         });
@@ -449,6 +544,38 @@ describe('StaffService', function () {
                     interval: 'month',
                     startDate: '2022-08-01T07:30:39.882Z'
                 };
+            });
+
+            it('sends paid subscription start alert with attribution', async function () {
+                const attribution = {
+                    referrerSource: 'Twitter',
+                    title: 'Welcome Post',
+                    url: 'https://example.com/welcome'
+                };
+                await service.emails.notifyPaidSubscriptionStarted({member, offer: null, tier, subscription, attribution}, options);
+
+                mailStub.calledOnce.should.be.true();
+                testCommonPaidSubMailData({...stubs, member});
+
+                // check attribution text
+                mailStub.calledWith(
+                    sinon.match.has('html', sinon.match('Twitter'))
+                ).should.be.true();
+
+                // check attribution text
+                mailStub.calledWith(
+                    sinon.match.has('html', sinon.match('Source'))
+                ).should.be.true();
+
+                // check attribution page
+                mailStub.calledWith(
+                    sinon.match.has('html', sinon.match('Welcome Post'))
+                ).should.be.true();
+
+                // check attribution url
+                mailStub.calledWith(
+                    sinon.match.has('html', sinon.match('https://example.com/welcome'))
+                ).should.be.true();
             });
 
             it('sends paid subscription start alert without offer', async function () {

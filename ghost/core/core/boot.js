@@ -102,6 +102,11 @@ async function initCore({ghostServer, config, bootLogger, frontend}) {
     await settings.syncEmailSettings(config.get('hostSettings:emailVerification:verified'));
     debug('End: settings');
 
+    debug('Begin: i18n');
+    const i18n = require('./server/services/i18n');
+    await i18n.init();
+    debug('End: i18n');
+
     // The URLService is a core part of Ghost, which depends on models.
     debug('Begin: Url Service');
     const urlService = require('./server/services/url');
@@ -274,6 +279,16 @@ async function initDynamicRouting() {
 }
 
 /**
+ * The app service cannot be loaded unless the frontend is enabled
+ * In future, the logic to determine whether this should be loaded should be in the service loader
+ */
+async function initAppService() {
+    debug('Begin: App Service');
+    const appService = require('./frontend/services/apps');
+    await appService.init();
+}
+
+/**
  * Services are components that make up part of Ghost and need initializing on boot
  * These services should all be part of core, frontend services should be loaded with the frontend
  * We are working towards this being a service loader, with the ability to make certain services optional
@@ -291,9 +306,7 @@ async function initServices({config}) {
     const permissions = require('./server/services/permissions');
     const xmlrpc = require('./server/services/xmlrpc');
     const slack = require('./server/services/slack');
-    const {mega} = require('./server/services/mega');
     const webhooks = require('./server/services/webhooks');
-    const appService = require('./frontend/services/apps');
     const limits = require('./server/services/limits');
     const apiVersionCompatibility = require('./server/services/api-version-compatibility');
     const scheduling = require('./server/adapters/scheduling');
@@ -307,6 +320,7 @@ async function initServices({config}) {
     const emailService = require('./server/services/email-service');
     const emailAnalytics = require('./server/services/email-analytics');
     const mentionsService = require('./server/services/mentions');
+    const mentionsEmailReport = require('./server/services/mentions-email-report');
     const tagsPublic = require('./server/services/tags-public');
     const postsPublic = require('./server/services/posts-public');
     const slackNotifications = require('./server/services/slack-notifications');
@@ -325,6 +339,7 @@ async function initServices({config}) {
     await Promise.all([
         memberAttribution.init(),
         mentionsService.init(),
+        mentionsEmailReport.init(),
         staffService.init(),
         members.init(),
         tiers.init(),
@@ -337,9 +352,7 @@ async function initServices({config}) {
         audienceFeedback.init(),
         emailService.init(),
         emailAnalytics.init(),
-        mega.listen(),
         webhooks.listen(),
-        appService.init(),
         apiVersionCompatibility.init(),
         scheduling.init({
             apiUrl: urlUtils.urlFor('api', {type: 'admin'}, true)
@@ -488,6 +501,7 @@ async function bootGhost({backend = true, frontend = true, server = true} = {}) 
 
         if (frontend) {
             await initDynamicRouting();
+            await initAppService();
         }
 
         // TODO: move this to the correct place once we figure out where that is

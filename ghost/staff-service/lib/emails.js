@@ -16,7 +16,9 @@ class StaffServiceEmails {
         this.registerPartials();
     }
 
-    async notifyFreeMemberSignup(member, options) {
+    async notifyFreeMemberSignup({
+        member, attribution
+    }, options) {
         const users = await this.models.User.getEmailAlertUsers('free-signup', options);
 
         for (const user of users) {
@@ -25,8 +27,17 @@ class StaffServiceEmails {
 
             const subject = `🥳 Free member signup: ${memberData.name}`;
 
+            let attributionTitle = attribution?.title || '';
+            // In case of a homepage attribution, we want to show the title as "Homepage" on email
+            if (attributionTitle === 'homepage') {
+                attributionTitle = 'Homepage';
+            }
+
             const templateData = {
                 memberData,
+                attributionTitle,
+                attributionUrl: attribution?.url || '',
+                referrerSource: attribution?.referrerSource,
                 siteTitle: this.settingsCache.get('title'),
                 siteUrl: this.urlUtils.getSiteUrl(),
                 siteDomain: this.siteDomain,
@@ -47,7 +58,7 @@ class StaffServiceEmails {
         }
     }
 
-    async notifyPaidSubscriptionStarted({member, subscription, offer, tier}, options = {}) {
+    async notifyPaidSubscriptionStarted({member, subscription, offer, tier, attribution}, options = {}) {
         const users = await this.models.User.getEmailAlertUsers('paid-started', options);
 
         for (const user of users) {
@@ -70,8 +81,17 @@ class StaffServiceEmails {
 
             let offerData = this.getOfferData(offer);
 
+            let attributionTitle = attribution?.title || '';
+            // In case of a homepage attribution, we want to show the title as "Homepage" on email
+            if (attributionTitle === 'homepage') {
+                attributionTitle = 'Homepage';
+            }
+
             const templateData = {
                 memberData,
+                attributionTitle,
+                attributionUrl: attribution?.url || '',
+                referrerSource: attribution?.referrerSource,
                 tierData,
                 offerData,
                 subscriptionData,
@@ -142,56 +162,21 @@ class StaffServiceEmails {
         }
     }
 
-    async notifyMentionReceived({mention}) {
-        const users = await this.models.User.getEmailAlertUsers('mention-received');
-        let resource = null;
-        if (mention.resourceId) {
-            try {
-                const postModel = await this.models.Post.findOne({id: mention.resourceId.toString()});
-                // console.log(postModel.toJSON());
-                if (postModel) {
-                    resource = {
-                        id: postModel.id,
-                        name: postModel.get('title'),
-                        type: postModel.get('type') || 'post'
-                    };
-                }
-            } catch (err) {
-                this.logging.error(err);
-            }
-        }
-        for (const user of users) {
-            const to = user.email;
-            const subject = `💌 New mention from: ${mention.sourceSiteTitle}`;
-
-            const templateData = {
-                targetUrl: mention.target,
-                sourceUrl: mention.source,
-                sourceTitle: mention.sourceTitle,
-                sourceExcerpt: mention.sourceExcerpt,
-                sourceSiteTitle: mention.sourceSiteTitle,
-                sourceFavicon: mention.sourceFavicon,
-                sourceAuthor: mention.sourceAuthor,
-                sourceFeaturedImage: mention.sourceFeaturedImage,
-                resource,
-                siteTitle: this.settingsCache.get('title'),
-                siteUrl: this.urlUtils.getSiteUrl(),
-                siteDomain: this.siteDomain,
-                accentColor: this.settingsCache.get('accent_color'),
-                fromEmail: this.fromEmailAddress,
-                toEmail: to,
-                staffUrl: this.urlUtils.urlJoin(this.urlUtils.urlFor('admin', true), '#', `/settings/staff/${user.slug}`)
-            };
-
-            const {html, text} = await this.renderEmailTemplate('new-mention-received', templateData);
-
-            await this.sendMail({
-                to,
-                subject,
-                html,
-                text
-            });
-        }
+    /**
+     * @param {object} recipient
+     * @param {string} recipient.email
+     * @param {string} recipient.slug
+     */
+    async getSharedData(recipient) {
+        return {
+            siteTitle: this.settingsCache.get('title'),
+            siteUrl: this.urlUtils.getSiteUrl(),
+            siteDomain: this.siteDomain,
+            accentColor: this.settingsCache.get('accent_color'),
+            fromEmail: this.fromEmailAddress,
+            toEmail: recipient.email,
+            staffUrl: this.urlUtils.urlJoin(this.urlUtils.urlFor('admin', true), '#', `/settings/staff/${recipient.slug}`)
+        };
     }
 
     /**
@@ -354,13 +339,53 @@ class StaffServiceEmails {
         });
     }
 
-    async renderEmailTemplate(templateName, data) {
+    async renderHTML(templateName, data) {
         const htmlTemplateSource = await fs.readFile(path.join(__dirname, './email-templates/', `${templateName}.hbs`), 'utf8');
         const htmlTemplate = this.Handlebars.compile(Buffer.from(htmlTemplateSource).toString());
+
+        this.Handlebars.registerHelper('eq', function (arg, value, options) {
+            if (arg === value) {
+                return options.fn(this);
+            } else {
+                return options.inverse(this);
+            }
+        });
+
+        this.Handlebars.registerHelper('limit', function (array, limit) {
+            if (!Array.isArray(array)) {
+                return [];
+            }
+            return array.slice(0,limit);
+        });
+
+        let sharedData = {};
+        if (data.recipient) {
+            sharedData = await this.getSharedData(data.recipient);
+        }
+
+        return htmlTemplate({
+            ...data,
+            ...sharedData
+        });
+    }
+
+    async renderText(templateName, data) {
         const textTemplate = require(`./email-templates/${templateName}.txt.js`);
 
-        const html = htmlTemplate(data);
-        const text = textTemplate(data);
+        let sharedData = {};
+        if (data.recipient) {
+            sharedData = await this.getSharedData(data.recipient);
+        }
+
+        return textTemplate({
+            ...data,
+            ...sharedData
+        });
+    }
+
+    async renderEmailTemplate(templateName, data) {
+        const html = await this.renderHTML(templateName, data);
+        const text = await this.renderText(templateName, data);
 
         return {html, text};
     }

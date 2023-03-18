@@ -25,7 +25,7 @@
                 </div>
                 <div class="gh-dashboard-list-body">
                     {{#each this.posts as |post|}}
-                        <LinkTo class="gh-dashboard-list-item permalink" @route="editor.edit" @models={{array post.displayName post.id}}>
+                        <LinkTo class="gh-dashboard-list-item permalink" @route="posts.analytics" @model={{post.id}}>
                             <div class="gh-dashboard-list-item-sub">
                                 <span class="gh-dashboard-list-text">{{post.title}}</span>
                             </div>
@@ -104,7 +104,10 @@
                                                         {{#if parsedEvent.info}}
                                                             <span class="highlight">({{parsedEvent.info}})</span>
                                                         {{/if}}
-                                                        {{#if parsedEvent.url}}
+                                                        {{#if parsedEvent.route}}
+                                                            <span class="gh-members-activity-event-join">{{parsedEvent.join}}</span>
+                                                            <LinkTo class="gh-members-activity-object-link" @route={{parsedEvent.route.name}} @model={{parsedEvent.route.model}}>{{parsedEvent.object}}</LinkTo>
+                                                        {{else if parsedEvent.url}}
                                                             <span class="gh-members-activity-event-join">{{parsedEvent.join}}</span>
                                                             <a class="ghost-members-activity-object-link" href="{{parsedEvent.url}}" target="_blank" rel="noopener noreferrer">{{parsedEvent.object}}</a>
                                                         {{else if parsedEvent.email}}

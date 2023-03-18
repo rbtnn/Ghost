@@ -7,7 +7,6 @@ const logging = require('@tryghost/logging');
 describe('Unit: services/url/Urls', function () {
     let urls;
     let eventsToRemember;
-    let loggingStub;
 
     beforeEach(function () {
         urls = new Urls();
@@ -72,7 +71,7 @@ describe('Unit: services/url/Urls', function () {
 
         urls.getByResourceId('object-id-x').resource.data.slug.should.eql('a');
 
-        loggingStub = sinon.stub(logging, 'error');
+        sinon.stub(logging, 'error');
         // add duplicate
         urls.add({
             url: '/test/',
@@ -84,8 +83,6 @@ describe('Unit: services/url/Urls', function () {
             },
             generatorId: 1
         });
-        loggingStub.calledOnce.should.eql(true);
-        loggingStub.firstCall.firstArg.should.have.property('code').eql('URLSERVICE_RESOURCE_DUPLICATE');
 
         should.exist(eventsToRemember['url.added']);
 

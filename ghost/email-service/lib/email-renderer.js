@@ -20,6 +20,7 @@ const htmlToPlaintext = require('@tryghost/html-to-plaintext');
  * @prop {string} uuid
  * @prop {string} email
  * @prop {string} name
+ * @prop {Date|null} createdAt This can be null if the member has been deleted for older email recipient rows
  */
 
 /**
@@ -59,6 +60,7 @@ class EmailRenderer {
     #memberAttributionService;
     #outboundLinkTagger;
     #audienceFeedbackService;
+    #labs;
 
     /**
      * @param {object} dependencies
@@ -76,6 +78,7 @@ class EmailRenderer {
      * @param {object} dependencies.memberAttributionService
      * @param {object} dependencies.audienceFeedbackService
      * @param {object} dependencies.outboundLinkTagger
+     * @param {object} dependencies.labs
      */
     constructor({
         settingsCache,
@@ -89,7 +92,8 @@ class EmailRenderer {
         linkTracking,
         memberAttributionService,
         audienceFeedbackService,
-        outboundLinkTagger
+        outboundLinkTagger,
+        labs
     }) {
         this.#settingsCache = settingsCache;
         this.#settingsHelpers = settingsHelpers;
@@ -103,6 +107,7 @@ class EmailRenderer {
         this.#memberAttributionService = memberAttributionService;
         this.#audienceFeedbackService = audienceFeedbackService;
         this.#outboundLinkTagger = outboundLinkTagger;
+        this.#labs = labs;
     }
 
     getSubject(post) {
@@ -294,7 +299,7 @@ class EmailRenderer {
         html = $.html(); // () Fix for vscode syntax highlighter
 
         // Replacement strings
-        const replacementDefinitions = this.buildReplacementDefinitions({html, newsletter});
+        const replacementDefinitions = this.buildReplacementDefinitions({html, newsletterUuid: newsletter.get('uuid')});
 
         // TODO: normalizeReplacementStrings (replace unsupported replacement strings)
 
@@ -316,7 +321,6 @@ class EmailRenderer {
     }
 
     /**
-     * @private
      * createUnsubscribeUrl
      *
      * Takes a member and newsletter uuid. Returns the url that should be used to unsubscribe
@@ -347,16 +351,15 @@ class EmailRenderer {
     }
 
     /**
-     * @private
      * Note that we only look in HTML because plaintext and HTML are essentially the same content
      * @returns {ReplacementDefinition[]}
      */
-    buildReplacementDefinitions({html, newsletter}) {
+    buildReplacementDefinitions({html, newsletterUuid}) {
         const baseDefinitions = [
             {
                 id: 'unsubscribe_url',
                 getValue: (member) => {
-                    return this.createUnsubscribeUrl(member.uuid, {newsletterUuid: newsletter.get('uuid')});
+                    return this.createUnsubscribeUrl(member.uuid, {newsletterUuid});
                 }
             },
             {
@@ -369,6 +372,29 @@ class EmailRenderer {
                 id: 'first_name',
                 getValue: (member) => {
                     return member.name?.split(' ')[0];
+                }
+            },
+            {
+                id: 'name',
+                getValue: (member) => {
+                    return member.name;
+                }
+            },
+            {
+                id: 'email',
+                getValue: (member) => {
+                    return member.email;
+                }
+            },
+            {
+                id: 'created_at',
+                getValue: (member) => {
+                    const timezone = this.#settingsCache.get('timezone');
+                    return member.createdAt ? DateTime.fromJSDate(member.createdAt).setZone(timezone).setLocale('en-gb').toLocaleString({
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric'
+                    }) : '';
                 }
             }
         ];
@@ -402,7 +428,7 @@ class EmailRenderer {
                     replacements.push({
                         id: replacementStr,
                         originalId: recipientProperty,
-                        token: new RegExp(escapeRegExp(replacementMatch), 'g'),
+                        token: new RegExp(escapeRegExp(replacementMatch).replace(/(?:"|&quot;)/g, '(?:"|&quot;)'), 'g'),
                         getValue: fallback ? (member => definition.getValue(member) || fallback) : definition.getValue
                     });
                 }
@@ -483,6 +509,9 @@ class EmailRenderer {
         const feedbackButtonPartial = await fs.readFile(path.join(__dirname, './email-templates/partials/', `feedback-button.hbs`), 'utf8');
         this.#handlebars.registerPartial('feedbackButton', feedbackButtonPartial);
 
+        const feedbackButtonMobilePartial = await fs.readFile(path.join(__dirname, './email-templates/partials/', `feedback-button-mobile.hbs`), 'utf8');
+        this.#handlebars.registerPartial('feedbackButtonMobile', feedbackButtonMobilePartial);
+
         // Actual template
         const htmlTemplateSource = await fs.readFile(path.join(__dirname, './email-templates/', `template.hbs`), 'utf8');
         this.#renderTemplate = this.#handlebars.compile(Buffer.from(htmlTemplateSource).toString());
@@ -561,6 +590,11 @@ class EmailRenderer {
             0
         ).href.replace('--uuid--', '%%{uuid}%%');
 
+        const commentUrl = new URL(postUrl);
+        commentUrl.hash = '#ghost-comments';
+
+        const hasEmailOnlyFlag = post.related('posts_meta')?.get('email_only') ?? false;
+
         const data = {
             site: {
                 title: this.#settingsCache.get('title'),
@@ -576,6 +610,7 @@ class EmailRenderer {
             post: {
                 title: post.get('title'),
                 url: postUrl,
+                commentUrl: commentUrl.href,
                 authors,
                 publishedAt,
                 feature_image: postFeatureImage,
@@ -585,8 +620,13 @@ class EmailRenderer {
             },
 
             newsletter: {
-                name: newsletter.get('name')
+                name: newsletter.get('name'),
+                showPostTitleSection: newsletter.get('show_post_title_section'),
+                showCommentCta: newsletter.get('show_comment_cta') && this.#settingsCache.get('comments_enabled') !== 'off' && !hasEmailOnlyFlag,
+                showSubscriptionDetails: newsletter.get('show_subscription_details') && this.#labs.isSet('makingItRain')
             },
+
+            labs: this.#settingsCache.get('labs'),
 
             //CSS
             accentColor: accentColor, // default to #15212A
@@ -597,6 +637,8 @@ class EmailRenderer {
             headerImage,
             headerImageWidth,
             showHeaderIcon: newsletter.get('show_header_icon') && this.#settingsCache.get('icon'),
+
+            // TODO: consider moving these to newsletter property
             showHeaderTitle: newsletter.get('show_header_title'),
             showHeaderName: newsletter.get('show_header_name'),
             showFeatureImage: newsletter.get('show_feature_image') && !!postFeatureImage,
@@ -605,7 +647,7 @@ class EmailRenderer {
             classes: {
                 title: 'post-title' + (newsletter.get('title_font_category') === 'serif' ? ` post-title-serif` : ``) + (newsletter.get('title_alignment') === 'left' ? ` post-title-left` : ``),
                 titleLink: 'post-title-link' + (newsletter.get('title_alignment') === 'left' ? ` post-title-link-left` : ``),
-                meta: 'post-meta' + (newsletter.get('title_alignment') === 'left' ? ` post-meta-left` : ``),
+                meta: 'post-meta' + (newsletter.get('title_alignment') === 'left' ? ` post-meta-left` : ` post-meta-center`),
                 body: newsletter.get('body_font_category') === 'sans_serif' ? `post-content-sans-serif` : `post-content`
             },
 

@@ -1,17 +1,17 @@
 const {agentProvider, fixtureManager, matchers} = require('../../utils/e2e-framework');
 const FormData = require('form-data');
 const p = require('path');
-const {promises: fs, stat} = require('fs');
+const {promises: fs} = require('fs');
 const assert = require('assert');
 const config = require('../../../core/shared/config');
 const urlUtils = require('../../../core/shared/url-utils');
 const imageTransform = require('@tryghost/image-transform');
 const sinon = require('sinon');
 const storage = require('../../../core/server/adapters/storage');
-const sleep = require('../../utils/sleep');
 const {anyErrorId} = matchers;
 const {imageSize} = require('../../../core/server/lib/image');
 const configUtils = require('../../utils/configUtils');
+const logging = require('@tryghost/logging');
 
 const images = [];
 let agent, frontendAgent, ghostServer;
@@ -188,6 +188,7 @@ describe('Images API', function () {
     it('Can not upload a json file', async function () {
         const originalFilePath = p.join(__dirname, '/../../utils/fixtures/data/redirects.json');
         const fileContents = await fs.readFile(originalFilePath);
+        const loggingStub = sinon.stub(logging, 'error');
         await uploadImageRequest({fileContents, filename: 'redirects.json', contentType: 'application/json'})
             .expectStatus(415)
             .matchBodySnapshot({
@@ -195,11 +196,13 @@ describe('Images API', function () {
                     id: anyErrorId
                 }]
             });
+        sinon.assert.calledOnce(loggingStub);
     });
 
     it('Can not upload a file without extension', async function () {
         const originalFilePath = p.join(__dirname, '/../../utils/fixtures/data/redirects.json');
         const fileContents = await fs.readFile(originalFilePath);
+        const loggingStub = sinon.stub(logging, 'error');
         await uploadImageRequest({fileContents, filename: 'redirects', contentType: 'image/png'})
             .expectStatus(415)
             .matchBodySnapshot({
@@ -207,11 +210,13 @@ describe('Images API', function () {
                     id: anyErrorId
                 }]
             });
+        sinon.assert.calledOnce(loggingStub);
     });
 
     it('Can not upload a json file with image mime type', async function () {
         const originalFilePath = p.join(__dirname, '/../../utils/fixtures/data/redirects.json');
         const fileContents = await fs.readFile(originalFilePath);
+        const loggingStub = sinon.stub(logging, 'error');
         await uploadImageRequest({fileContents, filename: 'redirects.json', contentType: 'image/gif'})
             .expectStatus(415)
             .matchBodySnapshot({
@@ -219,11 +224,13 @@ describe('Images API', function () {
                     id: anyErrorId
                 }]
             });
+        sinon.assert.calledOnce(loggingStub);
     });
 
     it('Can not upload a json file with image file extension', async function () {
         const originalFilePath = p.join(__dirname, '/../../utils/fixtures/data/redirects.json');
         const fileContents = await fs.readFile(originalFilePath);
+        const loggingStub = sinon.stub(logging, 'error');
         await uploadImageRequest({fileContents, filename: 'redirects.png', contentType: 'application/json'})
             .expectStatus(415)
             .matchBodySnapshot({
@@ -231,6 +238,7 @@ describe('Images API', function () {
                     id: anyErrorId
                 }]
             });
+        sinon.assert.calledOnce(loggingStub);
     });
 
     it('Can upload multiple images with the same name', async function () {

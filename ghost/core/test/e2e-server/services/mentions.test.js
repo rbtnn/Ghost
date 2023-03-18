@@ -1,9 +1,7 @@
 const {agentProvider, fixtureManager, mockManager} = require('../../utils/e2e-framework');
-const sinon = require('sinon');
 const nock = require('nock');
 const assert = require('assert');
 const markdownToMobiledoc = require('../../utils/fixtures/data-generator').markdownToMobiledoc;
-const dnsPromises = require('dns').promises;
 const jobsService = require('../../../core/server/services/mentions-jobs');
 
 let agent;
@@ -25,14 +23,11 @@ describe('Mentions Service', function () {
         agent = await agentProvider.getAdminAPIAgent();
         await fixtureManager.init('users');
         await agent.loginAsAdmin();
-        nock.disableNetConnect(); // make sure we don't actually send mentions
     });
 
     beforeEach(async function () {
         // externalRequest does dns lookup; stub to make sure we don't fail with fake domain names
-        sinon.stub(dnsPromises, 'lookup').callsFake(function () {
-            return Promise.resolve({address: '123.123.123.123'});
-        });
+        mockManager.disableNetwork();
 
         // mock response from website mentioned by post to provide endpoint
         mentionMock = nock(mentionUrl.href)
@@ -52,21 +47,15 @@ describe('Mentions Service', function () {
 
     afterEach(async function () {
         mockManager.restore();
-        nock.cleanAll();
-    });
-
-    after(function () {
-        nock.enableNetConnect();
-        nock.cleanAll();
     });
 
     describe('Sending Service', function () {
         describe(`does not send when we expect it to not send`, function () {
             it('New draft post created', async function () {
-                const publishedPost = {status: 'draft', ...mentionsPost};
+                const draftPost = {status: 'draft', ...mentionsPost};
                 await agent
                     .post('posts/')
-                    .body({posts: [publishedPost]})
+                    .body({posts: [draftPost]})
                     .expectStatus(201);
 
                 await jobsService.allSettled();
@@ -95,6 +84,20 @@ describe('Mentions Service', function () {
                 await agent
                     .post('posts/')
                     .body({posts: [publishedPost]})
+                    .expectStatus(201);
+
+                await jobsService.allSettled();
+                await DomainEvents.allSettled();
+
+                assert.equal(mentionMock.isDone(), false);
+                assert.equal(endpointMock.isDone(), false);
+            });
+
+            it('New draft page created', async function () {
+                const draftPage = {status: 'draft', ...mentionsPost};
+                await agent
+                    .post('pages/')
+                    .body({pages: [draftPage]})
                     .expectStatus(201);
 
                 await jobsService.allSettled();
@@ -207,6 +210,107 @@ describe('Mentions Service', function () {
                 assert.equal(endpointMockTwo.isDone(), true);
             });
 
+            it('Newly published page (page.published)', async function () {
+                let publishedPage = {status: 'published', ...mentionsPost};
+                await agent
+                    .post('pages/')
+                    .body({pages: [publishedPage]})
+                    .expectStatus(201);
+
+                await jobsService.allSettled();
+                await DomainEvents.allSettled();
+
+                assert.equal(mentionMock.isDone(), true);
+                assert.equal(endpointMock.isDone(), true);
+            });
+
+            it('Edited published page (page.published.edited)', async function () {
+                const publishedPage = {status: 'published', ...mentionsPost};
+                const res = await agent
+                    .post('pages/')
+                    .body({pages: [publishedPage]})
+                    .expectStatus(201);
+
+                await jobsService.allSettled();
+                await DomainEvents.allSettled();
+
+                // while not the point of the test, we should have real links/mentions to start with
+                assert.equal(mentionMock.isDone(), true);
+                assert.equal(endpointMock.isDone(), true);
+
+                nock.cleanAll();
+
+                // reset mocks for mention
+                const mentionMockTwo = nock(mentionUrl.href)
+                    .persist()
+                    .get('/')
+                    .reply(200, targetHtml, {'content-type': 'text/html'});
+
+                const endpointMockTwo = nock(endpointUrl.href)
+                    .persist()
+                    .post('/')
+                    .reply(201);
+
+                const pageId = res.body.pages[0].id;
+                const editedPage = {
+                    mobiledoc: markdownToMobiledoc(mentionHtml + 'More content'),
+                    updated_at: res.body.pages[0].updated_at
+                };
+
+                await agent.put(`pages/${pageId}/`)
+                    .body({pages: [editedPage]})
+                    .expectStatus(200);
+
+                await jobsService.allSettled();
+                await DomainEvents.allSettled();
+
+                assert.equal(mentionMockTwo.isDone(), true);
+                assert.equal(endpointMockTwo.isDone(), true);
+            });
+
+            it('Unpublished post (post.unpublished)', async function () {
+                const publishedPage = {status: 'published', ...mentionsPost};
+                const res = await agent
+                    .post('pages/')
+                    .body({pages: [publishedPage]})
+                    .expectStatus(201);
+
+                await jobsService.allSettled();
+                await DomainEvents.allSettled();
+
+                // while not the point of the test, we should have real links/mentions to start with
+                assert.equal(mentionMock.isDone(), true);
+                assert.equal(endpointMock.isDone(), true);
+
+                nock.cleanAll();
+
+                // reset mocks for mention
+                const mentionMockTwo = nock(mentionUrl.href)
+                    .persist()
+                    .get('/')
+                    .reply(200, targetHtml, {'content-type': 'text/html'});
+                const endpointMockTwo = nock(endpointUrl.href)
+                    .persist()
+                    .post('/')
+                    .reply(201);
+
+                const pageId = res.body.pages[0].id;
+                // moving back to draft is how we unpublish
+                const unpublishedPage = {
+                    status: 'draft',
+                    updated_at: res.body.pages[0].updated_at
+                };
+                await agent.put(`pages/${pageId}/`)
+                    .body({pages: [unpublishedPage]})
+                    .expectStatus(200);
+
+                await jobsService.allSettled();
+                await DomainEvents.allSettled();
+
+                assert.equal(mentionMockTwo.isDone(), true);
+                assert.equal(endpointMockTwo.isDone(), true);
+            });
+
             it('Sends for links that got removed from a post', async function () {
                 const publishedPost = {status: 'published', ...mentionsPost};
                 const res = await agent
@@ -241,6 +345,49 @@ describe('Mentions Service', function () {
                 };
                 await agent.put(`posts/${postId}/`)
                     .body({posts: [editedPost]})
+                    .expectStatus(200);
+
+                await jobsService.allSettled();
+                await DomainEvents.allSettled();
+
+                assert.equal(mentionMockTwo.isDone(), true);
+                assert.equal(endpointMockTwo.isDone(), true);
+            });
+
+            it('Sends for links that got removed from a page', async function () {
+                const publishedPage = {status: 'published', ...mentionsPost};
+                const res = await agent
+                    .post('pages/')
+                    .body({pages: [publishedPage]})
+                    .expectStatus(201);
+
+                await jobsService.allSettled();
+                await DomainEvents.allSettled();
+
+                // while not the point of the test, we should have real links/mentions to start with
+                assert.equal(mentionMock.isDone(), true);
+                assert.equal(endpointMock.isDone(), true);
+
+                nock.cleanAll();
+
+                // reset mocks for mention
+                const mentionMockTwo = nock(mentionUrl.href)
+                    .persist()
+                    .get('/')
+                    .reply(200, targetHtml, {'content-type': 'text/html'});
+
+                const endpointMockTwo = nock(endpointUrl.href)
+                    .persist()
+                    .post('/')
+                    .reply(201);
+
+                const pageId = res.body.pages[0].id;
+                const editedPage = {
+                    mobiledoc: markdownToMobiledoc(`mentions were removed from this post`),
+                    updated_at: res.body.pages[0].updated_at
+                };
+                await agent.put(`pages/${pageId}/`)
+                    .body({pages: [editedPage]})
                     .expectStatus(200);
 
                 await jobsService.allSettled();

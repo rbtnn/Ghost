@@ -1,17 +1,17 @@
 const {MemberCreatedEvent, SubscriptionCancelledEvent, SubscriptionActivatedEvent} = require('@tryghost/member-events');
-const {MentionCreatedEvent} = require('@tryghost/webmentions');
 const {MilestoneCreatedEvent} = require('@tryghost/milestones');
 
 // @NOTE: 'StaffService' is a vague name that does not describe what it's actually doing.
 //         Possibly, "StaffNotificationService" or "StaffEventNotificationService" would be a more accurate name
 class StaffService {
-    constructor({logging, models, mailer, settingsCache, settingsHelpers, urlUtils, DomainEvents, labs}) {
+    constructor({logging, models, mailer, settingsCache, settingsHelpers, urlUtils, DomainEvents, labs, memberAttributionService}) {
         this.logging = logging;
         this.labs = labs;
         /** @private */
         this.settingsCache = settingsCache;
         this.models = models;
         this.DomainEvents = DomainEvents;
+        this.memberAttributionService = memberAttributionService;
 
         const Emails = require('./emails');
 
@@ -78,10 +78,6 @@ class StaffService {
 
     /** @private */
     async handleEvent(type, event) {
-        if (type === MentionCreatedEvent && event.data.mention && this.labs.isSet('webmentions') && this.labs.isSet('webmentionEmails')) {
-            return await this.emails.notifyMentionReceived(event.data);
-        }
-
         if (type === MilestoneCreatedEvent && event.data.milestone && this.labs.isSet('milestoneEmails')) {
             await this.emails.notifyMilestoneReceived(event.data);
         }
@@ -98,13 +94,29 @@ class StaffService {
         });
 
         if (type === MemberCreatedEvent && member.status === 'free') {
-            await this.emails.notifyFreeMemberSignup(member);
+            let attribution;
+            try {
+                attribution = await this.memberAttributionService.getMemberCreatedAttribution(event.data.memberId);
+            } catch (e) {
+                this.logging.warn(`Failed to get attribution for member - ${event?.data?.memberId}`);
+            }
+            await this.emails.notifyFreeMemberSignup({
+                member,
+                attribution
+            });
         } else if (type === SubscriptionActivatedEvent) {
+            let attribution;
+            try {
+                attribution = await this.memberAttributionService.getSubscriptionCreatedAttribution(event.data.subscriptionId);
+            } catch (e) {
+                this.logging.warn(`Failed to get attribution for member - ${event?.data?.memberId}`);
+            }
             await this.emails.notifyPaidSubscriptionStarted({
                 member,
                 offer,
                 tier,
-                subscription
+                subscription,
+                attribution
             });
         } else if (type === SubscriptionCancelledEvent) {
             subscription.canceledAt = event.timestamp;
@@ -141,15 +153,6 @@ class StaffService {
                 await this.handleEvent(SubscriptionCancelledEvent, event);
             } catch (e) {
                 this.logging.error(e, `Failed to notify paid member subscription cancel - ${event?.data?.memberId}`);
-            }
-        });
-
-        // Trigger email when a new webmention is received
-        this.DomainEvents.subscribe(MentionCreatedEvent, async (event) => {
-            try {
-                await this.handleEvent(MentionCreatedEvent, event);
-            } catch (e) {
-                this.logging.error(e, `Failed to notify webmention`);
             }
         });
 

@@ -75,14 +75,23 @@ class BatchSendingService {
 
         if (BEFORE_RETRY_CONFIG) {
             this.#BEFORE_RETRY_CONFIG = BEFORE_RETRY_CONFIG;
+        } else {
+            if (process.env.NODE_ENV.startsWith('test') || process.env.NODE_ENV === 'development') {
+                this.#BEFORE_RETRY_CONFIG = {maxRetries: 0};
+            }
         }
         if (AFTER_RETRY_CONFIG) {
             this.#AFTER_RETRY_CONFIG = AFTER_RETRY_CONFIG;
+        } else {
+            if (process.env.NODE_ENV.startsWith('test') || process.env.NODE_ENV === 'development') {
+                this.#AFTER_RETRY_CONFIG = {maxRetries: 0};
+            }
         }
+
         if (MAILGUN_API_RETRY_CONFIG) {
             this.#MAILGUN_API_RETRY_CONFIG = MAILGUN_API_RETRY_CONFIG;
         } else {
-            if (process.env.NODE_ENV.startsWith('test')) {
+            if (process.env.NODE_ENV.startsWith('test') || process.env.NODE_ENV === 'development') {
                 this.#MAILGUN_API_RETRY_CONFIG = {maxRetries: 0};
             }
         }
@@ -488,13 +497,14 @@ class BatchSendingService {
      * @returns {Promise<MemberLike[]>}
      */
     async getBatchMembers(batchId) {
-        const models = await this.#models.EmailRecipient.findAll({filter: `batch_id:${batchId}`});
+        const models = await this.#models.EmailRecipient.findAll({filter: `batch_id:${batchId}`, withRelated: ['member']});
         return models.map((model) => {
             return {
                 id: model.get('member_id'),
                 uuid: model.get('member_uuid'),
                 email: model.get('member_email'),
-                name: model.get('member_name')
+                name: model.get('member_name'),
+                createdAt: model.related('member')?.get('created_at') ?? null
             };
         });
     }

@@ -58,8 +58,8 @@ async function createMemberWithSubscription(interval, amount, currency, date) {
     nock('https://api.stripe.com')
         .persist()
         .get(/v1\/.*/)
-        .reply((uri, body) => {
-            const [match, resource, id] = uri.match(/\/?v1\/(\w+)\/?(\w+)/) || [null];
+        .reply((uri) => {
+            const [match, resource] = uri.match(/\/?v1\/(\w+)\/?(\w+)/) || [null];
 
             if (!match) {
                 return [500];
@@ -144,11 +144,10 @@ describe('Milestones Service', function () {
     let loggingStub;
 
     const milestonesConfig = {
-        arr: [{currency: 'usd', values: [100, 150]}],
-        members: [10, 20, 30],
+        arr: [{currency: 'usd', values: [0, 100, 150]}],
+        members: [0, 10, 20, 30],
         minDaysSinceImported: 7,
-        minDaysSinceLastEmail: 14,
-        maxPercentageFromMilestone: 0.35
+        minDaysSinceLastEmail: 14
     };
 
     before(async function () {
@@ -168,6 +167,7 @@ describe('Milestones Service', function () {
         sinon.createSandbox();
         configUtils.set('milestones', milestonesConfig);
         mockManager.mockLabsEnabled('milestoneEmails');
+        mockManager.mockMail();
     });
 
     afterEach(async function () {
@@ -191,7 +191,7 @@ describe('Milestones Service', function () {
         const firstResultPromise = milestonesService.initAndRun(fifteenDays);
         await clock.tickAsync(fifteenDays);
         const firstRun = await firstResultPromise;
-        assert(firstRun.members === undefined);
+        assert(firstRun.members.value === 0);
         assert(firstRun.arr === undefined);
 
         await createFreeMembers(7);
@@ -200,17 +200,19 @@ describe('Milestones Service', function () {
         const secondResultPromise = milestonesService.initAndRun(fifteenDays);
         await clock.tickAsync(fifteenDays);
         const secondRun = await secondResultPromise;
-        assert(secondRun.members === undefined);
-        assert(secondRun.arr === undefined);
+
+        assert(secondRun.members.value === 0);
+        assert(secondRun.arr.value === 0);
 
         // Reached the first milestone for members
         await createFreeMembers(1);
         const thirdResultPromise = milestonesService.initAndRun(fifteenDays);
         await clock.tickAsync(fifteenDays);
         const thirdRun = await thirdResultPromise;
+
         assert(thirdRun.members.value === 10);
         assert(thirdRun.members.emailSentAt !== undefined);
-        assert(thirdRun.arr === undefined);
+        assert(thirdRun.arr.value === 0);
 
         const memberMilestoneModel = await models.Milestone.findOne({value: 10, type: 'members'});
 
@@ -229,7 +231,7 @@ describe('Milestones Service', function () {
         const fourthResultPromise = milestonesService.initAndRun(100);
         await clock.tickAsync(100);
         const fourthRun = await fourthResultPromise;
-        assert(fourthRun.members === undefined);
+        assert(fourthRun.members.value === 10);
         assert(fourthRun.arr.value === 100);
         assert(fourthRun.arr.emailSentAt !== undefined);
 
@@ -279,7 +281,8 @@ describe('Milestones Service', function () {
 
         assert(result.members.value === 30);
         assert(result.members.emailSentAt === null);
-        assert(result.arr === undefined);
+
+        assert(result.arr.value === 100);
 
         const memberMilestoneModel = await models.Milestone.findOne({value: 30, type: 'members'});
 

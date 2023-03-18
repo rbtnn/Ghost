@@ -1,9 +1,8 @@
+import React from 'react';
 import ActionButton from '../common/ActionButton';
 import CloseButton from '../common/CloseButton';
 import AppContext from '../../AppContext';
 import {ReactComponent as EnvelopeIcon} from '../../images/icons/envelope.svg';
-
-const React = require('react');
 
 export const MagicLinkStyles = `
     .gh-portal-icon-envelope {
@@ -18,6 +17,7 @@ export const MagicLinkStyles = `
     }
 
     .gh-portal-inbox-notification p {
+        max-width: 420px;
         text-align: center;
         margin-bottom: 30px;
     }

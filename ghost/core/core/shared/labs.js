@@ -20,7 +20,6 @@ const GA_FEATURES = [
     'memberAttribution',
     'audienceFeedback',
     'themeErrorsNotification',
-    'emailStability',
     'emailErrors',
     'outboundLinkTagging'
 ];
@@ -35,11 +34,11 @@ const BETA_FEATURES = [
 
 const ALPHA_FEATURES = [
     'urlCache',
-    'mediaInliner',
     'lexicalEditor',
     'websockets',
     'webmentionEmails',
-    'stripeAutomaticTax'
+    'stripeAutomaticTax',
+    'makingItRain'
 ];
 
 module.exports.GA_KEYS = [...GA_FEATURES];

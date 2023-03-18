@@ -4,13 +4,12 @@ const SUPPORTED_LOCALES = ['en', 'nl'];
 
 /**
  * @param {string} [lng]
- * @param {'portal'|'test'} ns
+ * @param {'ghost'|'portal'|'test'} ns
  */
 module.exports = (lng = 'en', ns = 'portal') => {
     const i18nextInstance = i18next.createInstance();
     i18nextInstance.init({
         lng,
-        debug: process.env.NODE_ENV === 'development',
 
         // allow keys to be phrases having `:`, `.`
         nsSeparator: false,
