@@ -78,18 +78,23 @@
                                                 </td>
                                             </tr>
                                             <tr>
-                                                <td>
+                                                <td style="width: 100%">
                                                     <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="padding-bottom: 48px;">
                                                         <tr>
-                                                            <td class="{{classes.meta}} author-date" align="left">
+                                                            <td height="20" class="{{classes.meta}}" style="padding: 0;">
                                                                 By {{post.authors}} • <span class="post-meta-date">{{post.publishedAt}} </span>
-                                                                {{#if newsletter.showCommentCta}} 
+                                                                {{#if newsletter.showCommentCta}}
                                                                     <a href="{{post.commentUrl}}" class="comment-link" valign="middle">
                                                                         • <img src="https://static.ghost.org/v5.0.0/images/comment-icon.png" border="0" width="16" height="16" alt="Comment">
                                                                     </a>
                                                                 {{/if}}
                                                             </td>
-                                                            <td class="{{classes.meta}} view-online" align="right">
+                                                            <td class="{{classes.meta}} view-online desktop">
+                                                                <a href="{{post.url}}" class="view-online-link">View in browser</a>
+                                                            </td>
+                                                        </tr>
+                                                        <tr class="{{classes.meta}} view-online-mobile">
+                                                            <td height="20" class="view-online">
                                                                 <a href="{{post.url}}" class="view-online-link">View in browser</a>
                                                             </td>
                                                         </tr>
@@ -139,7 +144,7 @@
 
                             {{#if (or feedbackButtons newsletter.showCommentCta) }}
                                 <tr>
-                                    <td dir="ltr" width="100%" style="background-color: #ffffff; text-align: center; padding: 32px 4px 24px;" align="center">
+                                    <td dir="ltr" width="100%" style="background-color: #ffffff; text-align: center; padding: 32px 0 24px; border-bottom: 1px solid #e5eff5;" align="center">
                                         <table class="feedback-buttons" role="presentation" border="0" cellpadding="0" cellspacing="0">
                                             <tr>
                                                 {{#if feedbackButtons }}
@@ -151,7 +156,7 @@
                                                 {{/if}}
                                             </tr>
                                         </table>
-                                        <table class="feedback-buttons-mobile" role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%">
+                                        <table class="feedback-buttons-mobile" role="presentation" border="0" cellpadding="0" cellspacing="0">
                                             <tr>
                                                 {{#if feedbackButtons }}
                                                     {{> feedbackButtonMobile feedbackButtons href=feedbackButtons.likeHref buttonText='More like this' iconUrl="https://static.ghost.org/v5.0.0/images/more-like-this-mobile.png" width="42" height="42" }}
@@ -166,22 +171,41 @@
                                 </tr>
                             {{/if}}
 
+                             {{#if latestPosts.length}}
+                                <tr>
+                                    <td style="padding: 24px 0; border-bottom: 1px solid #e5eff5;">
+                                        <h3 class="latest-posts-header">Keep reading</h3>
+                                        {{> latestPosts}}
+                                    </td>
+                                </tr>
+                            {{/if}}
+
                             {{#if newsletter.showSubscriptionDetails}}
                                 <tr>
-                                    <td>
+                                    <td class="subscription-box">
                                         <h3>Subscription details</h3>
-                                        <p>You are receiving this because you are a <strong data-gh-segment="status:-free">paid</strong><strong data-gh-segment="status:free">free</strong> subscriber to <span>{{site.title}}</span>.</p>
-                                        <p>Name: %%{name}%%</p>
-                                        <p>Email: %%{email}%%</p>
-                                        <p>Member since: %%{created_at}%%</p>
-                                        <p data-gh-segment="status:-free">Renewal date: todo</p>
+                                        <p style="margin-bottom: 16px;">
+                                            <span>You are receiving this because you are a <strong>%%{status}%% subscriber</strong> to {{site.title}}.</span> %%{status_text}%%
+                                        </p>
+                                        <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%">
+                                            <tr>
+                                                <td class="subscription-details">
+                                                    <p class="%%{name_class}%%">Name: %%{name, "not provided"}%%</p>
+                                                    <p>Email: <a href="#">%%{email}%%</a></p>
+                                                    <p>Member since: %%{created_at}%%</p>
+                                                </td>
+                                                <td align="right" valign="bottom" class="manage-subscription">
+                                                    <a href="%%{manage_account_url}%%"> Manage subscription &rarr;</a>
+                                                </td>
+                                            </tr>
+                                        </table>
                                     </td>
                                 </tr>
                             {{/if}}
 
                             <tr>
                                 <td class="wrapper" align="center">
-                                    <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="border-top: 1px solid #e5eff5; padding-top: 40px; padding-bottom: 30px;">
+                                    <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="padding-top: 40px; padding-bottom: 30px;">
                                         {{#if footerContent }}
                                             <tr><td class="footer">{{{footerContent}}}</td></tr>
                                         {{/if}}

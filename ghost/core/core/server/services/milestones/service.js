@@ -10,7 +10,8 @@ const getStripeLiveEnabled = () => {
     const stripeConnect = settingsCache.get('stripe_connect_publishable_key');
     const stripeKey = settingsCache.get('stripe_publishable_key');
 
-    const stripeLiveRegex = /pk_live_/;
+    // Allow Stripe test key when in development mode
+    const stripeLiveRegex = process.env.NODE_ENV === 'development' ? /pk_test_/ : /pk_live_/;
 
     if (stripeConnect && stripeConnect.match(stripeLiveRegex)) {
         return true;
@@ -59,22 +60,18 @@ module.exports = {
      * @returns {Promise<object>}
      */
     async run() {
-        const labs = require('../../../shared/labs');
+        const members = await this.api.checkMilestones('members');
+        let arr;
+        const stripeLiveEnabled = getStripeLiveEnabled();
 
-        if (labs.isSet('milestoneEmails')) {
-            const members = await this.api.checkMilestones('members');
-            let arr;
-            const stripeLiveEnabled = getStripeLiveEnabled();
-
-            if (stripeLiveEnabled) {
-                arr = await this.api.checkMilestones('arr');
-            }
-
-            return {
-                members,
-                arr
-            };
+        if (stripeLiveEnabled) {
+            arr = await this.api.checkMilestones('arr');
         }
+
+        return {
+            members,
+            arr
+        };
     },
 
     /**
@@ -84,6 +81,11 @@ module.exports = {
      *  @returns {Promise<object>}
      */
     async scheduleRun(customTimeout) {
+        if (process.env.NODE_ENV === 'development') {
+            // Run the job within 5sec after boot when in local development mode
+            customTimeout = 5000;
+        }
+
         const timeOut = customTimeout || JOB_TIMEOUT;
 
         const today = new Date();

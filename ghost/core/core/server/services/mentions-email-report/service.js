@@ -38,8 +38,23 @@ module.exports = {
             /**
              * @returns {Promise<string>}
              */
-            async renderSubject() {
-                return 'Mention Report';
+            async renderSubject(report) {
+                const sourceSiteTitles = report?.mentions?.map(mention => mention.sourceSiteTitle);
+                const uniqueSourceSiteTitles = [...new Set(sourceSiteTitles)];
+                const totalSiteMentions = uniqueSourceSiteTitles.length;
+                const firstMentionSite = uniqueSourceSiteTitles[0];
+
+                let subject = 'Mention Report';
+
+                if (totalSiteMentions === 1) {
+                    subject = `${firstMentionSite} mentioned you`;
+                } else if (totalSiteMentions === 2) {
+                    subject = `${firstMentionSite} & 1 other mentioned you`;
+                } else if (totalSiteMentions > 2) {
+                    subject = `${firstMentionSite} & ${totalSiteMentions - 1} others mentioned you`;
+                }
+
+                return subject;
             },
 
             /**
@@ -48,8 +63,13 @@ module.exports = {
              * @returns {Promise<string>}
              */
             async renderHTML(report, recipient) {
+                // Filter out mentions with duplicate source url from the report
+                const uniqueMentions = report.mentions.filter((mention, index, self) => {
+                    return self.findIndex(m => m.sourceUrl.href === mention.sourceUrl.href) === index;
+                });
+
                 return staffService.api.emails.renderHTML('mention-report', {
-                    report: report,
+                    mentions: uniqueMentions,
                     recipient: recipient,
                     hasMoreMentions: report.mentions.length > 5
                 });
@@ -71,7 +91,7 @@ module.exports = {
         const settingsCache = require('../../../shared/settings-cache');
         const mentionReportHistoryService = {
             async getLatestReportDate() {
-                const setting = settingsCache.get('lastMentionsReportEmailTimestamp');
+                const setting = settingsCache.get('last_mentions_report_email_timestamp');
                 const parsedInt = parseInt(setting);
 
                 // Protect against missing/bad data
@@ -85,7 +105,7 @@ module.exports = {
             },
             async setLatestReportDate(date) {
                 await models.Settings.edit({
-                    key: 'lastMentionsReportEmailTimestamp',
+                    key: 'last_mentions_report_email_timestamp',
                     value: date.getTime()
                 });
             }
