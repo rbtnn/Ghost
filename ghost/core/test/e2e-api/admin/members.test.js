@@ -846,6 +846,19 @@ describe('Members API', function () {
             ]
         };
 
+        // Set site title to something with a special character to ensure subject line doesn't get escaped
+        // Refs https://github.com/TryGhost/Team/issues/2895
+        await agent.put('/settings/')
+            .body({
+                settings: [
+                    {
+                        key: 'title',
+                        value: 'Ghost\'s Test Site'
+                    }
+                ]
+            })
+            .expectStatus(200);
+
         const {body} = await agent
             .post('/members/?send_email=true&email_type=signup')
             .body({members: [member]})
@@ -866,7 +879,7 @@ describe('Members API', function () {
         const newMember = body.members[0];
 
         mockManager.assert.sentEmail({
-            subject: '🙌 Complete your sign up to Ghost!',
+            subject: '🙌 Complete your sign up to Ghost\'s Test Site!',
             to: 'member_getting_confirmation@test.com'
         });
 
@@ -913,6 +926,18 @@ describe('Members API', function () {
             memberId: newMember.id,
             asserts: []
         });
+
+        // Reset the site title to the default
+        await agent.put('/settings/')
+            .body({
+                settings: [
+                    {
+                        key: 'title',
+                        value: 'Ghost'
+                    }
+                ]
+            })
+            .expectStatus(200);
     });
 
     it('Add should fail when passing incorrect email_type query parameter', async function () {
@@ -2440,6 +2465,71 @@ describe('Members API', function () {
         assert.equal(changedMember.newsletters.length, 2);
         assert.ok(changedMember.newsletters.find(n => n.id === testUtils.DataGenerator.Content.newsletters[0].id), 'The member is still subscribed for a newsletter that is off by default');
         assert.ok(changedMember.newsletters.find(n => n.id === testUtils.DataGenerator.Content.newsletters[1].id), 'The member is still subscribed for the newsletter it subscribed to');
+    });
+
+    it('Adding newsletters to member with no subscriptions works even with subscribed false', async function () {
+        // Add member with no subscriptions
+        const member = {
+            name: 'test newsletter',
+            email: 'memberAddNewsletterSubscribed@test.com',
+            newsletters: []
+        };
+
+        const {body} = await agent
+            .post(`/members/`)
+            .body({members: [member]})
+            .expectStatus(201)
+            .matchBodySnapshot({
+                members: [{
+                    id: anyObjectId,
+                    uuid: anyUuid,
+                    created_at: anyISODateTime,
+                    updated_at: anyISODateTime,
+                    subscriptions: anyArray,
+                    labels: anyArray,
+                    newsletters: Array(0).fill(newsletterSnapshot)
+                }]
+            })
+            .matchHeaderSnapshot({
+                'content-version': anyContentVersion,
+                etag: anyEtag,
+                location: anyLocationFor('members')
+            });
+
+        const memberId = body.members[0].id;
+
+        const editedMember = {
+            subscribed: false,
+            newsletters: [
+                {
+                    id: testUtils.DataGenerator.Content.newsletters[0].id
+                }
+            ]
+        };
+
+        // Edit member
+        const {body: body2} = await agent
+            .put(`/members/${memberId}`)
+            .body({members: [editedMember]})
+            .expectStatus(200)
+            .matchBodySnapshot({
+                members: [{
+                    id: anyObjectId,
+                    uuid: anyUuid,
+                    created_at: anyISODateTime,
+                    updated_at: anyISODateTime,
+                    subscriptions: anyArray,
+                    labels: anyArray,
+                    newsletters: Array(1).fill(newsletterSnapshot)
+                }]
+            })
+            .matchHeaderSnapshot({
+                'content-version': anyContentVersion,
+                etag: anyEtag
+            });
+        const changedMember = body2.members[0];
+        assert.equal(changedMember.newsletters.length, 1);
+        assert.ok(changedMember.newsletters.find(n => n.id === testUtils.DataGenerator.Content.newsletters[0].id), 'The member should be subscribed to the newsletter');
     });
 
     it('Updating member data without newsletters does not change newsletters', async function () {

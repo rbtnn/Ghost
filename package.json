@@ -37,6 +37,7 @@
   },
   "resolutions": {
     "@elastic/elasticsearch": "8.5.0",
+    "@tryghost/errors": "1.2.24",
     "@tryghost/logging": "2.4.1",
     "moment": "2.24.0",
     "moment-timezone": "0.5.23"
@@ -49,6 +50,7 @@
       "@tryghost:groupCSS",
       "@tryghost:groupBuildTools"
     ],
+    "rebaseWhen": "never",
     "ignoreDeps": [
       "got",
       "intl-messageformat",
@@ -61,7 +63,8 @@
       "validator",
       "codemirror",
       "faker",
-      "@sentry/node"
+      "@sentry/node",
+      "ember-cli-code-coverage"
     ],
     "ignorePaths": [
       "test",
@@ -121,10 +124,10 @@
     "useWorkspaces": true
   },
   "devDependencies": {
-    "concurrently": "7.6.0",
+    "concurrently": "8.0.1",
     "eslint-plugin-ghost": "2.16.0",
     "husky": "8.0.3",
-    "lerna": "6.5.1",
+    "lerna": "6.6.1",
     "lint-staged": "13.1.2"
   }
 }

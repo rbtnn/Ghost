@@ -31,6 +31,20 @@
                     </div>
                 </div>
 
+                {{#if this.feature.migrateApp}}
+                <div class="gh-expandable-block">
+                    <div class="gh-expandable-header">
+                        <div>
+                            <h4 class="gh-expandable-title">Migrate content</h4>
+                            <p class="gh-expandable-description">Import your content from Substack</p>
+                        </div>
+                        <LinkTo @route="migrate" class="gh-btn" data-test-link="migrate">
+                            <span>Open</span>
+                        </LinkTo>
+                    </div>
+                </div>
+                {{/if}}
+
                 <div class="gh-expandable-block">
                     <div class="gh-expandable-header">
                         <div>
@@ -153,6 +167,19 @@
                     </div>
                     </GhUploader>
                 </div>
+                <div class="gh-expandable-block">
+                    <div class="gh-expandable-header">
+                        <div>
+                            <h4 class="gh-expandable-title">Enable Portal translations (beta)</h4>
+                            <p class="gh-expandable-description">
+                               Enable support for translations in the members signup/login system
+                            </p>
+                        </div>
+                        <div class="for-switch">
+                            <GhFeatureFlag @flag="i18n" />
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -197,19 +224,6 @@
                         </div>
                         <div class="for-switch">
                             <GhFeatureFlag @flag="webmentions" />
-                        </div>
-                    </div>
-                </div>
-                <div class="gh-expandable-block">
-                    <div class="gh-expandable-header">
-                        <div>
-                            <h4 class="gh-expandable-title">Webmention notification emails</h4>
-                            <p class="gh-expandable-description">
-                                Send a notification email to staff when a webmention is received.
-                            </p>
-                        </div>
-                        <div class="for-switch">
-                            <GhFeatureFlag @flag="webmentionEmails" />
                         </div>
                     </div>
                 </div>
@@ -262,6 +276,19 @@
                         </div>
                         <div class="for-switch">
                             <GhFeatureFlag @flag="makingItRain" />
+                        </div>
+                    </div>
+                </div>
+                <div class="gh-expandable-block">
+                    <div class="gh-expandable-header">
+                        <div>
+                            <h4 class="gh-expandable-title">Migrate content</h4>
+                            <p class="gh-expandable-description">
+                               Import content from other platforms to Ghost
+                            </p>
+                        </div>
+                        <div class="for-switch">
+                            <GhFeatureFlag @flag="migrateApp" />
                         </div>
                     </div>
                 </div>

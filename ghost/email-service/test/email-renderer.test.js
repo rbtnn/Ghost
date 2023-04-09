@@ -855,14 +855,16 @@ describe('Email renderer', function () {
     });
 
     describe('renderBody', function () {
-        let renderedPost = '<p>Lexical Test</p>';
+        let renderedPost = '<p>Lexical Test</p><img class="is-light-background" src="test-dark" /><img class="is-dark-background" src="test-light" />';
         let postUrl = 'http://example.com';
         let customSettings = {};
         let emailRenderer;
         let basePost;
         let addTrackingToUrlStub;
+        let labsEnabled;
 
         beforeEach(function () {
+            labsEnabled = true;
             basePost = {
                 lexical: '{}',
                 visibility: 'public',
@@ -956,9 +958,30 @@ describe('Email renderer', function () {
                     }
                 },
                 labs: {
-                    isSet: () => true
+                    isSet: () => labsEnabled
                 }
             });
+        });
+
+        it('Renders with labs disabled', async function () {
+            labsEnabled = false;
+            const post = createModel(basePost);
+            const newsletter = createModel({
+                header_image: null,
+                name: 'Test Newsletter',
+                show_badge: false,
+                feedback_enabled: true,
+                show_post_title_section: true
+            });
+            const segment = null;
+            const options = {};
+
+            await emailRenderer.renderBody(
+                post,
+                newsletter,
+                segment,
+                options
+            );
         });
 
         it('returns feedback buttons and unsubcribe links', async function () {
@@ -1170,6 +1193,52 @@ describe('Email renderer', function () {
             // Test footer
             response.html.should.containEql('Test footer</p>'); // begin tag skipped because style is inlined in that tag
             response.plaintext.should.containEql('Test footer');
+        });
+
+        it('works in dark mode', async function () {
+            const post = createModel(basePost);
+            const newsletter = createModel({
+                header_image: null,
+                name: 'Test Newsletter',
+                show_badge: false,
+                feedback_enabled: true,
+                show_post_title_section: true,
+                background_color: '#000000'
+            });
+            const segment = null;
+            const options = {};
+
+            let response = await emailRenderer.renderBody(
+                post,
+                newsletter,
+                segment,
+                options
+            );
+
+            assert.doesNotMatch(response.html, /is-light-background/);
+        });
+
+        it('works in light mode', async function () {
+            const post = createModel(basePost);
+            const newsletter = createModel({
+                header_image: null,
+                name: 'Test Newsletter',
+                show_badge: false,
+                feedback_enabled: true,
+                show_post_title_section: true,
+                background_color: '#FFFFFF'
+            });
+            const segment = null;
+            const options = {};
+
+            let response = await emailRenderer.renderBody(
+                post,
+                newsletter,
+                segment,
+                options
+            );
+
+            assert.doesNotMatch(response.html, /is-dark-background/);
         });
 
         it('replaces all links except the unsubscribe and feedback links', async function () {
@@ -1506,6 +1575,105 @@ describe('Email renderer', function () {
                     })
                 }
             });
+        });
+
+        async function templateDataWithSettings(settingsObj) {
+            const html = '';
+            const post = createModel({
+                posts_meta: createModel({}),
+                loaded: ['posts_meta']
+            });
+            const newsletter = createModel({
+                ...settingsObj
+            });
+
+            const data = await emailRenderer.getTemplateData({post, newsletter, html, addPaywall: false});
+            return data;
+        }
+
+        it('Uses the correct background colors based on settings', async function () {
+            const tests = [
+                {input: 'Invalid Color', expected: '#ffffff'},
+                {input: '#BADA55', expected: '#BADA55'},
+                {input: 'dark', expected: '#15212a'},
+                {input: 'light', expected: '#ffffff'},
+                {input: null, expected: '#ffffff'}
+            ];
+
+            for (const test of tests) {
+                const data = await templateDataWithSettings({
+                    background_color: test.input
+                });
+                assert.equal(data.backgroundColor, test.expected);
+            }
+        });
+
+        it('Uses the correct border colors based on settings', async function () {
+            settings.accent_color = '#ABC123';
+            const tests = [
+                {input: 'Invalid Color', expected: null},
+                {input: '#BADA55', expected: '#BADA55'},
+                {input: 'auto', expected: '#FFFFFF', background_color: '#15212A'},
+                {input: 'auto', expected: '#000000', background_color: '#ffffff'},
+                {input: 'light', expected: null},
+                {input: 'accent', expected: settings.accent_color},
+                {input: 'transparent', expected: null}
+            ];
+
+            for (const test of tests) {
+                const data = await templateDataWithSettings({
+                    border_color: test.input,
+                    background_color: test.background_color
+                });
+                assert.equal(data.borderColor, test.expected);
+            }
+        });
+
+        it('Uses the correct title colors based on settings and background color', async function () {
+            settings.accent_color = '#DEF456';
+            const tests = [
+                {input: '#BADA55', expected: '#BADA55'},
+                {input: 'accent', expected: settings.accent_color},
+                {input: 'Invalid Color', expected: '#FFFFFF', background_color: '#15212A'},
+                {input: null, expected: '#000000', background_color: '#ffffff'}
+            ];
+
+            for (const test of tests) {
+                const data = await templateDataWithSettings({
+                    title_color: test.input,
+                    background_color: test.background_color
+                });
+                assert.equal(data.titleColor, test.expected);
+            }
+        });
+
+        it('Sets the backgroundIsDark correctly', async function () {
+            const tests = [
+                {background_color: '#15212A', expected: true},
+                {background_color: '#ffffff', expected: false}
+            ];
+
+            for (const test of tests) {
+                const data = await templateDataWithSettings({
+                    background_color: test.background_color
+                });
+                assert.equal(data.backgroundIsDark, test.expected);
+            }
+        });
+
+        it('Sets the linkColor correctly', async function () {
+            settings.accent_color = '#A1B2C3';
+            const tests = [
+                {background_color: '#15212A', expected: '#ffffff'},
+                {background_color: '#ffffff', expected: settings.accent_color}
+            ];
+
+            for (const test of tests) {
+                const data = await templateDataWithSettings({
+                    background_color: test.background_color
+                });
+                assert.equal(data.linkColor, test.expected);
+            }
         });
 
         it('uses default accent color', async function () {
