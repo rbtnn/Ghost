@@ -203,6 +203,51 @@ module.exports = {
         }
     },
 
+    bulkEdit: {
+        statusCode: 200,
+        headers: {},
+        options: [
+            'filter'
+        ],
+        data: [
+            'action',
+            'meta'
+        ],
+        validation: {
+            data: {
+                action: {
+                    required: true,
+                    values: ['feature', 'unfeature']
+                }
+            },
+            options: {
+                filter: {
+                    required: true
+                }
+            }
+        },
+        permissions: {
+            method: 'edit'
+        },
+        async query(frame) {
+            return await postsService.bulkEdit(frame.data.bulk, frame.options);
+        }
+    },
+
+    bulkDestroy: {
+        statusCode: 200,
+        headers: {},
+        options: [
+            'filter'
+        ],
+        permissions: {
+            method: 'destroy'
+        },
+        async query(frame) {
+            return await postsService.bulkDestroy(frame.options);
+        }
+    },
+
     destroy: {
         statusCode: 204,
         headers: {

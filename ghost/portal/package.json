@@ -1,6 +1,6 @@
 {
   "name": "@tryghost/portal",
-  "version": "2.27.0",
+  "version": "2.29.1",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -27,7 +27,7 @@
     "lint": "eslint src --ext .js --cache",
     "preship": "yarn lint",
     "ship": "STATUS=$(git status --porcelain); echo $STATUS; if [ -z \"$STATUS\" ]; then yarn version; fi",
-    "postship": "git push ${GHOST_UPSTREAM:-origin} --follow-tags && yarn publish . --tag $npm_package_version",
+    "postship": "git push ${GHOST_UPSTREAM:-origin} --follow-tags && npm publish",
     "prepublishOnly": "yarn build"
   },
   "eslintConfig": {
@@ -60,8 +60,8 @@
   },
   "devDependencies": {
     "@babel/eslint-parser": "7.21.3",
-    "@sentry/react": "7.46.0",
-    "@sentry/tracing": "7.46.0",
+    "@sentry/react": "7.47.0",
+    "@sentry/tracing": "7.47.0",
     "@testing-library/jest-dom": "5.16.5",
     "@testing-library/react": "12.1.5",
     "@tryghost/i18n": "0.0.0",

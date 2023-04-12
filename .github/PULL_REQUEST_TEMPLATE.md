@@ -10,6 +10,5 @@ We appreciate your contribution!
 
 ---
 
-For fun, here's what Copilot analyzed from your PR:
-
-copilot:all
+<!-- Leave the line below if you'd like GitHub Copilot to generate a summary from your commit -->
+copilot:summary

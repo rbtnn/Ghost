@@ -28,6 +28,8 @@ export default ModalComponent.extend({
     changedTiers: null,
     openSection: null,
     portalPreviewGuid: 'modal-portal-settings',
+    closeOnEnter: false,
+    maxTermsLength: 115,
 
     confirm() {},
 
@@ -267,6 +269,26 @@ export default ModalComponent.extend({
 
         toggleSignupCheckboxRequired(checked) {
             this.settings.portalSignupCheckboxRequired = checked;
+        },
+
+        validateTermsHtml() {
+            let content = this.settings.portalSignupTermsHtml ?? '';
+
+            // Strip HTML-tags and characters from content so we have a reliable character count
+            content = content.replace(/<[^>]*>?/gm, '');
+            content = content.replace(/&nbsp;/g, ' ');
+            content = content.replace(/&amp;/g, '&');
+            content = content.replace(/&quot;/g, '"');
+            content = content.replace(/&lt;/g, '<');
+            content = content.replace(/&gt;/g, '>');
+
+            this.settings.errors.remove('portalSignupTermsHtml');
+            this.settings.hasValidated.removeObject('portalSignupTermsHtml');
+
+            if (content.length > this.maxTermsLength) {
+                this.settings.errors.add('portalSignupTermsHtml', 'Signup notice is too long');
+                this.settings.hasValidated.pushObject('portalSignupTermsHtml');
+            }
         }
     },
 
@@ -366,6 +388,7 @@ export default ModalComponent.extend({
     saveTask: task(function* () {
         this.send('validateFreeSignupRedirect');
         this.send('validatePaidSignupRedirect');
+        this.send('validateTermsHtml');
 
         this.settings.errors.remove('members_support_address');
         this.settings.hasValidated.removeObject('members_support_address');
