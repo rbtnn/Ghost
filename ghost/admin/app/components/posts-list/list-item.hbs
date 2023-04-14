@@ -48,7 +48,7 @@
         <LinkTo @route="editor.edit" @models={{array this.post.displayName this.post.id}} class="permalink gh-list-data gh-post-list-title">
             <h3 class="gh-content-entry-title">
                 {{#if @post.featured}}
-                    {{svg-jar "star" class="gh-featured-post"}}
+                    {{svg-jar "star-fill" class="gh-featured-post"}}
                 {{/if}}
                 {{@post.title}}
                 {{#if @post.lexical}}
@@ -78,7 +78,6 @@
                 <p class="gh-content-entry-status">
                     {{#if @post.isScheduled}}
                         <span class="scheduled">
-                            <span class="status-dot"></span>
                             Scheduled
                             {{#if this.isHovered}}
                                 <span class="schedule-details" {{css-transition "anim-fade-in-scale"}}>
@@ -95,7 +94,6 @@
 
                     {{#if @post.isDraft}}
                         <span class="draft">
-                            <span class="status-dot"></span>
                             Draft
                         </span>
                     {{/if}}
