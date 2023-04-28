@@ -32,6 +32,10 @@ export default class AnnouncementSettingsVisibilityComponent extends Component {
         return this.visibilitySettings.includes(this.visibilityOptions.visitors);
     }
 
+    get isMembersEnabled() {
+        return this.settings.membersEnabled;
+    }
+
     @action
     updateVisibility(event) {
         let updatedVisibilityOptions = [...this.visibilitySettings];
@@ -44,7 +48,9 @@ export default class AnnouncementSettingsVisibilityComponent extends Component {
         }
 
         this.settings.announcementVisibility = updatedVisibilityOptions;
-        this.settings.save();
-        this.args.onChange?.();
+        // update preview if there are no visibility options or just one to avoid update flickering on every check
+        if (!updatedVisibilityOptions.length || updatedVisibilityOptions.length === 1) {
+            this.args.onChange?.();
+        }
     }
 }

@@ -3,6 +3,7 @@ import {action} from '@ember/object';
 import {inject as service} from '@ember/service';
 
 export default class AnnouncementSettingsContentComponent extends Component {
+    @service feature;
     @service settings;
 
     get content() {
@@ -12,6 +13,5 @@ export default class AnnouncementSettingsContentComponent extends Component {
     @action
     setContent(html) {
         this.settings.announcementContent = html;
-        this.settings.save();
     }
 }

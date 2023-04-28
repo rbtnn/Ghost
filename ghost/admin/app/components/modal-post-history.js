@@ -60,6 +60,8 @@ export default class ModalPostHistory extends Component {
               createdAt: revision.get('createdAt'),
               title: revision.get('title'),
               feature_image: revision.get('featureImage'),
+              feature_image_alt: revision.get('featureImageAlt'),
+              feature_image_caption: revision.get('featureImageCaption'),
               author: {
                   name: revision.get('author.name') || 'Deleted staff user'
               },
@@ -72,6 +74,20 @@ export default class ModalPostHistory extends Component {
   @action
   onInsert() {
       this.updateDiff();
+      window.addEventListener('keydown', this.handleKeyDown);
+  }
+
+  @action
+  willDestroy() {
+      super.willDestroy(...arguments);
+      window.removeEventListener('keydown', this.handleKeyDown);
+  }
+
+  @action
+  handleKeyDown(event) {
+      if (event.key === 'Escape') {
+          this.args.closeModal();
+      }
   }
 
   @action

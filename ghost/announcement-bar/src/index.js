@@ -21,12 +21,21 @@ function getSiteData() {
      */
     const scriptTag = document.querySelector('script[data-announcement-bar]');
     if (scriptTag) {
-        const adminUrl = scriptTag.dataset.announcementBar;
-        const apiKey = scriptTag.dataset.key;
-        const apiUrl = scriptTag.dataset.api;
-        return {adminUrl, apiKey, apiUrl};
+        const apiUrl = scriptTag.dataset.apiUrl;
+        return {apiUrl, previewData: getPreviewData(scriptTag)};
     }
     return {};
+}
+
+function getPreviewData(scriptTag) {
+    if (scriptTag.dataset.preview) {
+        const announcement = scriptTag.dataset.announcement;
+        const announcementBackground = scriptTag.dataset.announcementBackground;
+
+        return {announcement, announcement_background: announcementBackground};
+    }
+
+    return null;
 }
 
 function setup() {
@@ -34,15 +43,13 @@ function setup() {
 }
 
 function init() {
-    const {adminUrl, apiKey, apiUrl} = getSiteData();
-    const adminBaseUrl = (adminUrl || window.location.origin)?.replace(/\/+$/, '');
+    const {apiUrl, previewData} = getSiteData();
     setup();
     ReactDOM.render(
         <React.StrictMode>
             <App
-                adminUrl={adminBaseUrl}
-                apiKey={apiKey}
                 apiUrl={apiUrl}
+                previewData={previewData}
             />
         </React.StrictMode>,
         document.getElementById(ROOT_DIV_ID)
