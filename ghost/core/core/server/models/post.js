@@ -19,7 +19,7 @@ const urlUtils = require('../../shared/url-utils');
 const {Tag} = require('./tag');
 const {Newsletter} = require('./newsletter');
 const {BadRequestError} = require('@tryghost/errors');
-const PostRevisions = require('@tryghost/post-revisions');
+const {PostRevisions} = require('@tryghost/post-revisions');
 const labs = require('../../shared/labs');
 
 const messages = {
@@ -915,7 +915,7 @@ Post = ghostBookshelf.Model.extend({
                     const revisionModels = await ghostBookshelf.model('PostRevision')
                         .findAll(Object.assign({
                             filter: `post_id:${model.id}`,
-                            columns: ['id', 'lexical', 'created_at', 'author_id', 'title', 'reason', 'post_status', 'created_at_ts']
+                            columns: ['id', 'lexical', 'created_at', 'author_id', 'title', 'reason', 'post_status', 'created_at_ts', 'feature_image']
                         }, _.pick(options, 'transacting')));
 
                     const revisions = revisionModels.toJSON();
@@ -935,7 +935,9 @@ Post = ghostBookshelf.Model.extend({
                     // This can be refactored once we have the status stored in each revision
                     const revisionOptions = {
                         forceRevision: options.save_revision,
-                        isPublished: newStatus === 'published'
+                        isPublished: newStatus === 'published',
+                        newStatus,
+                        olderStatus
                     };
                     const newRevisions = await postRevisions.getRevisions(current, revisions, revisionOptions);
                     model.set('post_revisions', newRevisions);
@@ -1127,6 +1129,16 @@ Post = ghostBookshelf.Model.extend({
         return filter;
     }
 }, {
+    getBulkActionExtraContext: function (options) {
+        if (options && options.filter && options.filter.includes('type:page')) {
+            return {
+                type: 'page'
+            };
+        }
+        return {
+            type: 'post'
+        };
+    },
     allowedFormats: ['mobiledoc', 'lexical', 'html', 'plaintext'],
 
     orderDefaultOptions: function orderDefaultOptions() {
@@ -1234,9 +1246,11 @@ Post = ghostBookshelf.Model.extend({
      * **See:** [ghostBookshelf.Model.findOne](base.js.html#Find%20One)
      */
     findOne: function findOne(data = {}, options = {}) {
-        // @TODO: remove when we drop v0.1
-        if (!options.filter && !data.status) {
-            data.status = 'published';
+        if (!options.context || !options.context.internal) {
+            // @TODO: remove when we drop v0.1
+            if (!options.filter && !data.status) {
+                data.status = 'published';
+            }
         }
 
         if (data.status === 'all') {

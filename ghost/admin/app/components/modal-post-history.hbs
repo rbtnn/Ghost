@@ -61,13 +61,22 @@
                                 <span class="gh-post-history-version">{{gh-format-post-time revision.createdAt format="D MMM YYYY, HH:mm"}}{{this.timezone}}</span>
                                 {{#if revision.latest}}
                                     <span class="gh-post-history-version-tag current">Latest</span>
-                                    {{#if (eq revision.postStatus "published")}}
-                                    <span class="gh-post-history-version-tag published">{{{revision.postStatus}}}</span>
-                                    {{/if}}
+                                {{/if}}
+
+                                {{#if revision.new_publish}}
+                                    <span class="gh-post-history-version-tag published">Published</span>
+                                {{/if}}
+                                {{#if (eq revision.reason "unpublished")}}
+                                    <span class="gh-post-history-version-tag unpublished">Unpublished</span>
                                 {{/if}}
                                 
                             </div>
-                            <span class="gh-post-history-version-meta {{if (eq revision.author.name "Deleted staff user") "deleted-user"}}">{{revision.author.name}}</span>
+                            <div class="flex items-center mt2">
+                                <span class="user-list-item-figure" style={{background-image-style revision.author.profile_image_url}}>
+                                    <span class="hidden">Photo of {{revision.author.name}}</span>
+                                </span>
+                                <span class="gh-post-history-version-meta {{if (eq revision.author.name "Deleted staff user") "deleted-user"}}">{{revision.author.name}}</span>
+                            </div>
                         </button>
                         {{#if (and revision.selected (not revision.latest))}}
                             <button

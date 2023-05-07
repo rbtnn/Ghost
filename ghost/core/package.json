@@ -1,6 +1,6 @@
 {
   "name": "ghost",
-  "version": "5.46.0",
+  "version": "5.47.0",
   "description": "The professional publishing platform",
   "author": "Ghost Foundation",
   "homepage": "https://ghost.org",
@@ -22,7 +22,8 @@
   "scripts": {
     "start": "node index",
     "setup": "knex-migrator init",
-    "build": "npm pack --pack-destination ../..",
+    "build": "yarn build:css",
+    "build:css": "postcss core/frontend/public/ghost.css --no-map --use cssnano -o core/frontend/public/ghost.min.css",
     "test": "yarn test:unit",
     "test:single": "mocha --require=./test/utils/overrides.js --exit --trace-warnings --recursive --extension=test.js --timeout=60000",
     "test:all": "yarn test:unit && yarn test:integration && yarn test:e2e && yarn lint",
@@ -50,15 +51,15 @@
     "lint:test": "eslint -c test/.eslintrc.js --ignore-path test/.eslintignore 'test/**/*.js' --cache",
     "lint:code": "yarn lint:server && yarn lint:shared && yarn lint:frontend",
     "lint": "yarn lint:server && yarn lint:shared && yarn lint:frontend && yarn lint:test",
-    "build:css": "postcss core/frontend/public/ghost.css --no-map --use cssnano -o core/frontend/public/ghost.min.css",
-    "prepack": "yarn workspace ghost-admin run build:prod && yarn build:css && npx --yes daniellockyer/monobundle"
+    "prepack": "lerna run build && monobundle"
   },
   "engines": {
-    "node": "^14.18.0 || ^16.13.0 || ^18.12.1",
+    "node": "^16.13.0 || ^18.12.1",
     "cli": "^1.17.0"
   },
   "dependencies": {
-    "@sentry/node": "7.11.1",
+    "@extractus/oembed-extractor": "3.1.8",
+    "@sentry/node": "7.50.0",
     "@tryghost/adapter-base-cache": "0.1.5",
     "@tryghost/adapter-cache-redis": "0.0.0",
     "@tryghost/adapter-manager": "0.0.0",
@@ -202,7 +203,6 @@
     "mysql2": "3.2.0",
     "nconf": "0.12.0",
     "node-jose": "2.2.0",
-    "oembed-parser": "1.4.9",
     "path-match": "1.2.4",
     "probe-image-size": "7.2.3",
     "rss": "1.2.2",
@@ -221,13 +221,13 @@
     "sqlite3": "5.1.6"
   },
   "devDependencies": {
-    "@playwright/test": "1.32.3",
+    "@playwright/test": "1.33.0",
     "@tryghost/express-test": "0.13.4",
     "@tryghost/webhook-mock-receiver": "0.2.6",
     "@types/common-tags": "1.8.1",
     "c8": "7.13.0",
     "cli-progress": "3.12.0",
-    "cssnano": "6.0.0",
+    "cssnano": "6.0.1",
     "eslint": "8.37.0",
     "expect": "29.3.1",
     "form-data": "4.0.0",
@@ -236,9 +236,10 @@
     "mocha": "10.2.0",
     "mocha-slow-test-reporter": "0.1.2",
     "mock-knex": "TryGhost/mock-knex#d8b93b1c20d4820323477f2c60db016ab3e73192",
+    "monobundle": "TryGhost/monobundle#2aca618f8880250fb99ad48d61f0ca7251f1e648",
     "nock": "13.3.0",
     "papaparse": "5.3.2",
-    "postcss": "8.4.21",
+    "postcss": "8.4.23",
     "postcss-cli": "10.1.0",
     "rewire": "6.0.0",
     "should": "13.2.3",

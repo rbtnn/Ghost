@@ -19,7 +19,7 @@
     "**/node_modules/**"
   ],
   "scripts": {
-    "build": "yarn workspace ghost run build",
+    "build": "lerna run build",
     "dev:debug": "DEBUG_COLORS=true DEBUG=@tryghost*,ghost:* yarn dev",
     "dev:admin": "node .github/dev.js --admin",
     "dev:ghost": "node .github/dev.js --ghost",
@@ -33,7 +33,7 @@
     "main": "yarn main:monorepo && yarn main:submodules",
     "main:monorepo": "git checkout main && git pull ${GHOST_UPSTREAM:-origin} main && yarn",
     "main:submodules": "git submodule sync && git submodule update && git submodule foreach \"git checkout main && git pull ${GHOST_UPSTREAM:-origin} main && yarn\"",
-    "prepare": "husky install .github/hooks"
+    "prepare": "husky install .github/hooks && lerna run prepare"
   },
   "resolutions": {
     "@elastic/elasticsearch": "8.5.0",
@@ -56,14 +56,12 @@
       "intl-messageformat",
       "moment",
       "moment-timezone",
-      "oembed-parser",
       "simple-dom",
       "ember-drag-drop",
       "normalize.css",
       "validator",
       "codemirror",
       "faker",
-      "@sentry/node",
       "ember-cli-code-coverage"
     ],
     "ignorePaths": [
@@ -127,7 +125,8 @@
     "concurrently": "8.0.1",
     "eslint-plugin-ghost": "2.16.0",
     "husky": "8.0.3",
-    "lerna": "6.6.1",
-    "lint-staged": "13.1.2"
+    "lerna": "6.6.2",
+    "lint-staged": "13.1.2",
+    "ts-node": "10.9.1"
   }
 }

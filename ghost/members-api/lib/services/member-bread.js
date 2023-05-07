@@ -238,18 +238,13 @@ module.exports = class MemberBREADService {
         member.subscriptions = member.subscriptions.filter(sub => !!sub.price);
         this.attachSubscriptionsToMember(member);
         this.attachOffersToSubscriptions(member, await this.fetchSubscriptionOffers(model.related('stripeSubscriptions')));
+        await this.attachAttributionsToMember(member, subscriptionIdMap);
 
-        if (this.labsService.isSet('memberAttribution')) {
-            await this.attachAttributionsToMember(member, subscriptionIdMap);
-        }
-
-        if (this.labsService.isSet('suppressionList')) {
-            const suppressionData = await this.emailSuppressionList.getSuppressionData(member.email);
-            member.email_suppression = {
-                suppressed: suppressionData.suppressed,
-                info: suppressionData.info
-            };
-        }
+        const suppressionData = await this.emailSuppressionList.getSuppressionData(member.email);
+        member.email_suppression = {
+            suppressed: suppressionData.suppressed,
+            info: suppressionData.info
+        };
 
         return member;
     }
@@ -402,10 +397,7 @@ module.exports = class MemberBREADService {
 
         const members = page.data.map(model => model.toJSON(options));
 
-        let bulkSuppressionData;
-        if (this.labsService.isSet('suppressionList')) {
-            bulkSuppressionData = await this.emailSuppressionList.getBulkSuppressionData(members.map(member => member.email));
-        }
+        const bulkSuppressionData = await this.emailSuppressionList.getBulkSuppressionData(members.map(member => member.email));
 
         const data = members.map((member, index) => {
             member.subscriptions = member.subscriptions.filter(sub => !!sub.price);
@@ -414,12 +406,10 @@ module.exports = class MemberBREADService {
             if (!originalWithRelated.includes('products')) {
                 delete member.products;
             }
-            if (this.labsService.isSet('suppressionList')) {
-                member.email_suppression = {
-                    suppressed: bulkSuppressionData[index].suppressed,
-                    info: bulkSuppressionData[index].info
-                };
-            }
+            member.email_suppression = {
+                suppressed: bulkSuppressionData[index].suppressed,
+                info: bulkSuppressionData[index].info
+            };
             return member;
         });
 

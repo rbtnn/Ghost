@@ -60,12 +60,9 @@ export default class FeatureService extends Service {
 
     // labs flags
     @feature('urlCache') urlCache;
-    @feature('memberAttribution') memberAttribution;
-    @feature('sourceAttribution') sourceAttribution;
     @feature('lexicalEditor') lexicalEditor;
     @feature('lexicalMultiplayer') lexicalMultiplayer;
     @feature('audienceFeedback') audienceFeedback;
-    @feature('suppressionList') suppressionList;
     @feature('webmentions') webmentions;
     @feature('emailErrors') emailErrors;
     @feature('websockets') websockets;
