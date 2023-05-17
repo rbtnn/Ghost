@@ -6,6 +6,7 @@ import {currencies, getCurrencyOptions, getNonDecimal, getSymbol, isNonCurrencie
 import {A as emberA} from '@ember/array';
 import {htmlSafe} from '@ember/template';
 import {inject} from 'ghost-admin/decorators/inject';
+import {run} from '@ember/runloop';
 import {inject as service} from '@ember/service';
 import {task} from 'ember-concurrency';
 import {tracked} from '@glimmer/tracking';
@@ -317,4 +318,12 @@ export default class ModalTierPrice extends ModalBase {
             this.close();
         }
     };
+
+    keyPress(event) {
+        // enter key
+        if (event.keyCode === 13) {
+            event.preventDefault();
+            run.scheduleOnce('actions', this, this.send, 'addBenefit', this.newBenefit);
+        }
+    }
 }
