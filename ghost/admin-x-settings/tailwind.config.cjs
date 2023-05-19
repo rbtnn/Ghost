@@ -113,6 +113,7 @@ module.exports = {
                 12: '4.8rem',
                 14: '5.6rem',
                 16: '6.4rem',
+                18: '7.2rem',
                 20: '8rem',
                 24: '9.6rem',
                 28: '11.2rem',
@@ -183,6 +184,9 @@ module.exports = {
                 tight: '1.35em',
                 tighter: '1.25em',
                 supertight: '1.1em'
+            },
+            transition: {
+                basic: 'all 0.4 ease'
             }
         }
     }

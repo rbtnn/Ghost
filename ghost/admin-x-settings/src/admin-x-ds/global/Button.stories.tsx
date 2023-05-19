@@ -1,12 +1,16 @@
 import type {Meta, StoryObj} from '@storybook/react';
 
 import Button from './Button';
-import {ButtonColors} from './Button';
 
 const meta = {
     title: 'Global / Button',
     component: Button,
-    tags: ['autodocs']
+    tags: ['autodocs'],
+    argTypes: {
+        color: {
+            control: 'select'
+        }
+    }
 } satisfies Meta<typeof Button>;
 
 export default meta;
@@ -21,28 +25,28 @@ export const Default: Story = {
 export const Black: Story = {
     args: {
         label: 'Button',
-        color: ButtonColors.Black
+        color: 'black'
     }
 };
 
 export const Green: Story = {
     args: {
         label: 'Button',
-        color: ButtonColors.Green
+        color: 'green'
     }
 };
 
 export const Red: Story = {
     args: {
         label: 'Button',
-        color: ButtonColors.Red
+        color: 'red'
     }
 };
 
-export const Link: Story = {
+export const LinkButton: Story = {
     args: {
         label: 'Button',
-        color: ButtonColors.Green,
+        color: 'green',
         link: true
     }
 };

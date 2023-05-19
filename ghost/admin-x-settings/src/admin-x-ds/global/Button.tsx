@@ -1,58 +1,58 @@
 import React from 'react';
-export interface ButtonColorsType {
-    Clear: string;
-    Black: string;
-    Green: string;
-    Red: string;
-}
 
-export const ButtonColors: ButtonColorsType = {
-    Clear: 'Clear',
-    Black: 'Black',
-    Green: 'Green',
-    Red: 'Red'
-};
+export type ButtonColor = 'clear' | 'black' | 'green' | 'red';
 
-export interface ButtonProps {
+export interface IButton {
     label: string;
+    key?: string;
     color?: string;
     fullWidth?: boolean;
     link?: boolean;
+    disabled?: boolean;
+    onClick?: () => void;
 }
 
-const Button: React.FC<ButtonProps> = ({
+const Button: React.FC<IButton> = ({
     label,
     color,
     fullWidth,
     link,
+    disabled,
+    onClick,
     ...props
 }) => {
-    let buttonColor: string;
     if (!color) {
-        color = ButtonColors.Black;
+        color = 'clear';
     }
-    const fontWeight: string = ((link && color !== ButtonColors.Black) || (!link && color !== ButtonColors.Clear)) ? 'font-bold' : 'font-semibold';
-    const padding: string = !link ? 'px-4 h-9' : '';
+    
+    let styles = 'transition flex items-center justify-center rounded-sm text-sm';
+    styles += ((link && color !== 'clear' && color !== 'black') || (!link && color !== 'clear')) ? ' font-bold' : ' font-semibold';
+    styles += !link ? ' px-4 h-9' : '';
 
     switch (color) {
-    case ButtonColors.Black:
-        buttonColor = link ? 'text-black' : 'bg-black text-white';
+    case 'black':
+        styles += link ? ' text-black hover:text-grey-800' : ' bg-black text-white hover:bg-grey-900';
         break;
-    case ButtonColors.Green:
-        buttonColor = link ? 'text-green' : 'bg-green text-white';
+    case 'green':
+        styles += link ? ' text-green hover:text-green-400' : ' bg-green text-white hover:bg-green-400';
         break;
-    case ButtonColors.Red:
-        buttonColor = link ? 'text-red' : 'bg-red text-white';
+    case 'red':
+        styles += link ? ' text-red hover:text-red-400' : ' bg-red text-white hover:bg-red-400';
         break;
     default:
-        buttonColor = link ? 'text-black' : 'bg-transparent text-black';
+        styles += link ? ' text-black hover:text-grey-800' : ' bg-transparent text-black hover:text-grey-800';
         break;
     }
+
+    styles += (fullWidth && !link) ? ' w-full' : '';
+    styles += (disabled) ? ' opacity-40' : ' cursor-pointer';
 
     return (
         <button
-            className={`flex cursor-pointer items-center justify-center rounded-sm text-sm ${padding} ${fontWeight} ${fullWidth && !link ? 'w-full' : ''} ${buttonColor} `}
+            className={styles}
+            disabled={disabled}
             type="button"
+            onClick={onClick}
             {...props}
         >
             {label}

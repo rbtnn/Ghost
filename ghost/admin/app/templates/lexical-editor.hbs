@@ -94,36 +94,15 @@
             />
 
             {{#if (feature 'lexicalEditor')}}
-                <GhBasicDropdown
-                    @verticalPosition="above"
-                    @horizontalPosition="left" as |dd|
-                >
-                    <dd.Trigger
-                        class="gh-editor-feedback-trigger gh-btn gh-btn-editor green"
-                        data-test-button="lexical-editor-feedback"
-                    >
-                        <span class="gh-editor-feedback">
-                            Feedback?
-                        </span>
-                    </dd.Trigger>
-
-                    <dd.Content class="gh-editor-feedback-dropdown-container">
-                        <div {{css-transition "anim-fade-in-scale"}}>
-                            <FeedbackLexical::EditorForm
-                                @post={{this.post}}
-                                @close={{dd.actions.close}}
-                            />
-                        </div>
-                    </dd.Content>
-                </GhBasicDropdown>
+                <FeedbackLexical::EditorDropdown @post={{this.post}} />
             {{/if}}
 
             <div class="gh-editor-wordcount-container">
-                <div class="gh-editor-wordcount">
+                {{!-- <div class="gh-editor-wordcount">
                     {{gh-pluralize this.wordCount.wordCount "word"}}
-                </div>
-                <a href="https://github.com/TryGhost/Koenig/tree/main/packages/koenig-lexical" target="_blank" rel="noopener noreferrer" class="gh-lexical-indicator">Lexical</a>
-                {{!-- <a href="https://ghost.org/help/using-the-editor/" class="flex" target="_blank" rel="noopener noreferrer">{{svg-jar "help"}}</a> --}}
+                </div> --}}
+                {{!-- <a href="https://github.com/TryGhost/Koenig/tree/main/packages/koenig-lexical" target="_blank" rel="noopener noreferrer" class="gh-lexical-indicator">Lexical</a> --}}
+                <a href="https://ghost.org/help/using-the-editor/" class="flex" target="_blank" rel="noopener noreferrer">{{svg-jar "help"}}</a>
             </div>
 
         </GhEditor>

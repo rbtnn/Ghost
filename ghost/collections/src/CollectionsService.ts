@@ -11,16 +11,45 @@ export class CollectionsService {
         this.repository = deps.repository;
     }
 
-    async save(collection: Collection): Promise<Collection> {
-        return await this.repository.save(collection);
+    async save(data: any): Promise<Collection> {
+        const collection = await this.repository.create(data);
+        await this.repository.save(collection);
+        return collection;
+    }
+
+    async edit(data: any): Promise<Collection | null> {
+        const collection = await this.repository.getById(data.id);
+
+        if (!collection) {
+            return null;
+        }
+
+        Object.assign(collection, data);
+        await this.repository.save(collection);
+
+        return collection;
     }
 
     async getById(id: string): Promise<Collection | null> {
         return await this.repository.getById(id);
     }
 
-    async getAll(): Promise<Collection[]> {
-        return await this.repository.getAll();
+    async getAll(options?: any): Promise<{data: Collection[], meta: any}> {
+        const collections = await this.repository.getAll(options);
+
+        return {
+            data: collections,
+            meta: {
+                pagination: {
+                    page: 1,
+                    pages: 1,
+                    limit: collections.length,
+                    total: collections.length,
+                    prev: null,
+                    next: null
+                }
+            }
+        };
     }
 
     async destroy(id: string): Promise<void> {

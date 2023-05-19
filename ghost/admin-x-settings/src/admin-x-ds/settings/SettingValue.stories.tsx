@@ -3,9 +3,17 @@ import type {Meta, StoryObj} from '@storybook/react';
 import SettingValue from './SettingValue';
 
 const meta = {
-    title: 'Settings / Setting value',
+    title: 'Settings / Setting Value',
     component: SettingValue,
-    tags: ['autodocs']
+    tags: ['autodocs'],
+    argTypes: {
+        value: {
+            control: 'text'
+        },
+        hint: {
+            control: 'text'
+        }
+    }
 } satisfies Meta<typeof SettingValue>;
 
 export default meta;
@@ -18,17 +26,17 @@ export const Default: Story = {
     }
 };
 
-export const WithHelp: Story = {
+export const WithHint: Story = {
     args: {
         heading: 'Setting',
         value: 'Setting value',
-        help: 'Setting help text'
+        hint: 'Setting hint text'
     }
 };
 
 export const NoHeading: Story = {
     args: {
         value: 'Setting value',
-        help: 'Help text'
+        hint: 'Hint text'
     }
 };
