@@ -27,12 +27,14 @@ export default class MagicLinkPage extends React.Component {
     static contextType = AppContext;
 
     renderFormHeader() {
-        let popupTitle = `マジックリンクを送りました！`;
-        let popupDescription = `もし３分以内にメールが届いてないのならスパムフォルダをチェックしてみてください！`;
+        const {t} = this.context;
+
+        let popupTitle = t(`Now check your email!`);
+        let popupDescription = t(`A login link has been sent to your inbox. If it doesn't arrive in 3 minutes, be sure to check your spam folder.`);
 
         if (this.context.lastPage === 'signup') {
-            popupTitle = `メールを確認してください！`;
-            popupDescription = `BSMの購読を完了したため、メールの認証リンクをクリックしてください。 もし３分以内にメールが届いてないのならスパムフォルダをチェックしてみてください！`;
+            popupTitle = t(`Now check your email!`);
+            popupDescription = t(`To complete signup, click the confirmation link in your inbox. If it doesn't arrive within 3 minutes, check your spam folder!`);
         }
 
         return (
@@ -66,7 +68,9 @@ export default class MagicLinkPage extends React.Component {
     }
 
     renderCloseButton() {
-        const label = '閉じる';
+        const {t} = this.context;
+
+        const label = t('Close');
         return (
             <ActionButton
                 style={{width: '100%'}}

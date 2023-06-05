@@ -524,6 +524,5 @@ p.gh-content-import-errordetail:first-of-type {
 }
 
 .gh-feedback-lexical-labs .form-group {
-    margin-top: 0.8rem;
-    margin-bottom: 1rem;
+    margin: 10px 0;
 }

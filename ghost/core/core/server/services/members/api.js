@@ -56,18 +56,19 @@ function createApiInstance(config) {
                 }
             },
             getSubject(type) {
+                const siteTitle = settingsCache.get('title');
                 switch (type) {
                 case 'subscribe':
-                    return `backspace.fm: 購読の確認`;
+                    return `📫 ${t(`Confirm your subscription to {{siteTitle}}`, {siteTitle, interpolation: {escapeValue: false}})}`;
                 case 'signup':
-                    return `backspace.fm: BSMを購読`;
+                    return `🙌 ${t(`Complete your sign up to {{siteTitle}}!`, {siteTitle, interpolation: {escapeValue: false}})}`;
                 case 'signup-paid':
-                    return `backspace.fm: BSMを購読`;
+                    return `🙌 ${t(`Thank you for signing up to {{siteTitle}}!`, {siteTitle, interpolation: {escapeValue: false}})}`;
                 case 'updateEmail':
-                    return `backspace.fm: メール認証`;
+                    return `📫 ${t(`Confirm your email update for {{siteTitle}}!`, {siteTitle, interpolation: {escapeValue: false}})}`;
                 case 'signin':
                 default:
-                    return `backspace.fm: ログイン`;
+                    return `🔑 ${t(`Secure sign in link for {{siteTitle}}`, {siteTitle, interpolation: {escapeValue: false}})}`;
                 }
             },
             getText(url, type, email) {

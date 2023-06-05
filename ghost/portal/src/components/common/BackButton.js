@@ -49,7 +49,7 @@ function ActionButton({label = null, brandColor = '#3eb0ef', hidden = false, onC
     }
 
     if (label === null) {
-        label = t('戻る');
+        label = t('Back');
     }
 
     return (

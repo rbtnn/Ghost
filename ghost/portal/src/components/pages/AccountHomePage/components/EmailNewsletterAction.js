@@ -4,11 +4,11 @@ import {getSiteNewsletters, hasMemberGotEmailSuppression} from '../../../../util
 import {useContext} from 'react';
 
 function EmailNewsletterAction() {
-    const {member, site, onAction} = useContext(AppContext);
+    const {member, site, onAction, t} = useContext(AppContext);
     let {newsletters} = member;
 
     const subscribed = !!newsletters?.length;
-    let label = subscribed ? '停止中' : '購読中';
+    let label = subscribed ? t('Subscribed') : t('Unsubscribed');
     const onToggleSubscription = (e, sub) => {
         e.preventDefault();
         const siteNewsletters = getSiteNewsletters({site});
@@ -19,12 +19,12 @@ function EmailNewsletterAction() {
     return (
         <section>
             <div className='gh-portal-list-detail email-newsletter'>
-                <h3>メール配信</h3>
+                <h3>{t('Email newsletter')}</h3>
                 <p>{label} {hasMemberGotEmailSuppression({member}) && subscribed && <button
                     className='gh-portal-btn-text gh-email-faq-page-button'
                     onClick={() => onAction('switchPage', {page: 'emailReceivingFAQ', lastPage: 'accountHome'})}
                 >
-                    メールが受信できない？
+                    {t('Not receiving emails?')}
                 </button>}</p>
             </div>
             <div>

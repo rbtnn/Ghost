@@ -453,7 +453,7 @@ class SignupPage extends React.Component {
     }
 
     getInputFields({state, fieldNames}) {
-        const {site: {portal_name: portalName}} = this.context;
+        const {site: {portal_name: portalName}, t} = this.context;
 
         const errors = state.errors || {};
         const fields = [
@@ -461,7 +461,7 @@ class SignupPage extends React.Component {
                 type: 'email',
                 value: state.email,
                 placeholder: 'jamie@example.com',
-                label: 'メールアドレス',
+                label: t('Email'),
                 name: 'email',
                 required: true,
                 tabindex: 2,
@@ -475,7 +475,7 @@ class SignupPage extends React.Component {
                 type: 'text',
                 value: state.name,
                 placeholder: 'Jamie Larson',
-                label: '名前',
+                label: t('Name'),
                 name: 'name',
                 required: true,
                 tabindex: 1,
@@ -547,11 +547,11 @@ class SignupPage extends React.Component {
             return null;
         }
 
-        let label = '次へ';
+        let label = t('Continue');
         const showOnlyFree = pageQuery === 'free' && hasFreeProductPrice({site});
 
         if (hasOnlyFreePlan({site}) || showOnlyFree) {
-            label = 'BSMを購読';
+            label = t('Sign up');
         } else {
             return null;
         }
@@ -563,7 +563,7 @@ class SignupPage extends React.Component {
         }
         let retry = false;
         if (action === 'signup:failed') {
-            label = 'リトライ';
+            label = t('Retry');
             retry = true;
         }
 
@@ -583,14 +583,14 @@ class SignupPage extends React.Component {
     }
 
     renderProducts() {
-        const {site, pageQuery} = this.context;
+        const {site, pageQuery, t} = this.context;
         const products = getSiteProducts({site, pageQuery});
         const errors = this.state.errors || {};
         const priceErrors = {};
 
         // If we have at least one error, set an error message for the current selected plan
         if (Object.keys(errors).length > 0 && this.state.plan) {
-            priceErrors[this.state.plan] = 'Please fill in required fields';
+            priceErrors[this.state.plan] = t('Please fill in required fields');
         }
 
         return (
@@ -618,19 +618,19 @@ class SignupPage extends React.Component {
     }
 
     renderLoginMessage() {
-        const {brandColor, onAction} = this.context;
+        const {brandColor, onAction, t} = this.context;
         return (
             <div>
                 {this.renderFreeTrialMessage()}
                 <div className='gh-portal-signup-message'>
-                    <div>既にアカウントを持っていますか？</div>
+                    <div>{t('Already a member?')}</div>
                     <button
                         data-test-button='signin-switch'
                         className='gh-portal-btn gh-portal-btn-link'
                         style={{color: brandColor}}
                         onClick={() => onAction('switchPage', {page: 'signin'})}
                     >
-                        <span>ログイン</span>
+                        <span>{t('Sign in')}</span>
                     </button>
                 </div>
             </div>

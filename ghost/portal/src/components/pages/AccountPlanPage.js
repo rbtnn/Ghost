@@ -6,6 +6,8 @@ import BackButton from '../common/BackButton';
 import {MultipleProductsPlansSection} from '../common/PlansSection';
 import {getDateString, getDateStringJa} from '../../utils/date-time';
 import {allowCompMemberUpgrade, formatNumber, getAvailablePrices, getFilteredPrices, getMemberActivePrice, getMemberSubscription, getPriceFromSubscription, getProductFromPrice, getSubscriptionFromId, getUpgradeProducts, hasMultipleProductsFeature, isComplimentaryMember, isPaidMember} from '../../utils/helpers';
+import Interpolate from '@doist/react-interpolate';
+import {SYNTAX_I18NEXT} from '@doist/react-interpolate';
 
 export const AccountPlanPageStyles = `
     .account-plan.full-size .gh-portal-main-title {
@@ -38,21 +40,21 @@ export const AccountPlanPageStyles = `
     }
 `;
 
-function getConfirmationPageTitle({confirmationType}) {
+function getConfirmationPageTitle({confirmationType, t}) {
     if (confirmationType === 'changePlan') {
-        return '購読確認';
+        return t('Confirm subscription');
     } else if (confirmationType === 'cancel') {
-        return '購読停止';
+        return t('Cancel subscription');
     } else if (confirmationType === 'subscribe') {
-        return '購読開始';
+        return t('Subscribe');
     }
 }
 
 const Header = ({onBack, showConfirmation, confirmationType}) => {
-    const {member} = useContext(AppContext);
-    let title = isPaidMember({member}) ? 'プラン変更' : 'プラン選択';
+    const {member, t} = useContext(AppContext);
+    let title = isPaidMember({member}) ? 'Change plan' : 'Choose a plan';
     if (showConfirmation) {
-        title = getConfirmationPageTitle({confirmationType});
+        title = getConfirmationPageTitle({confirmationType, t});
     }
     return (
         <header className='gh-portal-detail-header'>
@@ -62,7 +64,7 @@ const Header = ({onBack, showConfirmation, confirmationType}) => {
 };
 
 const CancelSubscriptionButton = ({member, onCancelSubscription, action, brandColor}) => {
-    const {site} = useContext(AppContext);
+    const {site, t} = useContext(AppContext);
     if (!member.paid) {
         return null;
     }
@@ -75,7 +77,7 @@ const CancelSubscriptionButton = ({member, onCancelSubscription, action, brandCo
     if (subscription.cancel_at_period_end) {
         return null;
     }
-    const label = '購読停止';
+    const label = t('Cancel subscription');
     const isRunning = ['cancelSubscription:running'].includes(action);
     const disabled = (isRunning) ? true : false;
     const isPrimary = !!subscription.cancel_at_period_end;
@@ -113,13 +115,14 @@ const PlanConfirmationSection = ({plan, type, onConfirm}) => {
     const subscription = getMemberSubscription({member});
     const isRunning = ['updateSubscription:running', 'checkoutPlan:running', 'cancelSubscription:running'].includes(action);
     const label = t('Confirm');
-    let planStartDate = getDateString(subscription.current_period_end);
+    const planStartDate = getDateString(subscription.current_period_end);
     const currentActivePlan = getMemberActivePrice({member});
+    let planStartingMessage = t('Starting {{startDate}}', {startDate: planStartDate});
     if (currentActivePlan.id !== plan.id) {
-        planStartDate = 'today';
+        planStartingMessage = t('Starting today');
     }
     const priceString = formatNumber(plan.price);
-    const planStartMessage = `${plan.currency_symbol}${priceString}/${plan.interval} – Starting ${planStartDate}`;
+    const planStartMessage = `${plan.currency_symbol}${priceString}/${plan.interval} – ${planStartingMessage}`;
     const product = getProductFromPrice({site, priceId: plan?.id});
     const priceLabel = hasMultipleProductsFeature({site}) ? product?.name : t('Price');
     if (type === 'changePlan') {
@@ -128,7 +131,7 @@ const PlanConfirmationSection = ({plan, type, onConfirm}) => {
                 <div className='gh-portal-list mb6'>
                     <section>
                         <div className='gh-portal-list-detail'>
-                            <h3>アカウント</h3>
+                            <h3>{t('Account')}</h3>
                             <p>{member.email}</p>
                         </div>
                     </section>
@@ -156,10 +159,18 @@ const PlanConfirmationSection = ({plan, type, onConfirm}) => {
     } else {
         return (
             <div className="gh-portal-logged-out-form-container gh-portal-cancellation-form">
-                <p>もしいま購読停止する場合、<strong>{getDateStringJa(subscription.current_period_end)}</strong>まで購読コンテンツにアクセスすることができます</p>
+                <p>
+                    <Interpolate
+                        syntax={SYNTAX_I18NEXT}
+                        string={t(`If you cancel your subscription now, you will continue to have access until {{periodEnd}}.`)}
+                        mapping={{
+                            periodEnd: <strong>{getDateStringJa(subscription.current_period_end)}</strong>
+                        }}
+                    />
+                </p>
                 <section className='gh-portal-input-section'>
                     <div className='gh-portal-input-labelcontainer'>
-                        <label className='gh-portal-input-label'>購読停止する理由</label>
+                        <label className='gh-portal-input-label'>{t('Cancellation reason')}</label>
                     </div>
                     <textarea
                         data-test-input='cancellation-reason'
@@ -181,7 +192,7 @@ const PlanConfirmationSection = ({plan, type, onConfirm}) => {
                     isRunning={isRunning}
                     isPrimary={true}
                     brandColor={brandColor}
-                    label={'購読停止'}
+                    label={t('Confirm cancellation')}
                     style={{
                         width: '100%',
                         height: '40px'

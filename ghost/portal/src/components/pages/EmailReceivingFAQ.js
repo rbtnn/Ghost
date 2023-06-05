@@ -3,9 +3,11 @@ import {useContext} from 'react';
 import BackButton from '../../components/common/BackButton';
 import CloseButton from '../../components/common/CloseButton';
 import {getDefaultNewsletterSender, getSupportAddress} from '../../utils/helpers';
+import Interpolate from '@doist/react-interpolate';
+import {SYNTAX_I18NEXT} from '@doist/react-interpolate';
 
 export default function EmailReceivingPage() {
-    const {brandColor, onAction, site, lastPage, member} = useContext(AppContext);
+    const {brandColor, onAction, site, lastPage, member, t} = useContext(AppContext);
 
     const supportAddressEmail = getSupportAddress({site});
     const supportAddress = `mailto:${supportAddressEmail}`;
@@ -24,35 +26,76 @@ export default function EmailReceivingPage() {
             </header>
 
             <div class="gh-longform">
-                <h3>助けて！メールが受信できない</h3>
+                <h3>{t(`Help! I'm not receiving emails`)}</h3>
 
-                <p>もし購読したメール通知が受信できない場合、以下の点を確認してください。</p>
+                <p>{t(`If you're not receiving the email newsletter you've subscribed to, here are few things to check.`)}</p>
 
-                <h4>メールアドレスが正しいか確認</h4>
+                <h4>{t(`Verify your email address is correct`)}</h4>
 
-                <p>貴方のメールアドレスは<strong>{member.email}</strong>です。 もしこれが正しくない場合、<button className="gh-portal-btn-text" onClick={() => onAction('switchPage', {lastPage: 'emailReceivingFAQ', page: 'accountProfile'})}>アカウント設定</button>からメールアドレスを設定できます。</p>
+                <p>
+                    <Interpolate
+                        syntax={SYNTAX_I18NEXT}
+                        string={t(`The email address we have for you is {{memberEmail}} — if that's not correct, you can update it in your <button>account settings area</button>.`)}
+                        mapping={{
+                            memberEmail: <strong>{member.email}</strong>,
+                            button: <button className="gh-portal-btn-text" onClick={() => onAction('switchPage', {lastPage: 'emailReceivingFAQ', page: 'accountProfile'})}/>
+                        }}
+                    />
+                </p>
 
-                <h4>迷惑メールやプロモーションフォルダの確認</h4>
+                <h4>{t(`Check spam & promotions folders`)}</h4>
 
-                <p>メールが誤って受信トレイの迷惑メールやプロモーションフォルダに入っていないことを確認してください。そうである場合は、[スパムではないとしてマークする] および/または [受信トレイに移動] をクリックします。</p>
+                <p>{t(`Make sure emails aren't accidentally ending up in the Spam or Promotions folders of your inbox. If they are, click on "Mark as not spam" and/or "Move to inbox".`)}</p>
 
-                <h4>連絡先リストに追加</h4>
+                <h4>{t(`Create a new contact`)}</h4>
 
-                <p>メールクライアントの連絡先リストに<strong>{defaultNewsletterSenderEmail}</strong>を追加します。 これはこのアドレスから送信されたメールが信頼できるものであることをメールプロバイダーに知らせます。</p>
+                <p>
+                    <Interpolate
+                        syntax={SYNTAX_I18NEXT}
+                        string={t(`In your email client add {{senderEmail}} to your contacts list. This signals to your mail provider that emails sent from this address should be trusted.`)}
+                        mapping={{
+                            senderEmail: <strong>{defaultNewsletterSenderEmail}</strong>
+                        }}
+                    />
+                </p>
 
-                <h4>メールの送信</h4>
+                <h4>{t(`Send an email and say hi!`)}</h4>
 
-                <p><strong>{defaultNewsletterSenderEmail}</strong>にメールを送信します。 これは、このアドレスとの間のメールが信頼できるものであることをメールプロバイダーに知らせるのにも役立ちます。</p>
+                <p>
+                    <Interpolate
+                        syntax={SYNTAX_I18NEXT}
+                        string={t(`Send an email to {{senderEmail}} and say hello. This can also help signal to your mail provider that emails to-and-from this address should be trusted.`)}
+                        mapping={{
+                            senderEmail: <strong>{defaultNewsletterSenderEmail}</strong>
+                        }}
+                    />
+                </p>
 
-                <h4>自身のメールプロバイダーの確認</h4>
+                <h4>{t(`Check with your mail provider`)}</h4>
 
-                <p>企業または政府のメールアカウントをお持ちの場合は、IT部門に連絡して、<strong>{defaultNewsletterSenderEmail}</strong>からのメールの受信を許可するよう依頼してください。</p>
+                <p>
+                    <Interpolate
+                        syntax={SYNTAX_I18NEXT}
+                        string={t(`If you have a corporate or government email account, reach out to your IT department and ask them to allow emails to be received from {{senderEmail}}`)}
+                        mapping={{
+                            senderEmail: <strong>{defaultNewsletterSenderEmail}</strong>
+                        }}
+                    />
+                </p>
 
-                <h4>もしそれでも解決しないなら</h4>
+                <h4>{t(`Get in touch for help`)}</h4>
 
-                <p>これらのチェックをすべて完了してもメールが届かない場合は、<a href={supportAddress} onClick={() => {
-                    supportAddress && window.open(supportAddress);
-                }}>{supportAddressEmail}</a>に連絡してサポートを受けることができます。</p>
+                <p>
+                    <Interpolate
+                        syntax={SYNTAX_I18NEXT}
+                        string={t(`If you've completed all these checks and you're still not receiving emails, you can reach out to get support by contacting {{supportAddress}}.`)}
+                        mapping={{
+                            supportAddress: <a href={supportAddress} onClick={() => {
+                                supportAddress && window.open(supportAddress);
+                            }}>{supportAddressEmail}</a>
+                        }}
+                    />
+                </p>
             </div>
         </div>
     );

@@ -54,10 +54,12 @@ export default class AccountProfilePage extends React.Component {
     }
 
     renderSaveButton() {
+        const {t} = this.context;
+
         const isRunning = (this.context.action === 'updateProfile:running');
-        let label = '保存';
+        let label = t('Save');
         if (this.context.action === 'updateProfile:failed') {
-            label = 'リトライ';
+            label = t('Retry');
         }
         const disabled = isRunning ? true : false;
         return (
@@ -90,10 +92,12 @@ export default class AccountProfilePage extends React.Component {
     }
 
     renderHeader() {
+        const {t} = this.context;
+
         return (
             <header className='gh-portal-detail-header'>
                 <BackButton brandColor={this.context.brandColor} hidden={!this.context.lastPage} onClick={e => this.onBack(e)} />
-                <h3 className='gh-portal-main-title'>アカウント設定</h3>
+                <h3 className='gh-portal-main-title'>{t('Account settings')}</h3>
             </header>
         );
     }
@@ -130,13 +134,15 @@ export default class AccountProfilePage extends React.Component {
     }
 
     getInputFields({state, fieldNames}) {
+        const {t} = this.context;
+
         const errors = state.errors || {};
         const fields = [
             {
                 type: 'text',
                 value: state.name,
                 placeholder: 'Jamie Larson',
-                label: '名前',
+                label: t('Name'),
                 name: 'name',
                 required: true,
                 errorMessage: errors.name || ''
@@ -145,7 +151,7 @@ export default class AccountProfilePage extends React.Component {
                 type: 'email',
                 value: state.email,
                 placeholder: 'jamie@example.com',
-                label: 'メールアドレス',
+                label: t('Email'),
                 name: 'email',
                 required: true,
                 errorMessage: errors.email || ''
