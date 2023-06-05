@@ -15,7 +15,7 @@ const SUPPORTED_LOCALES = [
     'hu', // Hungarian
     'id', // Indonesian
     'it', // Italian
-    'jp', // Japanese
+    'ja', // Japanese
     'ko', // Korean
     'mn', // Mongolian
     'nl', // Dutch
