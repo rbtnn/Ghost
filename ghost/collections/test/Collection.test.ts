@@ -88,7 +88,7 @@ describe('Collection', function () {
     });
 
     it('Throws an error when trying to create a Collection with an invalid ID', async function () {
-        assert.rejects(async () => {
+        await assert.rejects(async () => {
             await Collection.create({
                 id: 12345
             });
@@ -99,12 +99,25 @@ describe('Collection', function () {
     });
 
     it('Throws an error when trying to create a Collection with invalid created_at date', async function () {
-        assert.rejects(async () => {
+        await assert.rejects(async () => {
             await Collection.create({
                 created_at: 'invalid date'
             });
         }, (err: any) => {
             assert.equal(err.message, 'Invalid date provided for created_at', 'Error message should match');
+            return true;
+        });
+    });
+
+    it('Throws an error when trying to create an automatic Collection without a filter', async function () {
+        await assert.rejects(async () => {
+            await Collection.create({
+                type: 'automatic',
+                filter: null
+            });
+        }, (err: any) => {
+            assert.equal(err.message, 'Invalid filter provided for automatic Collection', 'Error message should match');
+            assert.equal(err.context, 'Automatic type of collection should always have a filter value', 'Error message should match');
             return true;
         });
     });
@@ -155,5 +168,31 @@ describe('Collection', function () {
         collection.removePost('0');
 
         assert.equal(collection.posts.length, 0);
+    });
+
+    it('Cannot set non deletable collection to deleted', async function () {
+        const collection = await Collection.create({
+            title: 'Testing adding posts',
+            deletable: false
+        });
+
+        assert.equal(collection.deleted, false);
+
+        collection.deleted = true;
+
+        assert.equal(collection.deleted, false);
+    });
+
+    it('Can set deletable collection to deleted', async function () {
+        const collection = await Collection.create({
+            title: 'Testing adding posts',
+            deletable: true
+        });
+
+        assert.equal(collection.deleted, false);
+
+        collection.deleted = true;
+
+        assert.equal(collection.deleted, true);
     });
 });

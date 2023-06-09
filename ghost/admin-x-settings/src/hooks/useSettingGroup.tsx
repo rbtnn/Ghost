@@ -1,8 +1,7 @@
-import React, {useEffect} from 'react';
+import React, {useContext, useEffect, useReducer, useRef, useState} from 'react';
 import {SaveState, TSettingGroupStates} from '../admin-x-ds/settings/SettingGroup';
 import {Setting, SettingValue, SiteData} from '../types/api';
 import {SettingsContext} from '../components/providers/SettingsProvider';
-import {useContext, useReducer, useRef, useState} from 'react';
 
 interface LocalSetting extends Setting {
     dirty?: boolean;
@@ -13,11 +12,12 @@ export interface SettingGroupHook {
     saveState: SaveState;
     siteData: SiteData | null;
     focusRef: React.RefObject<HTMLInputElement>;
-    handleSave: () => void;
+    handleSave: () => Promise<void>;
     handleCancel: () => void;
     updateSetting: (key: string, value: SettingValue) => void;
     getSettingValues: (keys: string[]) => (SettingValue|undefined)[];
     handleStateChange: (newState: TSettingGroupStates) => void;
+    dirty: boolean
 }
 
 type UpdateAction = {
@@ -55,7 +55,7 @@ function settingsReducer(state: Setting[], action: ActionType) {
     }
 }
 
-const useSettingGroup = (): SettingGroupHook => {
+const useSettingGroup = ({onSave}: { onSave?: () => void | Promise<void> } = {}): SettingGroupHook => {
     // create a ref to focus the input field
     const focusRef = useRef<HTMLInputElement>(null);
 
@@ -86,20 +86,40 @@ const useSettingGroup = (): SettingGroupHook => {
         }
     }, [saveState]);
 
-    // function to save the changed settings via API
-    const handleSave = async () => {
-        const changedSettings = localSettings?.filter(setting => setting.dirty)
+    // reset the local state when there's a new settings API response, unless currently editing
+    useEffect(() => {
+        if (saveState === 'saving' || currentState === 'view') {
+            dispatch({
+                type: 'resetAll',
+                payload: settings || []
+            });
+        }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [settings]);
+
+    const changedSettings = () => {
+        return localSettings?.filter(setting => setting.dirty)
             ?.map((setting) => {
                 return {
                     key: setting.key,
                     value: setting.value
                 };
             });
-        if (!changedSettings?.length) {
+    };
+
+    // function to save the changed settings via API
+    const handleSave = async () => {
+        if (!changedSettings()?.length && !onSave) {
             return;
         }
+
         setSaveState('saving');
-        await saveSettings?.(changedSettings);
+        if (changedSettings()?.length) {
+            await saveSettings?.(changedSettings());
+        }
+        if (onSave) {
+            await onSave();
+        }
         setSaveState('saved');
         setCurrentState('view');
     };
@@ -146,7 +166,11 @@ const useSettingGroup = (): SettingGroupHook => {
         handleCancel,
         updateSetting,
         getSettingValues,
-        handleStateChange
+        handleStateChange,
+
+        get dirty() {
+            return !!changedSettings()?.length;
+        }
     };
 };
 

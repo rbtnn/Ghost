@@ -1,4 +1,4 @@
-import {Setting, SiteData, User, UserRole} from '../types/api';
+import {CustomThemeSetting, Setting, SiteData, User, UserRole} from '../types/api';
 import {getGhostPaths} from './helpers';
 
 interface Meta {
@@ -22,6 +22,12 @@ export interface UsersResponseType {
     users: User[];
 }
 
+export interface DeleteUserResponse {
+    meta: {
+        filename: string;
+    }
+}
+
 export interface RolesResponseType {
     meta?: Meta;
     roles: UserRole[];
@@ -41,6 +47,10 @@ export interface UserInvite {
 export interface InvitesResponseType {
     meta?: Meta;
     invites: UserInvite[];
+}
+
+export interface CustomThemeSettingsResponseType {
+    custom_theme_settings: CustomThemeSetting[];
 }
 
 export interface SiteResponseType {
@@ -68,6 +78,12 @@ interface RequestOptions {
     };
 }
 
+interface BrowseRoleOptions {
+    queryParams: {
+        [key: string]: string;
+    }
+}
+
 interface UpdatePasswordOptions {
     newPassword: string;
     confirmNewPassword: string;
@@ -84,10 +100,12 @@ interface API {
         browse: () => Promise<UsersResponseType>;
         currentUser: () => Promise<User>;
         edit: (editedUser: User) => Promise<UsersResponseType>;
+        delete: (userId: string) => Promise<DeleteUserResponse>;
         updatePassword: (options: UpdatePasswordOptions) => Promise<PasswordUpdateResponseType>;
+        makeOwner: (userId: string) => Promise<UsersResponseType>;
     };
     roles: {
-        browse: () => Promise<RolesResponseType>;
+        browse: (options?: BrowseRoleOptions) => Promise<RolesResponseType>;
     };
     site: {
         browse: () => Promise<SiteResponseType>;
@@ -97,6 +115,18 @@ interface API {
     };
     invites: {
         browse: () => Promise<InvitesResponseType>;
+        add: ({email, roleId} : {
+            email: string;
+            roleId: string;
+            expires?: number;
+            status?: string;
+            token?: string;
+        }) => Promise<InvitesResponseType>;
+        delete: (inviteId: string) => Promise<void>;
+    };
+    customThemeSettings: {
+        browse: () => Promise<CustomThemeSettingsResponseType>
+        edit: (newSettings: CustomThemeSetting[]) => Promise<CustomThemeSettingsResponseType>
     }
 }
 
@@ -107,7 +137,7 @@ interface GhostApiOptions {
 function setupGhostApi({ghostVersion}: GhostApiOptions): API {
     const {apiRoot} = getGhostPaths();
 
-    function fetcher(url: string, options: RequestOptions) {
+    function fetcher(url: string, options: RequestOptions = {}) {
         const endpoint = `${apiRoot}${url}`;
         // By default, we set the Content-Type header to application/json
         const defaultHeaders = {
@@ -192,11 +222,37 @@ function setupGhostApi({ghostVersion}: GhostApiOptions): API {
                 });
                 const data: PasswordUpdateResponseType = await response.json();
                 return data;
+            },
+            delete: async (userId: string) => {
+                const response = await fetcher(`/users/${userId}/`, {
+                    method: 'DELETE'
+                });
+                const data: DeleteUserResponse = await response.json();
+                return data;
+            },
+            makeOwner: async (userId: string) => {
+                const payload = JSON.stringify({
+                    owner: [{
+                        id: userId
+                    }]
+                });
+                const response = await fetcher(`/users/owner/`, {
+                    method: 'PUT',
+                    body: payload
+                });
+                const data: UsersResponseType = await response.json();
+                return data;
             }
         },
         roles: {
-            browse: async () => {
-                const response = await fetcher(`/roles/?limit=all`, {});
+            browse: async (options?: BrowseRoleOptions) => {
+                const queryParams = options?.queryParams || {};
+                queryParams.limit = 'all';
+                const queryString = Object.keys(options?.queryParams || {})
+                    .map(key => `${key}=${options?.queryParams[key]}`)
+                    .join('&');
+
+                const response = await fetcher(`/roles/?${queryString}`, {});
                 const data: RolesResponseType = await response.json();
                 return data;
             }
@@ -227,6 +283,46 @@ function setupGhostApi({ghostVersion}: GhostApiOptions): API {
             browse: async () => {
                 const response = await fetcher(`/invites/`, {});
                 const data: InvitesResponseType = await response.json();
+                return data;
+            },
+            add: async ({email, roleId}) => {
+                const payload = JSON.stringify({
+                    invites: [{
+                        email: email,
+                        role_id: roleId,
+                        expires: null,
+                        status: null,
+                        token: null
+                    }]
+                });
+                const response = await fetcher(`/invites/`, {
+                    method: 'POST',
+                    body: payload
+                });
+                const data: InvitesResponseType = await response.json();
+                return data;
+            },
+            delete: async (inviteId: string) => {
+                await fetcher(`/invites/${inviteId}/`, {
+                    method: 'DELETE'
+                });
+                return;
+            }
+        },
+        customThemeSettings: {
+            browse: async () => {
+                const response = await fetcher('/custom_theme_settings/');
+
+                const data: CustomThemeSettingsResponseType = await response.json();
+                return data;
+            },
+            edit: async (newSettings) => {
+                const response = await fetcher('/custom_theme_settings/', {
+                    method: 'PUT',
+                    body: JSON.stringify({custom_theme_settings: newSettings})
+                });
+
+                const data: CustomThemeSettingsResponseType = await response.json();
                 return data;
             }
         }
