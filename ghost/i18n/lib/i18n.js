@@ -12,12 +12,14 @@ const SUPPORTED_LOCALES = [
     'es', // Spanish
     'fi', // Finnish
     'fr', // French
+    'hr', // Croatian
     'hu', // Hungarian
     'id', // Indonesian
     'it', // Italian
     'ja', // Japanese
     'ko', // Korean
     'mn', // Mongolian
+    'ms', // Malay
     'nl', // Dutch
     'no', // Norwegian
     'pl', // Polish

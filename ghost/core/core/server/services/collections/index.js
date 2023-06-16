@@ -8,20 +8,13 @@ class CollectionsServiceWrapper {
     api;
 
     constructor() {
-        const models = require('../../models');
+        const postsRepository = require('./PostsRepository').getInstance();
         const events = require('../../lib/common/events');
         const collectionsRepositoryInMemory = new CollectionsRepositoryInMemory();
 
         const collectionsService = new CollectionsService({
             collectionsRepository: collectionsRepositoryInMemory,
-            postsRepository: {
-                getAll: async ({filter}) => {
-                    return models.Post.findAll({
-                        // @NOTE: enforce "post" type to avoid ever fetching pages
-                        filter: `(${filter})+type:post`
-                    });
-                }
-            }
+            postsRepository: postsRepository
         });
 
         // @NOTE: these should be reworked to use the "Event" classes
@@ -39,12 +32,14 @@ class CollectionsServiceWrapper {
     }
 
     async init() {
-        const featuredCollections = await this.api.getAll({filter: 'slug:featured'});
+        const existingBuiltins = await this.api.getAll({filter: 'slug:featured'});
 
-        if (!featuredCollections.data.length) {
-            require('./built-in-collections').forEach((collection) => {
-                this.api.createCollection(collection);
-            });
+        if (!existingBuiltins.data.length) {
+            const builtInCollections = require('./built-in-collections');
+
+            for (const collection of builtInCollections) {
+                await this.api.createCollection(collection);
+            }
         }
     }
 }

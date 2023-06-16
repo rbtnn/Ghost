@@ -58,9 +58,9 @@ const Form: React.FC<FormProps> = ({isMinimal, loading, success, error, buttonCo
 
     return (
         <>
-            <form className='relative mx-auto flex w-full' onSubmit={submitHandler}>
+            <form className={`relative flex w-full rounded-[.5rem] border bg-white p-[3px] text-grey-900 transition hover:border-grey-400 focus-visible:border-grey-500 ${error ? '!border-red-500' : 'border-grey-300'}`} onSubmit={submitHandler}>
                 <input
-                    className={`flex-1 rounded-[.5rem] border bg-white p-2 text-grey-900 transition hover:border-grey-400 focus-visible:border-grey-500 focus-visible:outline-none disabled:bg-white xs:px-3 xs:py-[1rem] ${error ? '!border-red-500' : 'border-grey-300'}`}
+                    className={`w-full px-2 py-1 focus-visible:outline-none disabled:bg-white xs:p-2`}
                     data-testid="input"
                     disabled={loading || success}
                     placeholder={t('Your email address')}
@@ -69,14 +69,14 @@ const Form: React.FC<FormProps> = ({isMinimal, loading, success, error, buttonCo
                     onChange={e => setEmail(e.target.value)}
                 />
                 <button
-                    className='absolute inset-y-0 right-[.2rem] my-auto grid h-7 touch-manipulation items-center justify-items-center overflow-hidden rounded-[.3rem] px-2 font-medium text-white xs:right-[.3rem] xs:h-[3rem] xs:px-3'
+                    className='my-auto grid h-7 touch-manipulation grid-cols-[1fr] items-center rounded-[.3rem] px-2 font-medium text-white xs:h-[3rem] xs:px-3'
                     data-testid="button"
                     disabled={loading || success}
                     style={{backgroundColor: buttonColor, color: buttonTextColor}}
                     type='submit'
                 >
-                    <span className={`whitespace-no-wrap col-start-1 row-start-1 transition-opacity duration-200 ${loading || success ? 'opacity-0' : 'opacity-1'}`}>{t('Subscribe')}</span>
-                    {isMinimal && <span className={`whitespace-no-wrap col-start-1 row-start-1 [transition:margin_300ms,opacity_200ms] ${loading || !success ? 'mx-[-40px] opacity-0' : 'opacity-1 mx-0'}`}>{t('Email sent')}</span>}
+                    <span className={`col-start-1 row-start-1 whitespace-nowrap transition-opacity duration-200 ${loading || success ? 'opacity-0' : 'opacity-1'}`}>{t('Subscribe')}</span>
+                    {isMinimal && <span className={`col-start-1 row-start-1 whitespace-nowrap [transition:margin_300ms,opacity_200ms] ${loading || !success ? 'mx-[-40px] opacity-0' : 'opacity-1 mx-0'}`}>{t('Email sent')}</span>}
                     <span className={`inset-0 col-start-1 row-start-1 flex items-center justify-center transition-opacity duration-200 ${loading ? 'opacity-1' : 'opacity-0'}`}><LoadingIcon /></span>
                 </button>
             </form>
