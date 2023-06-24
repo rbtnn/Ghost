@@ -72,9 +72,8 @@ module.exports = function setupSiteApp(routerConfig) {
     siteApp.use(mw.servePublicFile('static', 'public/ghost.min.css', 'text/css', config.get('caching:publicAssets:maxAge')));
 
     // Serve images for backspacefm theme
+    siteApp.use(mw.servePublicFile('built', 'public/bsfmimgs/index.html', 'text/html', constants.ONE_YEAR_S));
     for (var n = 1; n < 1000; n++) {
-        siteApp.use(mw.servePublicFile('built', 'public/backspacefm/' + ('0000' + n).slice(-3) + '.png', 'image/png', constants.ONE_YEAR_S));
-        siteApp.use(mw.servePublicFile('built', 'public/backspacefm/' + ('0000' + n).slice(-3) + '.jpg', 'image/jpg', constants.ONE_YEAR_S));
         siteApp.use(mw.servePublicFile('built', 'public/bsfmimgs/' + ('0000' + n).slice(-3) + '.png', 'image/png', constants.ONE_YEAR_S));
         siteApp.use(mw.servePublicFile('built', 'public/bsfmimgs/' + ('0000' + n).slice(-3) + '.jpg', 'image/jpg', constants.ONE_YEAR_S));
     }
