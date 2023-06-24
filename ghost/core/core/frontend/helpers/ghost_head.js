@@ -80,6 +80,11 @@ function getMembersHelper(data, frontendKey) {
 function getSearchHelper(frontendKey) {
     const adminUrl = urlUtils.getAdminUrl() || urlUtils.getSiteUrl();
     const {scriptUrl, stylesUrl} = getFrontendAppConfig('sodoSearch');
+
+    if (!scriptUrl) {
+        return '';
+    }
+
     const attrs = {
         key: frontendKey,
         styles: stylesUrl,
