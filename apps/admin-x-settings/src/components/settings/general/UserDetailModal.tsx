@@ -198,7 +198,6 @@ const EmailNotificationsInputs: React.FC<UserDetailProps> = ({user, setUserData}
                 checked={user.comment_notifications}
                 direction='rtl'
                 hint='Every time a member comments on one of your posts'
-                id='comments'
                 label='Comments'
                 onChange={(e) => {
                     setUserData?.({...user, comment_notifications: e.target.checked});
@@ -208,7 +207,6 @@ const EmailNotificationsInputs: React.FC<UserDetailProps> = ({user, setUserData}
                 checked={user.free_member_signup_notification}
                 direction='rtl'
                 hint='Every time a new free member signs up'
-                id='new-signups'
                 label='New signups'
                 onChange={(e) => {
                     setUserData?.({...user, free_member_signup_notification: e.target.checked});
@@ -218,7 +216,6 @@ const EmailNotificationsInputs: React.FC<UserDetailProps> = ({user, setUserData}
                 checked={user.paid_subscription_started_notification}
                 direction='rtl'
                 hint='Every time a member starts a new paid subscription'
-                id='new-paid-members'
                 label='New paid members'
                 onChange={(e) => {
                     setUserData?.({...user, paid_subscription_started_notification: e.target.checked});
@@ -228,7 +225,6 @@ const EmailNotificationsInputs: React.FC<UserDetailProps> = ({user, setUserData}
                 checked={user.paid_subscription_canceled_notification}
                 direction='rtl'
                 hint='Every time a member cancels their paid subscription'
-                id='paid-member-cancellations'
                 label='Paid member cancellations'
                 onChange={(e) => {
                     setUserData?.({...user, paid_subscription_canceled_notification: e.target.checked});
@@ -238,7 +234,6 @@ const EmailNotificationsInputs: React.FC<UserDetailProps> = ({user, setUserData}
                 checked={user.milestone_notifications}
                 direction='rtl'
                 hint='Occasional summaries of your audience & revenue growth'
-                id='milestones'
                 label='Milestones'
                 onChange={(e) => {
                     setUserData?.({...user, milestone_notifications: e.target.checked});
@@ -328,7 +323,7 @@ const Password: React.FC<UserDetailProps> = ({user}) => {
                 inputRef={newPasswordRef}
                 title="New password"
                 type="password"
-                value=''
+                value={newPassword}
                 onChange={(e) => {
                     setNewPassword(e.target.value);
                 }}
@@ -339,7 +334,7 @@ const Password: React.FC<UserDetailProps> = ({user}) => {
                 inputRef={confirmNewPasswordRef}
                 title="Verify password"
                 type="password"
-                value=''
+                value={confirmNewPassword}
                 onChange={(e) => {
                     setConfirmNewPassword(e.target.value);
                 }}
@@ -399,9 +394,10 @@ interface UserDetailModalProps {
 }
 
 const UserMenuTrigger = () => (
-    <div className='flex h-8 cursor-pointer items-center justify-center rounded bg-[rgba(0,0,0,0.75)] px-3 opacity-80 hover:opacity-100'>
+    <button className='flex h-8 cursor-pointer items-center justify-center rounded bg-[rgba(0,0,0,0.75)] px-3 opacity-80 hover:opacity-100' type='button'>
         <Icon colorClass='text-white' name='ellipsis' size='md' />
-    </div>
+        <span className='sr-only'>Actions</span>
+    </button>
 );
 
 const UserDetailModal:React.FC<UserDetailModalProps> = ({user, updateUser}) => {
@@ -486,7 +482,7 @@ const UserDetailModal:React.FC<UserDetailModalProps> = ({user, updateUser}) => {
         NiceModal.show(ConfirmationModal, {
             title: 'Transfer Ownership',
             prompt: 'Are you sure you want to transfer the ownership of this blog? You will not be able to undo this action.',
-            okLabel: 'Yep — I\'m sure',
+            okLabel: 'Yep — I\'m sure',
             okColor: 'red',
             onOk: async (modal) => {
                 const res = await api.users.makeOwner(user.id);
@@ -597,6 +593,7 @@ const UserDetailModal:React.FC<UserDetailModalProps> = ({user, updateUser}) => {
             okLabel={okLabel}
             size='lg'
             stickyFooter={true}
+            testId='user-detail-modal'
             onOk={async () => {
                 setSaveState('saving');
                 if (!validator.isEmail(userData.email)) {

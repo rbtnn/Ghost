@@ -1,11 +1,15 @@
 import BrandSettings, {BrandSettingValues} from './designAndBranding/BrandSettings';
-import ConfirmationModal from '../../../admin-x-ds/global/modal/ConfirmationModal';
-import NiceModal, {useModal} from '@ebay/nice-modal-react';
+// import Button from '../../../admin-x-ds/global/Button';
+// import ChangeThemeModal from './ThemeModal';
+import Icon from '../../../admin-x-ds/global/Icon';
+import NiceModal, {NiceModalHandler, useModal} from '@ebay/nice-modal-react';
 import React, {useContext, useEffect, useState} from 'react';
+import StickyFooter from '../../../admin-x-ds/global/StickyFooter';
 import TabView, {Tab} from '../../../admin-x-ds/global/TabView';
 import ThemePreview from './designAndBranding/ThemePreview';
 import ThemeSettings from './designAndBranding/ThemeSettings';
 import useForm from '../../../hooks/useForm';
+import useRouting from '../../../hooks/useRouting';
 import {CustomThemeSetting, Post, Setting, SettingValue} from '../../../types/api';
 import {PreviewModalContent} from '../../../admin-x-ds/global/modal/PreviewModal';
 import {ServicesContext} from '../../providers/ServiceProvider';
@@ -14,17 +18,22 @@ import {getHomepageUrl, getSettingValues} from '../../../utils/helpers';
 
 const Sidebar: React.FC<{
     brandSettings: BrandSettingValues
-    updateBrandSetting: (key: string, value: SettingValue) => void
     themeSettingSections: Array<{id: string, title: string, settings: CustomThemeSetting[]}>
+    modal: NiceModalHandler<Record<string, unknown>>;
+    updateBrandSetting: (key: string, value: SettingValue) => void
     updateThemeSetting: (updated: CustomThemeSetting) => void
     onTabChange: (id: string) => void
+    handleSave: () => Promise<void>
 }> = ({
     brandSettings,
-    updateBrandSetting,
     themeSettingSections,
+    modal,
+    updateBrandSetting,
     updateThemeSetting,
-    onTabChange
+    onTabChange,
+    handleSave
 }) => {
+    const {updateRoute} = useRouting();
     const [selectedTab, setSelectedTab] = useState('brand');
 
     const tabs: Tab[] = [
@@ -46,11 +55,23 @@ const Sidebar: React.FC<{
     };
 
     return (
-        <>
-            <div className='p-7'>
+        <div className='flex h-full flex-col justify-between'>
+            <div className='p-7' data-testid="design-setting-tabs">
                 <TabView selectedTab={selectedTab} tabs={tabs} onTabChange={handleTabChange} />
             </div>
-        </>
+            <StickyFooter height={74}>
+                <div className='w-full px-7'>
+                    <button className='group flex w-full items-center justify-between text-sm font-medium opacity-80 transition-all hover:opacity-100' data-testid='change-theme' type='button' onClick={async () => {
+                        await handleSave();
+                        modal.remove();
+                        updateRoute('design/edit/themes');
+                    }}>
+                        Change theme
+                        <Icon className='mr-2 transition-all group-hover:translate-x-2' name='chevron-right' size='sm' />
+                    </button>
+                </div>
+            </StickyFooter>
+        </div>
     );
 };
 
@@ -62,6 +83,7 @@ const DesignModal: React.FC = () => {
     const [themeSettings, setThemeSettings] = useState<Array<CustomThemeSetting>>([]);
     const [latestPost, setLatestPost] = useState<Post | null>(null);
     const [selectedPreviewTab, setSelectedPreviewTab] = useState('homepage');
+    const {updateRoute} = useRouting();
 
     useEffect(() => {
         api.latestPost.browse().then((response) => {
@@ -88,7 +110,7 @@ const DesignModal: React.FC = () => {
             }
 
             if (formState.settings.some(setting => setting.dirty)) {
-                const newSettings = await saveSettings(formState.settings.filter(setting => setting.dirty));
+                const {settings: newSettings} = await saveSettings(formState.settings.filter(setting => setting.dirty));
                 updateForm(state => ({...state, settings: newSettings}));
             }
         }
@@ -177,6 +199,8 @@ const DesignModal: React.FC = () => {
     const sidebarContent =
         <Sidebar
             brandSettings={{description, accentColor, icon, logo, coverImage}}
+            handleSave={handleSave}
+            modal={modal}
             themeSettingSections={themeSettingSections}
             updateBrandSetting={updateBrandSetting}
             updateThemeSetting={updateThemeSetting}
@@ -184,9 +208,13 @@ const DesignModal: React.FC = () => {
         />;
 
     return <PreviewModalContent
+        afterClose={() => {
+            updateRoute('design');
+        }}
         buttonsDisabled={saveState === 'saving'}
         defaultTab='homepage'
-        okLabel={saveState === 'saved' ? 'Saved' : (saveState === 'saving' ? 'Saving...' : 'Save and close')}
+        dirty={saveState === 'unsaved'}
+        okLabel={saveState === 'saved' ? 'Saved' : (saveState === 'saving' ? 'Saving...' : 'Save & close')}
         preview={previewContent}
         previewToolbarTabs={previewTabs}
         selectedURL={selectedPreviewTab}
@@ -195,31 +223,10 @@ const DesignModal: React.FC = () => {
         size='full'
         testId='design-modal'
         title='Design'
-        onCancel={() => {
-            if (saveState === 'unsaved') {
-                NiceModal.show(ConfirmationModal, {
-                    title: 'Are you sure you want to leave this page?',
-                    prompt: (
-                        <>
-                            <p>Hey there! It looks like you didn&lsquo;t save the changes you made.</p>
-                            <p>Save before you go!</p>
-                        </>
-                    ),
-                    okLabel: 'Leave',
-                    okColor: 'red',
-                    onOk: (confirmModal) => {
-                        confirmModal?.remove();
-                        modal.remove();
-                    },
-                    cancelLabel: 'Stay'
-                });
-            } else {
-                modal.remove();
-            }
-        }}
         onOk={async () => {
             await handleSave();
             modal.remove();
+            updateRoute('design');
         }}
         onSelectURL={onSelectURL}
     />;

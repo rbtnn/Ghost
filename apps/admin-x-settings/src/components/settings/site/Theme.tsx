@@ -1,18 +1,18 @@
 import Button from '../../../admin-x-ds/global/Button';
-import ChangeThemeModal from './ThemeModal';
-import NiceModal from '@ebay/nice-modal-react';
 import React from 'react';
 import SettingGroup from '../../../admin-x-ds/settings/SettingGroup';
+import useRouting from '../../../hooks/useRouting';
 
-const Theme: React.FC = () => {
+const Theme: React.FC<{ keywords: string[] }> = ({keywords}) => {
+    const {updateRoute} = useRouting();
     return (
         <SettingGroup
             customButtons={<Button color='green' label='Manage themes' link onClick={() => {
-                NiceModal.show(ChangeThemeModal);
+                updateRoute('design/edit/themes');
             }}/>}
             description="Change or upload themes"
+            keywords={keywords}
             navid='theme'
-            searchKeywords={['themes', 'design', 'appearance', 'style']}
             testId='theme'
             title="Theme"
         />

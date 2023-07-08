@@ -8,7 +8,7 @@ import Toggle from '../../../admin-x-ds/global/form/Toggle';
 import useSettingGroup from '../../../hooks/useSettingGroup';
 import {getSettingValues} from '../../../utils/helpers';
 
-const LockSite: React.FC = () => {
+const LockSite: React.FC<{ keywords: string[] }> = ({keywords}) => {
     const {
         localSettings,
         isEditing,
@@ -60,7 +60,6 @@ const LockSite: React.FC = () => {
                 checked={passwordEnabled}
                 direction='rtl'
                 hint='All search engine optimization and social features will be disabled.'
-                id='enable-password-protection'
                 label='Enable password protection'
                 onChange={handleToggleChange}
             />
@@ -81,9 +80,9 @@ const LockSite: React.FC = () => {
         <SettingGroup
             description='Enable protection with a simple shared password.'
             isEditing={isEditing}
+            keywords={keywords}
             navid='locksite'
             saveState={saveState}
-            searchKeywords={['private', 'password', 'lock']}
             testId='locksite'
             title='Make site private'
             onCancel={handleCancel}

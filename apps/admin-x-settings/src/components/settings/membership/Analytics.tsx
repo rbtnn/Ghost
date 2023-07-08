@@ -6,7 +6,7 @@ import Toggle from '../../../admin-x-ds/global/form/Toggle';
 import useSettingGroup from '../../../hooks/useSettingGroup';
 import {getSettingValues} from '../../../utils/helpers';
 
-const Analytics: React.FC = () => {
+const Analytics: React.FC<{ keywords: string[] }> = ({keywords}) => {
     const {
         localSettings,
         isEditing,
@@ -32,7 +32,6 @@ const Analytics: React.FC = () => {
                 checked={trackEmailOpens}
                 direction='rtl'
                 hint='Record when a member opens an email'
-                id='newsletter-opens'
                 label='Newsletter opens'
                 onChange={(e) => {
                     handleToggleChange('email_track_opens', e);
@@ -42,7 +41,6 @@ const Analytics: React.FC = () => {
                 checked={trackEmailClicks}
                 direction='rtl'
                 hint='Record when a member clicks on any link in an email'
-                id='newsletter-clicks'
                 label='Newsletter clicks'
                 onChange={(e) => {
                     handleToggleChange('email_track_clicks', e);
@@ -52,7 +50,6 @@ const Analytics: React.FC = () => {
                 checked={trackMemberSources}
                 direction='rtl'
                 hint='Track the traffic sources and posts that drive the most member growth'
-                id='member-sources'
                 label='Member sources'
                 onChange={(e) => {
                     handleToggleChange('members_track_sources', e);
@@ -62,7 +59,6 @@ const Analytics: React.FC = () => {
                 checked={outboundLinkTagging}
                 direction='rtl'
                 hint='Make it easier for other sites to track the traffic you send them in their analytics'
-                id='outbound-links'
                 label='Outbound link tagging'
                 onChange={(e) => {
                     handleToggleChange('outbound_link_tagging', e);
@@ -76,9 +72,9 @@ const Analytics: React.FC = () => {
             description='Decide what data you collect from your members'
             hideEditButton={true}
             isEditing={isEditing}
+            keywords={keywords}
             navid='analytics'
             saveState={saveState}
-            searchKeywords={['analytics', 'tracking', 'privacy']}
             testId='analytics'
             title='Analytics'
             onCancel={handleCancel}

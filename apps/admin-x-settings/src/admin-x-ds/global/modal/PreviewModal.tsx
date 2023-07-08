@@ -4,10 +4,12 @@ import Heading from '../Heading';
 import MobileChrome from '../chrome/MobileChrome';
 import Modal, {ModalSize} from './Modal';
 import NiceModal, {useModal} from '@ebay/nice-modal-react';
-import React, {useState} from 'react';
+import React, {useEffect, useState} from 'react';
 import Select, {SelectOption} from '../form/Select';
 import TabView, {Tab} from '../TabView';
+import useGlobalDirtyState from '../../../hooks/useGlobalDirtyState';
 import {ButtonProps} from '../Button';
+import {confirmIfDirty} from '../../../utils/modals';
 
 export interface PreviewModalProps {
     testId?: string;
@@ -15,22 +17,29 @@ export interface PreviewModalProps {
     size?: ModalSize;
     sidebar?: boolean | React.ReactNode;
     preview?: React.ReactNode;
+    dirty?: boolean
     cancelLabel?: string;
     okLabel?: string;
     okColor?: string;
     buttonsDisabled?: boolean
     previewToolbar?: boolean;
+    leftToolbar?: boolean;
+    rightToolbar?: boolean;
+    deviceSelector?: boolean;
     previewToolbarURLs?: SelectOption[];
+    previewBgColor?: 'grey' | 'white';
     selectedURL?: string;
     previewToolbarTabs?: Tab[];
     defaultTab?: string;
     sidebarButtons?: React.ReactNode;
     sidebarHeader?: React.ReactNode;
     sidebarPadding?: boolean;
+    sidebarContentClasses?: string;
 
     onCancel?: () => void;
     onOk?: () => void;
-    onSelectURL: (url: string) => void;
+    afterClose?: () => void;
+    onSelectURL?: (url: string) => void;
     onSelectDesktopView?: () => void;
     onSelectMobileView?: () => void;
 }
@@ -41,32 +50,43 @@ export const PreviewModalContent: React.FC<PreviewModalProps> = ({
     size = 'full',
     sidebar = '',
     preview,
+    dirty = false,
     cancelLabel = 'Cancel',
     okLabel = 'OK',
     okColor = 'black',
     previewToolbar = true,
+    leftToolbar = true,
+    rightToolbar = true,
+    deviceSelector = true,
     previewToolbarURLs,
+    previewBgColor = 'grey',
     selectedURL,
     previewToolbarTabs,
     buttonsDisabled,
     sidebarButtons,
     sidebarHeader,
     sidebarPadding = true,
+    sidebarContentClasses,
 
     onCancel,
     onOk,
+    afterClose,
     onSelectURL,
     onSelectDesktopView,
     onSelectMobileView
 }) => {
     const modal = useModal();
-    let buttons: ButtonProps[] = [];
+    const {setGlobalDirtyState} = useGlobalDirtyState();
+
+    useEffect(() => {
+        setGlobalDirtyState(dirty);
+    }, [dirty, setGlobalDirtyState]);
 
     const [view, setView] = useState('desktop');
 
-    if (view === 'mobile') {
+    if (view === 'mobile' && deviceSelector) {
         preview = (
-            <MobileChrome>
+            <MobileChrome data-testid="preview-mobile">
                 {preview}
             </MobileChrome>
         );
@@ -76,7 +96,7 @@ export const PreviewModalContent: React.FC<PreviewModalProps> = ({
         let toolbarLeft = (<></>);
         if (previewToolbarURLs) {
             toolbarLeft = (
-                <Select options={previewToolbarURLs!} selectedOption={selectedURL} onSelect={onSelectURL} />
+                <Select options={previewToolbarURLs!} selectedOption={selectedURL} onSelect={onSelectURL!} />
             );
         } else if (previewToolbarTabs) {
             toolbarLeft = <TabView
@@ -84,16 +104,18 @@ export const PreviewModalContent: React.FC<PreviewModalProps> = ({
                 selectedTab={selectedURL}
                 tabs={previewToolbarTabs}
                 width='wide'
-                onTabChange={onSelectURL}
+                onTabChange={onSelectURL!}
             />;
         }
 
         const unSelectedIconColorClass = 'text-grey-500';
-        const toolbarRight = (
+        const toolbarRight = deviceSelector && (
             <ButtonGroup
                 buttons={[
                     {
                         icon: 'laptop',
+                        label: 'Desktop',
+                        hideLabel: true,
                         link: true,
                         size: 'sm',
                         iconColorClass: (view === 'desktop' ? 'text-black' : unSelectedIconColorClass),
@@ -103,6 +125,8 @@ export const PreviewModalContent: React.FC<PreviewModalProps> = ({
                     },
                     {
                         icon: 'mobile',
+                        label: 'Mobile',
+                        hideLabel: true,
                         link: true,
                         size: 'sm',
                         iconColorClass: (view === 'mobile' ? 'text-black' : unSelectedIconColorClass),
@@ -115,26 +139,32 @@ export const PreviewModalContent: React.FC<PreviewModalProps> = ({
         );
 
         preview = (
-            <>
-                <DesktopChromeHeader
+            <div className={`min-w-100 absolute inset-y-0 left-0 right-[400px] flex grow flex-col overflow-y-scroll ${previewBgColor === 'grey' ? 'bg-grey-50' : 'bg-white'}`}>
+                {previewToolbar && <DesktopChromeHeader
+                    data-testid="design-toolbar"
                     size='lg'
                     toolbarCenter={<></>}
-                    toolbarLeft={toolbarLeft}
-                    toolbarRight={toolbarRight}
-                />
-                <div className='flex h-full grow items-center justify-center bg-grey-50 text-sm text-grey-400'>
+                    toolbarLeft={leftToolbar && toolbarLeft}
+                    toolbarRight={rightToolbar && toolbarRight}
+                />}
+                <div className='flex h-full grow items-center justify-center text-sm text-grey-400'>
                     {preview}
                 </div>
-            </>
+            </div>
         );
     }
+
+    let buttons: ButtonProps[] = [];
 
     if (!sidebarButtons) {
         buttons.push({
             key: 'cancel-modal',
             label: cancelLabel,
             onClick: (onCancel ? onCancel : () => {
-                modal.remove();
+                confirmIfDirty(dirty, () => {
+                    modal.remove();
+                    afterClose?.();
+                });
             }),
             disabled: buttonsDisabled
         });
@@ -151,6 +181,7 @@ export const PreviewModalContent: React.FC<PreviewModalProps> = ({
 
     return (
         <Modal
+            afterClose={afterClose}
             footer={false}
             noPadding={true}
             size={size}
@@ -162,14 +193,14 @@ export const PreviewModalContent: React.FC<PreviewModalProps> = ({
                     {preview}
                 </div>
                 {sidebar &&
-                    <div className='flex h-full basis-[400px] flex-col border-l border-grey-100'>
+                    <div className='relative flex h-full basis-[400px] flex-col border-l border-grey-100'>
                         {sidebarHeader ? sidebarHeader : (
                             <div className='flex max-h-[74px] items-start justify-between gap-3 px-7 py-5'>
                                 <Heading className='mt-1' level={4}>{title}</Heading>
                                 {sidebarButtons ? sidebarButtons : <ButtonGroup buttons={buttons} /> }
                             </div>
                         )}
-                        <div className={`grow ${sidebarPadding && 'p-7 pt-0'} flex flex-col justify-between overflow-y-auto`}>
+                        <div className={`${!sidebarHeader ? 'absolute inset-x-0 bottom-0 top-[74px] grow' : ''} ${sidebarPadding && 'p-7 pt-0'} flex flex-col justify-between overflow-y-auto ${sidebarContentClasses && sidebarContentClasses}`}>
                             {sidebar}
                         </div>
                     </div>

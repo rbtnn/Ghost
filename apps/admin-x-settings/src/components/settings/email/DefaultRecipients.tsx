@@ -60,7 +60,7 @@ function getDefaultRecipientValue({
     return defaultEmailRecipients;
 }
 
-const DefaultRecipients: React.FC = () => {
+const DefaultRecipients: React.FC<{ keywords: string[] }> = ({keywords}) => {
     const {
         localSettings,
         isEditing,
@@ -150,8 +150,13 @@ const DefaultRecipients: React.FC = () => {
         .filter(({value}) => filters.includes(value));
 
     const setSelectedSegments = (selected: MultiValue<MultiSelectOption>) => {
-        const selectedGroups = selected?.map(({value}) => value).join(',');
-        updateSetting('editor_default_email_recipients_filter', selectedGroups);
+        if (selected.length) {
+            const selectedGroups = selected?.map(({value}) => value).join(',');
+            updateSetting('editor_default_email_recipients_filter', selectedGroups);
+        } else {
+            updateSetting('editor_default_email_recipients_filter', null);
+            setSelectedOption('none');
+        }
     };
 
     const values = (
@@ -193,9 +198,9 @@ const DefaultRecipients: React.FC = () => {
         <SettingGroup
             description='When you publish new content, who do you usually want to send it to?'
             isEditing={isEditing}
+            keywords={keywords}
             navid='default-recipients'
             saveState={saveState}
-            searchKeywords={['newsletter', 'recipients', 'email']}
             testId='default-recipients'
             title='Default recipients'
             onCancel={handleCancel}

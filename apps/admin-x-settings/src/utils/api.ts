@@ -1,7 +1,7 @@
-import {CustomThemeSetting, Label, Offer, Post, Setting, SiteData, Theme, Tier, User, UserRole} from '../types/api';
+import {Config, CustomThemeSetting, InstalledTheme, Label, Offer, Post, Setting, SiteData, Theme, Tier, User, UserRole} from '../types/api';
 import {getGhostPaths} from './helpers';
 
-interface Meta {
+export interface Meta {
     pagination: {
         page: number;
         limit: number;
@@ -12,9 +12,15 @@ interface Meta {
     }
 }
 
+export type SettingsResponseMeta = Meta & { sent_email_verification?: boolean }
+
 export interface SettingsResponseType {
-    meta: Meta;
+    meta?: SettingsResponseMeta;
     settings: Setting[];
+}
+
+export interface ConfigResponseType {
+    config: Config;
 }
 
 export interface UsersResponseType {
@@ -36,7 +42,7 @@ export interface RolesResponseType {
 export interface UserInvite {
     created_at: string;
     email: string;
-    expires: string;
+    expires: number;
     id: string;
     role_id: string;
     role?: string;
@@ -80,7 +86,7 @@ export interface SiteResponseType {
 export interface ImagesResponseType {
     images: {
         url: string;
-        ref: string;
+        ref: string | null;
     }[];
 }
 
@@ -92,6 +98,10 @@ export interface PasswordUpdateResponseType {
 
 export interface ThemesResponseType {
     themes: Theme[];
+}
+
+export interface ThemesInstallResponseType {
+    themes: InstalledTheme[];
 }
 
 interface RequestOptions {
@@ -119,6 +129,9 @@ export interface API {
     settings: {
         browse: () => Promise<SettingsResponseType>;
         edit: (newSettings: Setting[]) => Promise<SettingsResponseType>;
+    };
+    config: {
+        browse: () => Promise<ConfigResponseType>;
     };
     users: {
         browse: () => Promise<UsersResponseType>;
@@ -157,6 +170,7 @@ export interface API {
     };
     tiers: {
         browse: () => Promise<TiersResponseType>
+        edit: (newTier: Tier) => Promise<TiersResponseType>
     };
     labels: {
         browse: () => Promise<LabelsResponseType>
@@ -168,8 +182,8 @@ export interface API {
         browse: () => Promise<ThemesResponseType>;
         activate: (themeName: string) => Promise<ThemesResponseType>;
         delete: (themeName: string) => Promise<void>;
-        install: (repo: string) => Promise<ThemesResponseType>;
-        upload: ({file}: {file: File}) => Promise<ThemesResponseType>;
+        install: (repo: string) => Promise<ThemesInstallResponseType>;
+        upload: ({file}: {file: File}) => Promise<ThemesInstallResponseType>;
     };
 }
 
@@ -223,6 +237,13 @@ function setupGhostApi({ghostVersion}: GhostApiOptions): API {
                 });
 
                 const data: SettingsResponseType = await response.json();
+                return data;
+            }
+        },
+        config: {
+            browse: async () => {
+                const response = await fetcher(`/config/`, {});
+                const data: ConfigResponseType = await response.json();
                 return data;
             }
         },
@@ -382,6 +403,14 @@ function setupGhostApi({ghostVersion}: GhostApiOptions): API {
                 const response = await fetcher(`/tiers/?filter=${filter}&limit=all`);
                 const data: TiersResponseType = await response.json();
                 return data;
+            },
+            edit: async (tier) => {
+                const response = await fetcher(`/tiers/${tier.id}`, {
+                    method: 'PUT',
+                    body: JSON.stringify({tiers: [tier]})
+                });
+                const data: TiersResponseType = await response.json();
+                return data;
             }
         },
         labels: {
@@ -433,7 +462,7 @@ function setupGhostApi({ghostVersion}: GhostApiOptions): API {
                     body: formData,
                     headers: {}
                 });
-                const data: ThemesResponseType = await response.json();
+                const data: ThemesInstallResponseType = await response.json();
                 return data;
             }
         }

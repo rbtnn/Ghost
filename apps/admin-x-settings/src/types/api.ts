@@ -5,6 +5,10 @@ export type Setting = {
     value: SettingValue;
 }
 
+export type Config = {
+    [key: string]: any;
+}
+
 export type User = {
     id: string;
     name: string;
@@ -137,4 +141,22 @@ export type Theme = {
         version?: string;
     };
     templates?: string[];
+}
+
+export type InstalledTheme = Theme & {
+    errors?: ThemeProblem<'error'>[];
+    warnings?: ThemeProblem<'warning'>[];
+}
+
+export type ThemeProblem<Level extends string = 'error' | 'warning'> = {
+    code: string
+    details: string
+    failures: Array<{
+        ref: string
+        message?: string
+        rule?: string
+    }>
+    fatal: boolean
+    level: Level
+    rule: string
 }

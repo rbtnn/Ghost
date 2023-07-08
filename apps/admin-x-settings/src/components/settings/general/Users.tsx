@@ -1,6 +1,5 @@
 import Avatar from '../../../admin-x-ds/global/Avatar';
 import Button from '../../../admin-x-ds/global/Button';
-import InviteUserModal from './InviteUserModal';
 import List from '../../../admin-x-ds/global/List';
 import ListItem from '../../../admin-x-ds/global/ListItem';
 import NiceModal from '@ebay/nice-modal-react';
@@ -9,6 +8,7 @@ import React, {useContext, useState} from 'react';
 import SettingGroup from '../../../admin-x-ds/settings/SettingGroup';
 import TabView from '../../../admin-x-ds/global/TabView';
 import UserDetailModal from './UserDetailModal';
+import useRouting from '../../../hooks/useRouting';
 import useStaffUsers from '../../../hooks/useStaffUsers';
 import {ServicesContext} from '../../providers/ServiceProvider';
 import {User} from '../../../types/api';
@@ -41,10 +41,10 @@ const Owner: React.FC<OwnerProps> = ({user, updateUser}) => {
     }
 
     return (
-        <div className='group flex gap-3 hover:cursor-pointer' onClick={showDetailModal}>
+        <div className='group flex gap-3 hover:cursor-pointer' data-testid='owner-user' onClick={showDetailModal}>
             <Avatar bgColor={generateAvatarColor((user.name ? user.name : user.email))} image={user.profile_image} label={getInitials(user.name)} labelColor='white' size='lg' />
             <div className='flex flex-col'>
-                <span>{user.name} &mdash; <strong>Owner</strong> <span className='invisible ml-2 inline-block text-sm font-bold text-green group-hover:visible'>Edit</span></span>
+                <span>{user.name} &mdash; <strong>Owner</strong> <button className='invisible ml-2 inline-block text-sm font-bold text-green group-hover:visible' type='button'>Edit</button></span>
                 <span className='text-xs text-grey-700'>{user.email}</span>
             </div>
         </div>
@@ -81,6 +81,7 @@ const UsersList: React.FC<UsersListProps> = ({users, updateUser}) => {
                         hideActions={true}
                         id={`list-item-${user.id}`}
                         separator={false}
+                        testId='user-list-item'
                         title={title}
                         onClick={() => showDetailModal(user)} />
                 );
@@ -115,7 +116,7 @@ const UserInviteActions: React.FC<{invite: UserInvite}> = ({invite}) => {
                     setInvites(res.invites);
                     setRevokeState('');
                     showToast({
-                        message: `Invitation revoked(${invite.email})`,
+                        message: `Invitation revoked (${invite.email})`,
                         type: 'success'
                     });
                 }}
@@ -136,7 +137,7 @@ const UserInviteActions: React.FC<{invite: UserInvite}> = ({invite}) => {
                     setInvites(res.invites);
                     setResendState('');
                     showToast({
-                        message: `Invitation resent!(${invite.email})`,
+                        message: `Invitation resent! (${invite.email})`,
                         type: 'success'
                     });
                 }}
@@ -167,6 +168,7 @@ const InvitesUserList: React.FC<InviteListProps> = ({users}) => {
                         hideActions={true}
                         id={`list-item-${user.id}`}
                         separator={false}
+                        testId='user-invite'
                         title={user.email}
                         onClick={() => {
                             // do nothing
@@ -178,7 +180,7 @@ const InvitesUserList: React.FC<InviteListProps> = ({users}) => {
     );
 };
 
-const Users: React.FC = () => {
+const Users: React.FC<{ keywords: string[] }> = ({keywords}) => {
     const {
         ownerUser,
         adminUsers,
@@ -188,9 +190,9 @@ const Users: React.FC = () => {
         invites,
         updateUser
     } = useStaffUsers();
-
+    const {updateRoute} = useRouting();
     const showInviteModal = () => {
-        NiceModal.show(InviteUserModal);
+        updateRoute('users/invite');
     };
 
     const buttons = (
@@ -232,8 +234,9 @@ const Users: React.FC = () => {
     return (
         <SettingGroup
             customButtons={buttons}
+            keywords={keywords}
             navid='users'
-            searchKeywords={['users', 'permissions', 'roles', 'staff']}
+            testId='users'
             title='Users and permissions'
         >
             <Owner updateUser={updateUser} user={ownerUser} />

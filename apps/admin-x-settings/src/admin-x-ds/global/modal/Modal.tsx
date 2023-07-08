@@ -1,12 +1,12 @@
 import Button, {ButtonProps} from '../Button';
 import ButtonGroup from '../ButtonGroup';
-import ConfirmationModal from './ConfirmationModal';
 import Heading from '../Heading';
-import NiceModal, {useModal} from '@ebay/nice-modal-react';
 import React, {useEffect} from 'react';
 import StickyFooter from '../StickyFooter';
 import clsx from 'clsx';
 import useGlobalDirtyState from '../../../hooks/useGlobalDirtyState';
+import {confirmIfDirty} from '../../../utils/modals';
+import {useModal} from '@ebay/nice-modal-react';
 
 export type ModalSize = 'sm' | 'md' | 'lg' | 'xl' | 'full' | 'bleed' | number;
 
@@ -28,14 +28,13 @@ export interface ModalProps {
     noPadding?: boolean;
     onOk?: () => void;
     onCancel?: () => void;
+    afterClose?: () => void;
     children?: React.ReactNode;
     backDrop?: boolean;
     backDropClick?: boolean;
     stickyFooter?: boolean;
     scrolling?: boolean;
     dirty?: boolean;
-    closeConfrimationTitle?: string;
-    closeConfirmationPrompt?: React.ReactNode;
 }
 
 const Modal: React.FC<ModalProps> = ({
@@ -51,19 +50,13 @@ const Modal: React.FC<ModalProps> = ({
     onOk,
     okColor = 'black',
     onCancel,
+    afterClose,
     children,
     backDrop = true,
     backDropClick = true,
     stickyFooter = false,
     scrolling = true,
-    dirty = false,
-    closeConfrimationTitle = 'Are you sure you want to leave this page?',
-    closeConfirmationPrompt = (
-        <>
-            <p>{`Hey there! It looks like you didn't save the changes you made.`}</p>
-            <p>Save before you go!</p>
-        </>
-    )
+    dirty = false
 }) => {
     const modal = useModal();
     const {setGlobalDirtyState} = useGlobalDirtyState();
@@ -75,21 +68,10 @@ const Modal: React.FC<ModalProps> = ({
     let buttons: ButtonProps[] = [];
 
     const removeModal = () => {
-        if (!dirty) {
+        confirmIfDirty(dirty, () => {
             modal.remove();
-        } else {
-            NiceModal.show(ConfirmationModal, {
-                title: closeConfrimationTitle,
-                prompt: closeConfirmationPrompt,
-                okLabel: 'Leave',
-                cancelLabel: 'Stay',
-                okColor: 'red',
-                onOk: (confirmationModal) => {
-                    modal.remove();
-                    confirmationModal?.remove();
-                }
-            });
-        }
+            afterClose?.();
+        });
     };
 
     if (!footer) {
@@ -151,7 +133,7 @@ const Modal: React.FC<ModalProps> = ({
 
     case 'full':
         modalClasses += ' h-full ';
-        backdropClasses += ' p-[2vmin]';
+        backdropClasses += ' p-[3vmin]';
         padding = 'p-10';
         break;
 
@@ -224,7 +206,7 @@ const Modal: React.FC<ModalProps> = ({
         <div className={backdropClasses} id='modal-backdrop' onClick={handleBackdropClick}>
             <div className={clsx(
                 'pointer-events-none fixed inset-0 z-0',
-                backDrop && 'bg-[rgba(98,109,121,0.15)] backdrop-blur-[3px]'
+                backDrop && 'bg-[rgba(98,109,121,0.2)] backdrop-blur-[3px]'
             )}></div>
             <section className={modalClasses} data-testid={testId} style={modalStyles}>
                 <div className={contentClasses}>

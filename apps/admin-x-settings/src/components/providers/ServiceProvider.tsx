@@ -1,6 +1,9 @@
 import React, {createContext, useContext, useMemo} from 'react';
 import setupGhostApi from '../../utils/api';
+import useDataService, {DataService, bulkEdit} from '../../utils/dataService';
+import useSearchService, {SearchService} from '../../utils/search';
 import {OfficialTheme} from '../../models/themes';
+import {Tier} from '../../types/api';
 
 export interface FileService {
     uploadImage: (file: File) => Promise<string>;
@@ -9,7 +12,8 @@ interface ServicesContextProps {
     api: ReturnType<typeof setupGhostApi>;
     fileService: FileService|null;
     officialThemes: OfficialTheme[];
-    search: {filter: string, setFilter: (value: string) => void}
+    search: SearchService
+    tiers: DataService<Tier>
 }
 
 interface ServicesProviderProps {
@@ -22,7 +26,8 @@ const ServicesContext = createContext<ServicesContextProps>({
     api: setupGhostApi({ghostVersion: ''}),
     fileService: null,
     officialThemes: [],
-    search: {filter: '', setFilter: () => {}}
+    search: {filter: '', setFilter: () => {}, checkVisible: () => true},
+    tiers: {data: [], update: async () => {}}
 });
 
 const ServicesProvider: React.FC<ServicesProviderProps> = ({children, ghostVersion, officialThemes}) => {
@@ -33,15 +38,16 @@ const ServicesProvider: React.FC<ServicesProviderProps> = ({children, ghostVersi
             return response.images[0].url;
         }
     }), [apiService]);
-
-    const [filter, setFilter] = React.useState('');
+    const search = useSearchService();
+    const tiers = useDataService({key: 'tiers', browse: apiService.tiers.browse, edit: bulkEdit('tiers', apiService.tiers.edit)});
 
     return (
         <ServicesContext.Provider value={{
             api: apiService,
             fileService,
             officialThemes,
-            search: {filter, setFilter}
+            search,
+            tiers
         }}>
             {children}
         </ServicesContext.Provider>
@@ -57,3 +63,5 @@ export const useApi = () => useServices().api;
 export const useOfficialThemes = () => useServices().officialThemes;
 
 export const useSearch = () => useServices().search;
+
+export const useTiers = () => useServices().tiers;
