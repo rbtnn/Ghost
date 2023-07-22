@@ -1,5 +1,4 @@
 const {
-    CollectionResourceChangeEvent,
     PostDeletedEvent,
     PostAddedEvent,
     PostEditedEvent
@@ -29,19 +28,8 @@ export class ModelToDomainEventInterceptor {
             'post.added',
             'post.deleted',
             'post.edited',
-
-            // @NOTE: uncomment events below once they have appropriate DomainEvent to map to
-            // 'tag.added',
-            // 'tag.edited',
-            // 'tag.attached',
-            // 'tag.detached',
-            // 'tag.deleted',
-
-            // 'user.activated',
-            'user.activated.edited'
-            // 'user.attached',
-            // 'user.detached',
-            // 'user.deleted'
+            // NOTE: currently unmapped and unused event
+            'tag.added'
         ];
 
         for (const modelEventName of ghostModelUpdateEvents) {
@@ -58,22 +46,21 @@ export class ModelToDomainEventInterceptor {
     }
 
     domainEventDispatcher(modelEventName: string, data: any) {
-        const change = Object.assign({}, {
-            id: data.id,
-            resource: modelEventName.split('.')[0]
-        }, data._changed);
-
         let event;
-        if (modelEventName === 'post.deleted') {
+
+        switch (modelEventName) {
+        case 'post.deleted':
             event = PostDeletedEvent.create({id: data.id});
-        } else if (modelEventName === 'post.added') {
+            break;
+        case 'post.added':
             event = PostAddedEvent.create({
                 id: data.id,
                 featured: data.attributes.featured,
                 status: data.attributes.status,
                 published_at: data.attributes.published_at
             });
-        } else if (modelEventName === 'post.edited') {
+            break;
+        case 'post.edited':
             event = PostEditedEvent.create({
                 id: data.id,
                 current: {
@@ -81,17 +68,26 @@ export class ModelToDomainEventInterceptor {
                     title: data.attributes.title,
                     status: data.attributes.status,
                     featured: data.attributes.featured,
-                    published_at: data.attributes.published_at
+                    published_at: data.attributes.published_at,
+                    tags: data.relations?.tags?.models.map((tag: any) => (tag.get('slug')))
                 },
                 // @NOTE: this will need to represent the previous state of the post
                 //        will be needed to optimize the query for the collection
                 previous: {
+                    id: data.id,
+                    title: data._previousAttributes?.title,
+                    status: data._previousAttributes?.status,
+                    featured: data._previousAttributes?.featured,
+                    published_at: data._previousAttributes?.published_at,
+                    tags: data._previousRelations?.tags?.models.map((tag: any) => (tag.get('slug')))
                 }
             });
-        } else {
-            event = CollectionResourceChangeEvent.create(modelEventName, change);
+            break;
+        default:
         }
 
-        this.DomainEvents.dispatch(event);
+        if (event) {
+            this.DomainEvents.dispatch(event);
+        }
     }
 }

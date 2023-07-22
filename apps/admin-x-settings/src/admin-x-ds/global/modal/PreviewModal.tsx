@@ -1,5 +1,5 @@
 import ButtonGroup from '../ButtonGroup';
-import DesktopChromeHeader from '../chrome/DesktopChromeHeader';
+import DesktopChrome from '../chrome/DesktopChrome';
 import Heading from '../Heading';
 import MobileChrome from '../chrome/MobileChrome';
 import Modal, {ModalSize} from './Modal';
@@ -90,6 +90,12 @@ export const PreviewModalContent: React.FC<PreviewModalProps> = ({
                 {preview}
             </MobileChrome>
         );
+    } else if (view === 'desktop' && deviceSelector) {
+        preview = (
+            <DesktopChrome data-testid="preview-desktop">
+                {preview}
+            </DesktopChrome>
+        );
     }
 
     if (previewToolbar) {
@@ -140,13 +146,14 @@ export const PreviewModalContent: React.FC<PreviewModalProps> = ({
 
         preview = (
             <div className={`min-w-100 absolute inset-y-0 left-0 right-[400px] flex grow flex-col overflow-y-scroll ${previewBgColor === 'grey' ? 'bg-grey-50' : 'bg-white'}`}>
-                {previewToolbar && <DesktopChromeHeader
-                    data-testid="design-toolbar"
-                    size='lg'
-                    toolbarCenter={<></>}
-                    toolbarLeft={leftToolbar && toolbarLeft}
-                    toolbarRight={rightToolbar && toolbarRight}
-                />}
+                {previewToolbar && <header className="relative flex h-[74px] shrink-0 items-center justify-center px-3 py-5" data-testid="design-toolbar">
+                    {leftToolbar && <div className='absolute left-5 flex h-full items-center'>
+                        {toolbarLeft}
+                    </div>}
+                    {rightToolbar && <div className='absolute right-5 flex h-full items-center'>
+                        {toolbarRight}
+                    </div>}
+                </header>}
                 <div className='flex h-full grow items-center justify-center text-sm text-grey-400'>
                     {preview}
                 </div>
@@ -189,7 +196,7 @@ export const PreviewModalContent: React.FC<PreviewModalProps> = ({
             title=''
         >
             <div className='flex h-full grow'>
-                <div className='flex grow flex-col'>
+                <div className={`flex grow flex-col ${previewBgColor === 'grey' ? 'bg-grey-50' : 'bg-white'}`}>
                     {preview}
                 </div>
                 {sidebar &&

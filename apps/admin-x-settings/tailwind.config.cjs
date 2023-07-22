@@ -214,12 +214,12 @@ module.exports = {
                 full: '9999px'
             },
             fontSize: {
-                '2xs': '1.05rem',
+                '2xs': '0.95rem',
                 base: '1.5rem',
                 xs: '1.2rem',
                 sm: '1.35rem',
                 md: '1.5rem',
-                lg: '1.8rem',
+                lg: '1.75rem',
                 xl: '2rem',
                 '2xl': '2.4rem',
                 '3xl': '3rem',

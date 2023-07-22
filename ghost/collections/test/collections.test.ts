@@ -1,10 +1,8 @@
 import assert from 'assert/strict';
-import sinon from 'sinon';
 import DomainEvents from '@tryghost/domain-events';
 import {
     CollectionsService,
     CollectionsRepositoryInMemory,
-    CollectionResourceChangeEvent,
     PostDeletedEvent,
     PostAddedEvent,
     PostEditedEvent
@@ -117,58 +115,24 @@ describe('CollectionsService', function () {
         it('Can get collections for a post', async function () {
             const collection = await collectionsService.createCollection({
                 title: 'testing collections',
+                slug: 'testing-collections',
+                type: 'manual'
+            });
+
+            const collection2 = await collectionsService.createCollection({
+                title: 'testing collections 1',
+                slug: '1-testing-collections',
                 type: 'manual'
             });
 
             await collectionsService.addPostToCollection(collection.id, posts[0]);
+            await collectionsService.addPostToCollection(collection2.id, posts[0]);
 
             const collections = await collectionsService.getCollectionsForPost(posts[0].id);
 
-            assert.equal(collections.length, 1, 'There should be one collection');
-            assert.equal(collections[0].id, collection.id, 'Collection should be the correct one');
-        });
-    });
-
-    describe('getAllPosts', function () {
-        it('Can get paged posts of a collection', async function () {
-            const collection = await collectionsService.createCollection({
-                title: 'testing paging',
-                type: 'manual'
-            });
-
-            for (const post of posts) {
-                await collectionsService.addPostToCollection(collection.id, post);
-            }
-
-            const postsPage1 = await collectionsService.getAllPosts(collection.id, {page: 1, limit: 2});
-
-            assert.ok(postsPage1, 'Posts should be returned');
-            assert.equal(postsPage1.meta.pagination.page, 1, 'Page should be 1');
-            assert.equal(postsPage1.meta.pagination.limit, 2, 'Limit should be 2');
-            assert.equal(postsPage1.meta.pagination.pages, 2, 'Pages should be 2');
-            assert.equal(postsPage1.data.length, 2, 'There should be 2 posts');
-            assert.equal(postsPage1.data[0].id, posts[0].id, 'First post should be the correct one');
-            assert.equal(postsPage1.data[1].id, posts[1].id, 'Second post should be the correct one');
-
-            const postsPage2 = await collectionsService.getAllPosts(collection.id, {page: 2, limit: 2});
-
-            assert.ok(postsPage2, 'Posts should be returned');
-            assert.equal(postsPage2.meta.pagination.page, 2, 'Page should be 2');
-            assert.equal(postsPage2.meta.pagination.limit, 2, 'Limit should be 2');
-            assert.equal(postsPage2.meta.pagination.pages, 2, 'Pages should be 2');
-            assert.equal(postsPage2.data.length, 2, 'There should be 2 posts');
-            assert.equal(postsPage2.data[0].id, posts[2].id, 'First post should be the correct one');
-            assert.equal(postsPage2.data[1].id, posts[3].id, 'Second post should be the correct one');
-        });
-
-        it('Throws when trying to get posts of a collection that does not exist', async function () {
-            await assert.rejects(async () => {
-                await collectionsService.getAllPosts('fake id', {});
-            }, (err: any) => {
-                assert.equal(err.message, 'Collection not found', 'Error message should match');
-                assert.equal(err.context, 'Collection with id: fake id does not exist', 'Error context should match');
-                return true;
-            });
+            assert.equal(collections.length, 2, 'There should be one collection');
+            assert.equal(collections[0].id, collection2.id, 'Collections should be sorted by slug');
+            assert.equal(collections[1].id, collection.id, 'Collections should be sorted by slug');
         });
     });
 
@@ -269,26 +233,6 @@ describe('CollectionsService', function () {
             const collection = await collectionsService.removePostFromCollection('i-do-not-exist', posts[0].id);
 
             assert.equal(collection, null, 'Collection should be null');
-        });
-    });
-
-    describe('subscribeToEvents', function () {
-        it('Subscribes to Domain Events', async function () {
-            const updateCollectionsSpy = sinon.spy(collectionsService, 'updateCollections');
-            const collectionChangeEvent = CollectionResourceChangeEvent.create('tag.added', {
-                id: 'test-id'
-            });
-
-            DomainEvents.dispatch(collectionChangeEvent);
-            await DomainEvents.allSettled();
-            assert.equal(updateCollectionsSpy.calledOnce, false, 'updateCollections should not be called yet');
-
-            collectionsService.subscribeToEvents();
-
-            DomainEvents.dispatch(collectionChangeEvent);
-            await DomainEvents.allSettled();
-
-            assert.equal(updateCollectionsSpy.calledOnce, true, 'updateCollections should be called');
         });
     });
 
@@ -399,30 +343,6 @@ describe('CollectionsService', function () {
 
                 assert.equal((await collectionsService.getById(automaticFeaturedCollection.id))?.posts?.length, 2);
                 assert.equal((await collectionsService.getById(automaticNonFeaturedCollection.id))?.posts.length, 3);
-                assert.equal((await collectionsService.getById(manualCollection.id))?.posts.length, 2);
-            });
-
-            it('Updates automatic collections only when post is published', async function () {
-                const newPost = {
-                    id: 'post-published',
-                    title: 'Post Published',
-                    slug: 'post-published',
-                    featured: true,
-                    published_at: new Date('2023-03-16T07:19:07.447Z'),
-                    deleted: false
-                };
-                await postsRepository.save(newPost);
-
-                collectionsService.subscribeToEvents();
-                const updateCollectionEvent = CollectionResourceChangeEvent.create('post.published', {
-                    id: newPost.id
-                });
-
-                DomainEvents.dispatch(updateCollectionEvent);
-                await DomainEvents.allSettled();
-
-                assert.equal((await collectionsService.getById(automaticFeaturedCollection.id))?.posts?.length, 3);
-                assert.equal((await collectionsService.getById(automaticNonFeaturedCollection.id))?.posts.length, 2);
                 assert.equal((await collectionsService.getById(manualCollection.id))?.posts.length, 2);
             });
 

@@ -7,7 +7,7 @@ const sinon = require('sinon');
 const logging = require('@tryghost/logging');
 const {HtmlValidate} = require('html-validate');
 
-function validateHtml(html) {
+async function validateHtml(html) {
     const htmlvalidate = new HtmlValidate({
         extends: [
             'html-validate:document',
@@ -34,7 +34,7 @@ function validateHtml(html) {
             }
         ]
     });
-    const report = htmlvalidate.validateString(html);
+    const report = await htmlvalidate.validateString(html);
 
     // Improve debugging and show a snippet of the invalid HTML instead of just the line number or a huge HTML-dump
     const parsedErrors = [];
@@ -775,7 +775,7 @@ describe('Email renderer', function () {
             }
         });
 
-        it('returns correct empty segment for post', function () {
+        it('returns correct empty segment for post', async function () {
             let post = {
                 get: (key) => {
                     if (key === 'lexical') {
@@ -783,7 +783,7 @@ describe('Email renderer', function () {
                     }
                 }
             };
-            let response = emailRenderer.getSegments(post);
+            let response = await emailRenderer.getSegments(post);
             response.should.eql([null]);
 
             post = {
@@ -793,11 +793,11 @@ describe('Email renderer', function () {
                     }
                 }
             };
-            response = emailRenderer.getSegments(post);
+            response = await emailRenderer.getSegments(post);
             response.should.eql([null]);
         });
 
-        it('returns correct segments for post with members only card', function () {
+        it('returns correct segments for post with members only card', async function () {
             emailRenderer = new EmailRenderer({
                 renderers: {
                     lexical: {
@@ -821,11 +821,11 @@ describe('Email renderer', function () {
                     }
                 }
             };
-            let response = emailRenderer.getSegments(post);
+            let response = await emailRenderer.getSegments(post);
             response.should.eql(['status:free', 'status:-free']);
         });
 
-        it('returns correct segments for post with email card', function () {
+        it('returns correct segments for post with email card', async function () {
             emailRenderer = new EmailRenderer({
                 renderers: {
                     lexical: {
@@ -849,7 +849,7 @@ describe('Email renderer', function () {
                     }
                 }
             };
-            let response = emailRenderer.getSegments(post);
+            let response = await emailRenderer.getSegments(post);
             response.should.eql(['status:free', 'status:-free']);
         });
     });
@@ -1581,7 +1581,7 @@ describe('Email renderer', function () {
                 options
             );
 
-            validateHtml(response.html);
+            await validateHtml(response.html);
 
             // Check footer content is not escaped
             assert.equal(response.html.includes('<span>Footer content with valid HTML</span>'), true, 'Should include footer content without escaping');
@@ -1597,7 +1597,9 @@ describe('Email renderer', function () {
         let emailRenderer;
 
         beforeEach(function () {
-            settings = {};
+            settings = {
+                timezone: 'Etc/UTC'
+            };
             labsEnabled = true;
             emailRenderer = new EmailRenderer({
                 audienceFeedbackService: {

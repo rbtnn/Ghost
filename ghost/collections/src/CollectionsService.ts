@@ -1,9 +1,9 @@
 import logging from '@tryghost/logging';
 import tpl from '@tryghost/tpl';
 import {Collection} from './Collection';
-import {CollectionResourceChangeEvent} from './CollectionResourceChangeEvent';
 import {CollectionRepository} from './CollectionRepository';
-import {MethodNotAllowedError, NotFoundError} from '@tryghost/errors';
+import {CollectionPost} from './CollectionPost';
+import {MethodNotAllowedError} from '@tryghost/errors';
 import {PostDeletedEvent} from './events/PostDeletedEvent';
 import {PostAddedEvent} from './events/PostAddedEvent';
 import {PostEditedEvent} from './events/PostEditedEvent';
@@ -21,7 +21,7 @@ const messages = {
 };
 
 interface SlugService {
-    generate(desired: string): Promise<string>;
+    generate(desired: string, options: {transaction: any}): Promise<string>;
 }
 
 type CollectionsServiceDeps = {
@@ -40,11 +40,15 @@ type CollectionPostDTO = {
 
 type CollectionPostListItemDTO = {
     id: string;
+    url: string;
     slug: string;
     title: string;
     featured: boolean;
     featured_image?: string;
-    published_at: Date
+    created_at: Date;
+    updated_at: Date;
+    published_at: Date,
+    tags?: string[];
 }
 
 type ManualCollection = {
@@ -87,6 +91,7 @@ type QueryOptions = {
     include?: string;
     page?: number;
     limit?: number;
+    transaction?: any;
 }
 
 interface PostsRepository {
@@ -152,170 +157,161 @@ export class CollectionsService {
      * @description Subscribes to Domain events to update collections when posts are added, updated or deleted
      */
     subscribeToEvents() {
-        // generic handler for all events that are not handled optimally yet
-        // this handler should go away once we have logic fo reach event
-        this.DomainEvents.subscribe(CollectionResourceChangeEvent, async () => {
-            await this.updateCollections();
-        });
-
         this.DomainEvents.subscribe(PostDeletedEvent, async (event: PostDeletedEvent) => {
+            logging.info(`PostDeletedEvent received, removing post ${event.id} from all collections`);
             await this.removePostFromAllCollections(event.id);
         });
 
         this.DomainEvents.subscribe(PostAddedEvent, async (event: PostAddedEvent) => {
+            logging.info(`PostAddedEvent received, adding post ${event.data.id} to matching collections`);
             await this.addPostToMatchingCollections(event.data);
         });
 
         this.DomainEvents.subscribe(PostEditedEvent, async (event: PostEditedEvent) => {
+            logging.info(`PostEditedEvent received, updating post ${event.data.id} in matching collections`);
             await this.updatePostInMatchingCollections(event.data);
         });
     }
 
     async createCollection(data: CollectionInputDTO): Promise<CollectionDTO> {
-        const slug = await this.slugService.generate(data.slug || data.title);
-        const collection = await Collection.create({
-            title: data.title,
-            slug: slug,
-            description: data.description,
-            type: data.type,
-            filter: data.filter,
-            featureImage: data.feature_image,
-            deletable: data.deletable
-        });
-
-        if (collection.type === 'automatic' && collection.filter) {
-            const posts = await this.postsRepository.getAll({
-                filter: collection.filter
+        return await this.collectionsRepository.createTransaction(async (transaction) => {
+            const slug = await this.slugService.generate(data.slug || data.title, {transaction});
+            const collection = await Collection.create({
+                title: data.title,
+                slug: slug,
+                description: data.description,
+                type: data.type,
+                filter: data.filter,
+                featureImage: data.feature_image,
+                deletable: data.deletable
             });
 
-            for (const post of posts) {
-                collection.addPost(post);
+            if (collection.type === 'automatic' && collection.filter) {
+                const posts = await this.postsRepository.getAll({
+                    filter: collection.filter,
+                    transaction: transaction
+                });
+
+                for (const post of posts) {
+                    await collection.addPost(post);
+                }
             }
-        }
 
-        await this.collectionsRepository.save(collection);
+            await this.collectionsRepository.save(collection, {transaction});
 
-        return this.toDTO(collection);
+            return this.toDTO(collection);
+        });
     }
 
     async addPostToCollection(collectionId: string, post: CollectionPostListItemDTO): Promise<CollectionDTO | null> {
-        const collection = await this.collectionsRepository.getById(collectionId);
+        return await this.collectionsRepository.createTransaction(async (transaction) => {
+            const collection = await this.collectionsRepository.getById(collectionId, {transaction});
 
-        if (!collection) {
-            return null;
-        }
-
-        collection.addPost(post);
-
-        await this.collectionsRepository.save(collection);
-
-        return this.toDTO(collection);
-    }
-
-    private async updateAutomaticCollectionItems(collection: Collection, filter?:string) {
-        const collectionFilter = filter || collection.filter;
-
-        if (collectionFilter) {
-            const posts = await this.postsRepository.getAll({
-                filter: collectionFilter
-            });
-
-            collection.removeAllPosts();
-
-            for (const post of posts) {
-                await collection.addPost(post);
+            if (!collection) {
+                return null;
             }
-        }
+
+            await collection.addPost(post);
+
+            await this.collectionsRepository.save(collection, {transaction});
+
+            return this.toDTO(collection);
+        });
     }
 
     private async removePostFromAllCollections(postId: string) {
-        // @NOTE: can be optimized by having a "getByPostId" method on the collections repository
-        const collections = await this.collectionsRepository.getAll();
+        return await this.collectionsRepository.createTransaction(async (transaction) => {
+            // @NOTE: can be optimized by having a "getByPostId" method on the collections repository
+            const collections = await this.collectionsRepository.getAll({transaction});
 
-        for (const collection of collections) {
-            if (collection.includesPost(postId)) {
-                await collection.removePost(postId);
+            for (const collection of collections) {
+                if (collection.includesPost(postId)) {
+                    collection.removePost(postId);
+                    await this.collectionsRepository.save(collection, {transaction});
+                }
             }
-        }
+        });
     }
 
-    private async addPostToMatchingCollections(post: {id: string, featured: boolean, published_at: Date}) {
-        const collections = await this.collectionsRepository.getAll({
-            filter: 'type:automatic'
-        });
+    private async addPostToMatchingCollections(post: CollectionPost) {
+        return await this.collectionsRepository.createTransaction(async (transaction) => {
+            const collections = await this.collectionsRepository.getAll({
+                filter: 'type:automatic',
+                transaction: transaction
+            });
 
-        for (const collection of collections) {
-            const added = await collection.addPost(post);
+            for (const collection of collections) {
+                const added = await collection.addPost(post);
 
-            if (added) {
-                await this.collectionsRepository.save(collection);
+                if (added) {
+                    await this.collectionsRepository.save(collection, {transaction});
+                }
             }
-        }
-    }
-
-    /**
-     * @description Updates all automatic collections. Can be time intensive and is a temporary solution
-     * while all of the events are mapped out and handled optimally
-     */
-    async updateCollections() {
-        const collections = await this.collectionsRepository.getAll({
-            filter: 'type:automatic'
         });
-
-        for (const collection of collections) {
-            await this.updateAutomaticCollectionItems(collection);
-            await this.collectionsRepository.save(collection);
-        }
     }
 
     async updatePostInMatchingCollections(postEdit: PostEditedEvent['data']) {
-        const collections = await this.collectionsRepository.getAll({
-            filter: 'type:automatic'
-        });
+        return await this.collectionsRepository.createTransaction(async (transaction) => {
+            const collections = await this.collectionsRepository.getAll({
+                filter: 'type:automatic',
+                transaction
+            });
 
-        for (const collection of collections) {
-            if (collection.includesPost(postEdit.id) && !collection.postMatchesFilter(postEdit.current)) {
-                await collection.removePost(postEdit.id);
-                await this.collectionsRepository.save(collection);
+            for (const collection of collections) {
+                if (collection.includesPost(postEdit.id) && !collection.postMatchesFilter(postEdit.current)) {
+                    collection.removePost(postEdit.id);
+                    await this.collectionsRepository.save(collection, {transaction});
 
-                logging.info(`[Collections] Post ${postEdit.id} was updated and removed from collection ${collection.id} with filter ${collection.filter}`);
-            } else if (!collection.includesPost(postEdit.id) && collection.postMatchesFilter(postEdit.current)) {
-                const added = await collection.addPost(postEdit.current);
+                    logging.info(`[Collections] Post ${postEdit.id} was updated and removed from collection ${collection.id} with filter ${collection.filter}`);
+                } else if (!collection.includesPost(postEdit.id) && collection.postMatchesFilter(postEdit.current)) {
+                    const added = await collection.addPost(postEdit.current);
 
-                if (added) {
-                    await this.collectionsRepository.save(collection);
+                    if (added) {
+                        await this.collectionsRepository.save(collection, {transaction});
+                    }
+
+                    logging.info(`[Collections] Post ${postEdit.id} was updated and added to collection ${collection.id} with filter ${collection.filter}`);
+                } else {
+                    logging.info(`[Collections] Post ${postEdit.id} was updated but did not update any collections`);
                 }
-
-                logging.info(`[Collections] Post ${postEdit.id} was updated and added to collection ${collection.id} with filter ${collection.filter}`);
-            } else {
-                logging.info(`[Collections] Post ${postEdit.id} was updated but did not update any collections`);
             }
-        }
+        });
     }
 
     async edit(data: any): Promise<CollectionDTO | null> {
-        const collection = await this.collectionsRepository.getById(data.id);
+        return await this.collectionsRepository.createTransaction(async (transaction) => {
+            const collection = await this.collectionsRepository.getById(data.id, {transaction});
 
-        if (!collection) {
-            return null;
-        }
-
-        const collectionData = this.fromDTO(data);
-        await collection.edit(collectionData, this.uniqueChecker);
-
-        if (collection.type === 'manual' && data.posts) {
-            for (const post of data.posts) {
-                collection.addPost(post);
+            if (!collection) {
+                return null;
             }
-        }
 
-        if (collection.type === 'automatic' && data.filter) {
-            await this.updateAutomaticCollectionItems(collection, data.filter);
-        }
+            const collectionData = this.fromDTO(data);
+            await collection.edit(collectionData, this.uniqueChecker);
 
-        await this.collectionsRepository.save(collection);
+            if (collection.type === 'manual' && data.posts) {
+                for (const post of data.posts) {
+                    await collection.addPost(post);
+                }
+            }
 
-        return this.toDTO(collection);
+            if (collection.type === 'automatic' && data.filter) {
+                const posts = await this.postsRepository.getAll({
+                    filter: data.filter,
+                    transaction
+                });
+
+                collection.removeAllPosts();
+
+                for (const post of posts) {
+                    await collection.addPost(post);
+                }
+            }
+
+            await this.collectionsRepository.save(collection, {transaction});
+
+            return this.toDTO(collection);
+        });
     }
 
     async getById(id: string): Promise<Collection | null> {
@@ -349,43 +345,16 @@ export class CollectionsService {
             }
         };
     }
-
-    async getAllPosts(id: string, {limit = 15, page = 1}: QueryOptions): Promise<{data: CollectionPostListItemDTO[], meta: any}> {
-        const collection = await this.getById(id);
-
-        if (!collection) {
-            throw new NotFoundError({
-                message: tpl(messages.collectionNotFound.message),
-                context: tpl(messages.collectionNotFound.context, {id})
-            });
-        }
-
-        const startIdx = limit * (page - 1);
-        const endIdx = limit * page;
-        const postIds = collection.posts.slice(startIdx, endIdx);
-        const posts = await this.postsRepository.getBulk(postIds);
-
-        return {
-            data: posts,
-            meta: {
-                pagination: {
-                    page: page,
-                    pages: Math.ceil(collection.posts.length / limit),
-                    limit: limit,
-                    total: posts.length,
-                    prev: null,
-                    next: null
-                }
-            }
-        };
-    }
-
     async getCollectionsForPost(postId: string): Promise<CollectionDTO[]> {
         const collections = await this.collectionsRepository.getAll({
             filter: `posts:${postId}`
         });
 
-        return collections.map(collection => this.toDTO(collection));
+        return collections.map(collection => this.toDTO(collection))
+            .sort((a, b) => {
+                // NOTE: sorting is here to keep DB engine ordering consistent
+                return a.slug.localeCompare(b.slug);
+            });
     }
 
     async destroy(id: string): Promise<Collection | null> {
@@ -409,17 +378,19 @@ export class CollectionsService {
     }
 
     async removePostFromCollection(id: string, postId: string): Promise<CollectionDTO | null> {
-        const collection = await this.getById(id);
+        return await this.collectionsRepository.createTransaction(async (transaction) => {
+            const collection = await this.collectionsRepository.getById(id, {transaction});
 
-        if (!collection) {
-            return null;
-        }
+            if (!collection) {
+                return null;
+            }
 
-        if (collection) {
-            collection.removePost(postId);
-            await this.collectionsRepository.save(collection);
-        }
+            if (collection) {
+                collection.removePost(postId);
+                await this.collectionsRepository.save(collection, {transaction});
+            }
 
-        return this.toDTO(collection);
+            return this.toDTO(collection);
+        });
     }
 }
