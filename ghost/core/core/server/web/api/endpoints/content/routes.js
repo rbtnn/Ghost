@@ -39,6 +39,9 @@ module.exports = function apiRoutes() {
     router.get('/tiers', mw.authenticatePublic, http(api.tiersPublic.browse));
     router.get('/offers/:id', mw.authenticatePublic, http(api.offersPublic.read));
 
+    router.get('/collections/:id', mw.authenticatePublic, http(api.collectionsPublic.readById));
+    router.get('/collections/slug/:slug', mw.authenticatePublic, http(api.collectionsPublic.readBySlug));
+
     // ## bsm_podcast
     router.get('/bsm_podcast/:uuid', mw.bsmPodcast, http(api.bsmPodcast.browse));
 

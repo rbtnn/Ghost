@@ -237,13 +237,25 @@ describe('Collection', function () {
         assert(collection.posts.length === 0);
 
         const posts = [{
-            id: '0'
+            id: '0',
+            featured: false,
+            published_at: new Date(),
+            tags: []
         }, {
-            id: '1'
+            id: '1',
+            featured: false,
+            published_at: new Date(),
+            tags: []
         }, {
-            id: '2'
+            id: '2',
+            featured: false,
+            published_at: new Date(),
+            tags: []
         }, {
-            id: '3'
+            id: '3',
+            featured: false,
+            published_at: new Date(),
+            tags: []
         }];
 
         collection.addPost(posts[0]);
@@ -270,7 +282,9 @@ describe('Collection', function () {
 
         const added = await collection.addPost({
             id: '0',
-            featured: false
+            featured: false,
+            published_at: new Date(),
+            tags: []
         });
 
         assert.equal(added, false);
@@ -278,7 +292,9 @@ describe('Collection', function () {
 
         const featuredAdded = await collection.addPost({
             id: '1',
-            featured: true
+            featured: true,
+            published_at: new Date(),
+            tags: []
         });
 
         assert.equal(featuredAdded, true);
@@ -293,7 +309,11 @@ describe('Collection', function () {
         assert.equal(collection.posts.length, 0);
 
         collection.addPost({
-            id: '0'
+            id: '0',
+            featured: false,
+            published_at: new Date(),
+            tags: []
+
         });
 
         assert.equal(collection.posts.length, 1);
@@ -352,16 +372,76 @@ describe('Collection', function () {
 
             const featuredPost = {
                 id: '0',
-                featured: true
+                featured: true,
+                published_at: new Date(),
+                tags: []
             };
 
             const nonFeaturedPost = {
                 id: '1',
-                featured: false
+                featured: false,
+                published_at: new Date(),
+                tags: []
             };
 
             assert.ok(collection.postMatchesFilter(featuredPost), 'Post should match the filter');
             assert.ok(!collection.postMatchesFilter(nonFeaturedPost), 'Post should not match the filter');
+        });
+
+        it('Can match a post with a tag filter', async function () {
+            const collection = await Collection.create({
+                title: 'Testing filtering posts',
+                type: 'automatic',
+                filter: 'tag:avocado'
+            });
+
+            const avocadoPost = {
+                id: '0',
+                featured: false,
+                tags: [{
+                    slug: 'avocado'
+                }],
+                published_at: new Date()
+            };
+            const nonAvocadoPost = {
+                id: '1',
+                featured: false,
+                tags: [{
+                    slug: 'not-avocado'
+                }],
+                published_at: new Date()
+            };
+
+            assert.ok(collection.postMatchesFilter(avocadoPost), 'Post should match the filter');
+            assert.ok(!collection.postMatchesFilter(nonAvocadoPost), 'Post should not match the filter');
+        });
+
+        it('Can match a post with a tags filter', async function () {
+            const collection = await Collection.create({
+                title: 'Testing filtering posts',
+                type: 'automatic',
+                filter: 'tags:avocado'
+            });
+
+            const avocadoPost = {
+                id: '0',
+                featured: false,
+                tags: [{
+                    slug: 'avocado'
+                }],
+                published_at: new Date()
+            };
+            const nonAvocadoPost = {
+                id: '1',
+                featured: false,
+                tags: [{
+                    slug: 'not-avocado'
+                }],
+                published_at: new Date()
+            };
+
+            assert.ok(collection.postMatchesFilter(avocadoPost), 'Post should match the filter');
+            assert.ok(!collection.postMatchesFilter(nonAvocadoPost), 'Post should not match the filter');
         });
     });
 });

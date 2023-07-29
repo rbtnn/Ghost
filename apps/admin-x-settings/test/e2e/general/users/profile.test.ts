@@ -32,7 +32,7 @@ test.describe('User profile', async () => {
         await modal.getByLabel('Email').fill('newadmin@test.com');
         await modal.getByLabel('Slug').fill('newadmin');
         await modal.getByLabel('Location').fill('some location');
-        await modal.getByLabel('Website').fill('some site');
+        await modal.getByLabel('Website').fill('https://example.com');
         await modal.getByLabel('Facebook profile').fill('some fb');
         await modal.getByLabel('Twitter profile').fill('some tw');
         await modal.getByLabel('Bio').fill('some bio');
@@ -40,11 +40,9 @@ test.describe('User profile', async () => {
         await modal.getByLabel(/New paid members/).uncheck();
         await modal.getByLabel(/Paid member cancellations/).check();
 
-        await modal.getByRole('button', {name: 'Save'}).click();
+        await modal.getByRole('button', {name: 'Save & close'}).click();
 
         await expect(modal.getByRole('button', {name: 'Saved'})).toBeVisible();
-
-        await modal.getByRole('button', {name: 'Close'}).click();
 
         await expect(listItem.getByText('New Admin')).toBeVisible();
         await expect(listItem.getByText('newadmin@test.com')).toBeVisible();
@@ -55,7 +53,7 @@ test.describe('User profile', async () => {
                 name: 'New Admin',
                 slug: 'newadmin',
                 location: 'some location',
-                website: 'some site',
+                website: 'https://example.com',
                 facebook: 'some fb',
                 twitter: 'some tw',
                 bio: 'some bio',

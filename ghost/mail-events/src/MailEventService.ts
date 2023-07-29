@@ -1,6 +1,6 @@
-const crypto = require('crypto');
-const errors = require('@tryghost/errors');
-const tpl = require('@tryghost/tpl');
+import crypto from 'crypto';
+import errors from '@tryghost/errors';
+import tpl from '@tryghost/tpl';
 
 import {MailEvent} from './MailEvent';
 import {MailEventRepository} from './MailEventRepository';
@@ -39,6 +39,7 @@ interface Labs {
 }
 
 interface Config {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     get(key: string): any;
 }
 

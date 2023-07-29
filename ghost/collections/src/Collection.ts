@@ -1,7 +1,8 @@
 import {UniqueChecker} from './UniqueChecker';
 import {ValidationError} from '@tryghost/errors';
 import tpl from '@tryghost/tpl';
-import nql = require('@tryghost/nql');
+import nql from '@tryghost/nql';
+import {posts as postExpansions} from '@tryghost/nql-filter-expansions';
 import {CollectionPost} from './CollectionPost';
 
 import ObjectID from 'bson-objectid';
@@ -95,7 +96,9 @@ export class Collection {
     }
 
     postMatchesFilter(post: CollectionPost) {
-        const filterNql = nql(this.filter);
+        const filterNql = nql(this.filter, {
+            expansions: postExpansions
+        });
         return filterNql.queryJSON(post);
     }
 
@@ -138,6 +141,7 @@ export class Collection {
         this._posts = [];
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     private constructor(data: any) {
         this.id = data.id;
         this.title = data.title;
@@ -167,6 +171,7 @@ export class Collection {
         };
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     static validateDateField(date: any, fieldName: string): Date {
         if (!date) {
             return new Date();
@@ -181,6 +186,7 @@ export class Collection {
         });
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     static async create(data: any): Promise<Collection> {
         let id;
 

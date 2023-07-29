@@ -1,15 +1,14 @@
-const {
-    PostDeletedEvent,
-    PostAddedEvent,
-    PostEditedEvent
-} = require('@tryghost/collections');
+import { PostDeletedEvent, PostAddedEvent, PostEditedEvent, TagDeletedEvent } from '@tryghost/collections';
 
 type ModelToDomainEventInterceptorDeps = {
     ModelEvents: {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         hasRegisteredListener: (event: any, listenerName: string) => boolean;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         on: (eventName: string, callback: (data: any) => void) => void;
     },
     DomainEvents: {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         dispatch: (event: any) => void;
     }
 }
@@ -29,12 +28,14 @@ export class ModelToDomainEventInterceptor {
             'post.deleted',
             'post.edited',
             // NOTE: currently unmapped and unused event
-            'tag.added'
+            'tag.added',
+            'tag.deleted'
         ];
 
         for (const modelEventName of ghostModelUpdateEvents) {
             if (!this.ModelEvents.hasRegisteredListener(modelEventName, 'collectionListener')) {
                 const dispatcher = this.domainEventDispatcher.bind(this);
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 const listener = function (data: any) {
                     dispatcher(modelEventName, data);
                 };
@@ -45,6 +46,7 @@ export class ModelToDomainEventInterceptor {
         }
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     domainEventDispatcher(modelEventName: string, data: any) {
         let event;
 
@@ -69,7 +71,10 @@ export class ModelToDomainEventInterceptor {
                     status: data.attributes.status,
                     featured: data.attributes.featured,
                     published_at: data.attributes.published_at,
-                    tags: data.relations?.tags?.models.map((tag: any) => (tag.get('slug')))
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    tags: data.relations?.tags?.models.map((tag: any) => ({
+                        slug: tag.get('slug')
+                    }))
                 },
                 // @NOTE: this will need to represent the previous state of the post
                 //        will be needed to optimize the query for the collection
@@ -79,9 +84,15 @@ export class ModelToDomainEventInterceptor {
                     status: data._previousAttributes?.status,
                     featured: data._previousAttributes?.featured,
                     published_at: data._previousAttributes?.published_at,
-                    tags: data._previousRelations?.tags?.models.map((tag: any) => (tag.get('slug')))
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    tags: data._previousRelations?.tags?.models.map((tag: any) => ({
+                        slug: tag.get('slug')
+                    }))
                 }
             });
+            break;
+        case 'tag.deleted':
+            event = TagDeletedEvent.create({id: data.id, slug: data.attributes.slug});
             break;
         default:
         }
