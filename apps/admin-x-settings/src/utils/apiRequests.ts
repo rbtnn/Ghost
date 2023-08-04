@@ -1,6 +1,6 @@
-import { QueryClient, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { getGhostPaths } from './helpers';
-import { useServices } from '../components/providers/ServiceProvider';
+import {QueryClient, UseQueryOptions, useMutation, useQuery, useQueryClient} from '@tanstack/react-query';
+import {getGhostPaths} from './helpers';
+import {useServices} from '../components/providers/ServiceProvider';
 
 export interface Meta {
     pagination: {
@@ -21,18 +21,40 @@ interface RequestOptions {
     };
 }
 
+export class ApiError extends Error {
+    constructor(
+        public readonly response: Response,
+        public readonly data?: {
+            errors?: Array<{
+                code: string | null;
+                context: string | null;
+                details: string | null;
+                ghostErrorCode: string | null;
+                help: string | null;
+                id: string;
+                message: string;
+                property: string | null;
+                type: string;
+            }>
+        }
+    ) {
+        super(data?.errors?.[0]?.message || response.statusText);
+    }
+}
+
 export const useFetchApi = () => {
     const {ghostVersion} = useServices();
 
     return async (endpoint: string | URL, options: RequestOptions = {}) => {
         // By default, we set the Content-Type header to application/json
-        const defaultHeaders = {
+        const defaultHeaders: Record<string, string> = {
             'app-pragma': 'no-cache',
             'x-ghost-version': ghostVersion
         };
-        const headers = options?.headers || {
-            'Content-Type': 'application/json'
-        };
+        if (typeof options.body === 'string') {
+            defaultHeaders['content-type'] = 'application/json';
+        }
+        const headers = options?.headers || {};
         const response = await fetch(endpoint, {
             headers: {
                 ...defaultHeaders,
@@ -44,7 +66,10 @@ export const useFetchApi = () => {
             ...options
         });
 
-        if (response.status === 204) {
+        if (response.status > 299) {
+            const data = response.headers.get('content-type')?.includes('application/json') ? await response.json() : undefined;
+            throw new ApiError(response, data);
+        } else if (response.status === 204) {
             return;
         } else {
             return await response.json();
@@ -72,13 +97,16 @@ interface QueryOptions<ResponseData> {
     returnData?: (originalData: unknown) => ResponseData;
 }
 
-export const createQuery = <ResponseData>(options: QueryOptions<ResponseData>) => (searchParams?: { [key: string]: string }) => {
+type QueryHookOptions<ResponseData> = UseQueryOptions<ResponseData> & { searchParams?: { [key: string]: string } };
+
+export const createQuery = <ResponseData>(options: QueryOptions<ResponseData>) => ({searchParams, ...query}: QueryHookOptions<ResponseData> = {}) => {
     const url = apiUrl(options.path, searchParams || options.defaultSearchParams);
     const fetchApi = useFetchApi();
 
     const result = useQuery<ResponseData>({
         queryKey: [options.dataType, url],
-        queryFn: () => fetchApi(url)
+        queryFn: () => fetchApi(url),
+        ...query
     });
 
     return {
@@ -87,9 +115,9 @@ export const createQuery = <ResponseData>(options: QueryOptions<ResponseData>) =
     };
 };
 
-export const createQueryWithId = <ResponseData>(options: QueryOptions<ResponseData>) => (id: string, searchParams?: { [key: string]: string }) => {
+export const createQueryWithId = <ResponseData>(options: QueryOptions<ResponseData>) => (id: string, {searchParams, ...query}: QueryHookOptions<ResponseData> = {}) => {
     const queryHook = createQuery<ResponseData>({...options, path: parameterizedPath(options.path, id)});
-    return queryHook(searchParams || options.defaultSearchParams);
+    return queryHook({searchParams: searchParams || options.defaultSearchParams, ...query});
 };
 
 interface MutationOptions<ResponseData, Payload> extends Omit<QueryOptions<ResponseData>, 'dataType' | 'path'>, Omit<RequestOptions, 'body'> {
@@ -109,9 +137,14 @@ const mutate = <ResponseData, Payload>({fetchApi, path, payload, searchParams, o
 }) => {
     const {defaultSearchParams, body, ...requestOptions} = options;
     const url = apiUrl(path, searchParams || defaultSearchParams);
-    console.log('api url', path, searchParams, url)
     const generatedBody = payload && body?.(payload);
-    const requestBody = (generatedBody && generatedBody instanceof FormData) ? generatedBody : JSON.stringify(generatedBody)
+
+    let requestBody: string | FormData | undefined = undefined;
+    if (generatedBody instanceof FormData) {
+        requestBody = generatedBody;
+    } else if (generatedBody) {
+        requestBody = JSON.stringify(generatedBody);
+    }
 
     return fetchApi(url, {
         body: requestBody,

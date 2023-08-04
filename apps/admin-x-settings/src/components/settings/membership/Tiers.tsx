@@ -1,18 +1,20 @@
-import React, { useState } from 'react';
+import React, {useState} from 'react';
 import SettingGroup from '../../../admin-x-ds/settings/SettingGroup';
 import StripeButton from '../../../admin-x-ds/settings/StripeButton';
 import TabView from '../../../admin-x-ds/global/TabView';
 import TiersList from './tiers/TiersList';
 import useRouting from '../../../hooks/useRouting';
-import { Tier } from '../../../types/api';
-import { getActiveTiers, getArchivedTiers } from '../../../utils/helpers';
-import { useGlobalData } from '../../providers/DataProvider';
+import {Tier} from '../../../types/api';
+import {checkStripeEnabled, getActiveTiers, getArchivedTiers} from '../../../utils/helpers';
+import {useBrowseTiers} from '../../../utils/api/tiers';
+import {useGlobalData} from '../../providers/GlobalDataProvider';
 
 const Tiers: React.FC<{ keywords: string[] }> = ({keywords}) => {
     const [selectedTab, setSelectedTab] = useState('active-tiers');
-    const {tiers} = useGlobalData();
-    const activeTiers = getActiveTiers(tiers);
-    const archivedTiers = getArchivedTiers(tiers);
+    const {settings, config} = useGlobalData();
+    const {data: {tiers} = {}} = useBrowseTiers();
+    const activeTiers = getActiveTiers(tiers || []);
+    const archivedTiers = getArchivedTiers(tiers || []);
     const {updateRoute} = useRouting();
 
     const openConnectModal = () => {
@@ -43,16 +45,29 @@ const Tiers: React.FC<{ keywords: string[] }> = ({keywords}) => {
         }
     ];
 
+    let content;
+    if (checkStripeEnabled(settings, config)) {
+        content = <TabView selectedTab={selectedTab} tabs={tabs} onTabChange={setSelectedTab} />;
+    } else {
+        content = <TiersList tab='free-tier' tiers={activeTiers.filter(tier => tier.type === 'free')} />;
+    }
+
     return (
         <SettingGroup
-            customButtons={<StripeButton onClick={openConnectModal}/>}
+            customButtons={checkStripeEnabled(settings, config) ?
+                <button className='group flex items-center gap-2 rounded border border-grey-300 px-3 py-1.5 text-sm font-semibold text-grey-900 transition-all hover:border-grey-500' type='button' onClick={openConnectModal}>
+                    <span className="inline-flex h-2 w-2 rounded-full bg-green transition-all group-hover:bg-[#625BF6]"></span>
+                    Connected to Stripe
+                </button>
+                :
+                <StripeButton onClick={openConnectModal}/>}
             description='Set prices and paid member sign up settings'
             keywords={keywords}
             navid='tiers'
             testId='tiers'
             title='Tiers'
         >
-            <TabView selectedTab={selectedTab} tabs={tabs} onTabChange={setSelectedTab} />
+            {content}
         </SettingGroup>
     );
 };

@@ -5,13 +5,13 @@ import NoValueLabel from '../../../../admin-x-ds/global/NoValueLabel';
 import React from 'react';
 import TierDetailModal from './TierDetailModal';
 import useRouting from '../../../../hooks/useRouting';
-import { Tier } from '../../../../types/api';
-import { currencyToDecimal, getSymbol } from '../../../../utils/currency';
-import { numberWithCommas } from '../../../../utils/helpers';
-import { useEditTier } from '../../../../utils/api/tiers';
+import {Tier} from '../../../../types/api';
+import {currencyToDecimal, getSymbol} from '../../../../utils/currency';
+import {numberWithCommas} from '../../../../utils/helpers';
+import {useEditTier} from '../../../../utils/api/tiers';
 
 interface TiersListProps {
-    tab?: string;
+    tab?: 'active-tiers' | 'archive-tiers' | 'free-tier';
     tiers: Tier[];
 }
 

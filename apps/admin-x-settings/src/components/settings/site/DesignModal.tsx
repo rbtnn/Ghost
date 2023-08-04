@@ -1,21 +1,22 @@
-import BrandSettings, { BrandSettingValues } from './designAndBranding/BrandSettings';
+import BrandSettings, {BrandSettingValues} from './designAndBranding/BrandSettings';
 // import Button from '../../../admin-x-ds/global/Button';
 // import ChangeThemeModal from './ThemeModal';
 import Icon from '../../../admin-x-ds/global/Icon';
-import NiceModal, { NiceModalHandler, useModal } from '@ebay/nice-modal-react';
-import React, { useEffect, useState } from 'react';
+import NiceModal, {NiceModalHandler, useModal} from '@ebay/nice-modal-react';
+import React, {useEffect, useState} from 'react';
 import StickyFooter from '../../../admin-x-ds/global/StickyFooter';
-import TabView, { Tab } from '../../../admin-x-ds/global/TabView';
+import TabView, {Tab} from '../../../admin-x-ds/global/TabView';
 import ThemePreview from './designAndBranding/ThemePreview';
 import ThemeSettings from './designAndBranding/ThemeSettings';
 import useForm from '../../../hooks/useForm';
 import useRouting from '../../../hooks/useRouting';
-import useSettings from '../../../hooks/useSettings';
-import { CustomThemeSetting, Setting, SettingValue } from '../../../types/api';
-import { PreviewModalContent } from '../../../admin-x-ds/global/modal/PreviewModal';
-import { getHomepageUrl, getSettingValues } from '../../../utils/helpers';
-import { useBrowseCustomThemeSettings, useEditCustomThemeSettings } from '../../../utils/api/customThemeSettings';
-import { useBrowsePosts } from '../../../utils/api/posts';
+import {CustomThemeSetting, Setting, SettingValue} from '../../../types/api';
+import {PreviewModalContent} from '../../../admin-x-ds/global/modal/PreviewModal';
+import {getHomepageUrl, getSettingValues} from '../../../utils/helpers';
+import {useBrowseCustomThemeSettings, useEditCustomThemeSettings} from '../../../utils/api/customThemeSettings';
+import {useBrowsePosts} from '../../../utils/api/posts';
+import {useEditSettings} from '../../../utils/api/settings';
+import {useGlobalData} from '../../providers/GlobalDataProvider';
 
 const Sidebar: React.FC<{
     brandSettings: BrandSettingValues
@@ -24,7 +25,7 @@ const Sidebar: React.FC<{
     updateBrandSetting: (key: string, value: SettingValue) => void
     updateThemeSetting: (updated: CustomThemeSetting) => void
     onTabChange: (id: string) => void
-    handleSave: () => Promise<void>
+    handleSave: () => Promise<boolean>
 }> = ({
     brandSettings,
     themeSettingSections,
@@ -79,12 +80,15 @@ const Sidebar: React.FC<{
 const DesignModal: React.FC = () => {
     const modal = useModal();
 
-    const {settings, siteData, saveSettings} = useSettings();
+    const {settings, siteData} = useGlobalData();
+    const {mutateAsync: editSettings} = useEditSettings();
     const {data: {posts: [latestPost]} = {posts: []}} = useBrowsePosts({
-        filter: 'status:published',
-        order: 'published_at DESC',
-        limit: '1',
-        fields: 'id,url'
+        searchParams: {
+            filter: 'status:published',
+            order: 'published_at DESC',
+            limit: '1',
+            fields: 'id,url'
+        }
     });
     const {data: themeSettings} = useBrowseCustomThemeSettings();
     const {mutateAsync: editThemeSettings} = useEditCustomThemeSettings();
@@ -109,7 +113,7 @@ const DesignModal: React.FC = () => {
             }
 
             if (formState.settings.some(setting => setting.dirty)) {
-                const {settings: newSettings} = await saveSettings(formState.settings.filter(setting => setting.dirty));
+                const {settings: newSettings} = await editSettings(formState.settings.filter(setting => setting.dirty));
                 updateForm(state => ({...state, settings: newSettings}));
             }
         }

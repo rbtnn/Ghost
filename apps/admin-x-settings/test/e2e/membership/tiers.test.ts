@@ -1,9 +1,20 @@
-import { expect, test } from '@playwright/test';
-import { mockApi, responseFixtures } from '../../utils/e2e';
+import {expect, test} from '@playwright/test';
+import {globalDataRequests, mockApi, responseFixtures, updatedSettingsResponse} from '../../utils/e2e';
+
+const settingsWithStripe = updatedSettingsResponse([
+    {key: 'stripe_connect_publishable_key', value: 'pk_test_123'},
+    {key: 'stripe_connect_secret_key', value: 'sk_test_123'},
+    {key: 'stripe_connect_display_name', value: 'Dummy'},
+    {key: 'stripe_connect_account_id', value: 'acct_123'}
+]);
 
 test.describe('Tier settings', async () => {
     test('Supports creating a new tier', async ({page}) => {
-        await mockApi({page});
+        await mockApi({page, requests: {
+            ...globalDataRequests,
+            browseSettings: {...globalDataRequests.browseSettings, response: settingsWithStripe},
+            browseTiers: {method: 'GET', path: '/tiers/?limit=all', response: responseFixtures.tiers}
+        }});
 
         await page.goto('/');
 
@@ -38,14 +49,13 @@ test.describe('Tier settings', async () => {
             visibility: 'public',
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString()
-        }
+        };
 
-        const lastApiRequests = await mockApi({page, responses: {
-            tiers: {
-                add: { tiers: [newTier] },
-                // This request will be reloaded after the new tier is added
-                browse: { tiers: [...responseFixtures.tiers.tiers, newTier] }
-            }
+        const {lastApiRequests} = await mockApi({page, requests: {
+            ...globalDataRequests,
+            addTier: {method: 'POST', path: '/tiers/', response: {tiers: [newTier]}},
+            // This request will be reloaded after the new tier is added
+            browseTiers: {method: 'GET', path: '/tiers/?limit=all', response: {tiers: [...responseFixtures.tiers.tiers, newTier]}}
         }});
 
         await modal.getByRole('button', {name: 'Save & close'}).click();
@@ -53,7 +63,7 @@ test.describe('Tier settings', async () => {
         await expect(section.getByTestId('tier-card').filter({hasText: /Plus/})).toHaveText(/Plus tier/);
         await expect(section.getByTestId('tier-card').filter({hasText: /Plus/})).toHaveText(/\$8\/month/);
 
-        expect(lastApiRequests.tiers.add.body).toMatchObject({
+        expect(lastApiRequests.addTier?.body).toMatchObject({
             tiers: [{
                 name: 'Plus tier',
                 monthly_price: 800,
@@ -64,22 +74,23 @@ test.describe('Tier settings', async () => {
     });
 
     test('Supports updating a tier', async ({page}) => {
-        const lastApiRequests = await mockApi({page, responses: {
-            tiers: {
-                edit: {
-                    tiers: [{
-                        ...responseFixtures.tiers.tiers[1],
-                        name: 'Supporter updated',
-                        description: 'Supporter description',
-                        monthly_price: 1001,
-                        trial_days: 7,
-                        benefits: [
-                            'Simple benefit',
-                            'New benefit'
-                        ]
-                    }]
-                }
-            }
+        const {lastApiRequests} = await mockApi({page, requests: {
+            ...globalDataRequests,
+            browseSettings: {...globalDataRequests.browseSettings, response: settingsWithStripe},
+            browseTiers: {method: 'GET', path: '/tiers/?limit=all', response: responseFixtures.tiers},
+            editTier: {method: 'PUT', path: `/tiers/${responseFixtures.tiers.tiers[1].id}/`, response: {
+                tiers: [{
+                    ...responseFixtures.tiers.tiers[1],
+                    name: 'Supporter updated',
+                    description: 'Supporter description',
+                    monthly_price: 1001,
+                    trial_days: 7,
+                    benefits: [
+                        'Simple benefit',
+                        'New benefit'
+                    ]
+                }]
+            }}
         }});
 
         await page.goto('/');
@@ -110,7 +121,7 @@ test.describe('Tier settings', async () => {
         await expect(section.getByTestId('tier-card').filter({hasText: /Supporter/})).toHaveText(/Supporter description/);
         await expect(section.getByTestId('tier-card').filter({hasText: /Supporter/})).toHaveText(/\$10\.01\/month/);
 
-        expect(lastApiRequests.tiers.edit.body).toMatchObject({
+        expect(lastApiRequests.editTier?.body).toMatchObject({
             tiers: [{
                 id: responseFixtures.tiers.tiers[1].id,
                 name: 'Supporter updated',
@@ -126,19 +137,20 @@ test.describe('Tier settings', async () => {
     });
 
     test('Supports editing the free tier', async ({page}) => {
-        const lastApiRequests = await mockApi({page, responses: {
-            tiers: {
-                edit: {
-                    tiers: [{
-                        ...responseFixtures.tiers.tiers[0],
-                        description: 'Free tier description',
-                        benefits: [
-                            'First benefit',
-                            'Second benefit'
-                        ]
-                    }]
-                }
-            }
+        const {lastApiRequests} = await mockApi({page, requests: {
+            ...globalDataRequests,
+            browseSettings: {...globalDataRequests.browseSettings, response: settingsWithStripe},
+            browseTiers: {method: 'GET', path: '/tiers/?limit=all', response: responseFixtures.tiers},
+            editTier: {method: 'PUT', path: `/tiers/${responseFixtures.tiers.tiers[0].id}/`, response: {
+                tiers: [{
+                    ...responseFixtures.tiers.tiers[0],
+                    description: 'Free tier description',
+                    benefits: [
+                        'First benefit',
+                        'Second benefit'
+                    ]
+                }]
+            }}
         }});
 
         await page.goto('/');
@@ -158,7 +170,7 @@ test.describe('Tier settings', async () => {
 
         await expect(section.getByTestId('tier-card').filter({hasText: /Free/})).toHaveText(/Free tier description/);
 
-        expect(lastApiRequests.tiers.edit.body).toMatchObject({
+        expect(lastApiRequests.editTier?.body).toMatchObject({
             tiers: [{
                 id: responseFixtures.tiers.tiers[0].id,
                 description: 'Free tier description',

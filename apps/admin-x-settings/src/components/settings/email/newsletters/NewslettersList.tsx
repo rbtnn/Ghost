@@ -1,150 +1,91 @@
 import Button from '../../../../admin-x-ds/global/Button';
-// import List from '../../../../admin-x-ds/global/List';
-// import ListItem from '../../../../admin-x-ds/global/ListItem';
+import ConfirmationModal from '../../../../admin-x-ds/global/modal/ConfirmationModal';
 import NewsletterDetailModal from './NewsletterDetailModal';
 import NiceModal from '@ebay/nice-modal-react';
+import NoValueLabel from '../../../../admin-x-ds/global/NoValueLabel';
 import React from 'react';
 import Table from '../../../../admin-x-ds/global/Table';
 import TableCell from '../../../../admin-x-ds/global/TableCell';
 import TableRow from '../../../../admin-x-ds/global/TableRow';
+import {Newsletter} from '../../../../types/api';
+import {useEditNewsletter} from '../../../../utils/api/newsletters';
 
 interface NewslettersListProps {
-    tab?: string;
+    newsletters: Newsletter[]
 }
 
-// We should create a NewsletterItem component based on TableRow and then loop through newsletters
-//
-// interface NewsletterItemProps {
-//     name: string;
-//     description: string;
-//     subscribers: number;
-//     emailsSent: number;
-// }
+const NewsletterItem: React.FC<{newsletter: Newsletter}> = ({newsletter}) => {
+    const {mutateAsync: editNewsletter} = useEditNewsletter();
 
-// const NewsletterItem: React.FC<NewsletterItemProps> = ({name, description, subscribers, emailsSent}) => {
-//     const action = tab === 'active-newsletters' ? (
-//         <Button color='green' label='Archive' link />
-//     ) : (
-//         <Button color='green' label='Activate' link />
-//     );
-
-//     return (
-//         <TableRow
-//             action={action}
-//             onClick={() => {
-//                 NiceModal.show(NewsletterDetailModal);
-//             }}>
-//             hideActions
-//             separator
-//         >
-//             <TableCell>
-//                 <div className={`flex grow flex-col`}>
-//                     <span className='font-medium'>{name}</span>
-//                     <span className='whitespace-nowrap text-xs text-grey-700'>{description}</span>
-//                 </div>
-//             </TableCell>
-//             <TableCell>
-//                 <div className={`flex grow flex-col`}>
-//                     <span>{subscribers}</span>
-//                     <span className='whitespace-nowrap text-xs text-grey-700'>Subscribers</span>
-//                 </div>
-//             </TableCell>
-//             <TableCell>
-//                 <div className={`flex grow flex-col`}>
-//                     <span>{emailsSent}</span>
-//                     <span className='whitespace-nowrap text-xs text-grey-700'>Emails sent</span>
-//                 </div>
-//             </TableCell>
-//         </TableRow>
-//     );
-// };
-
-const NewslettersList: React.FC<NewslettersListProps> = ({
-    tab
-}) => {
-    const action = tab === 'active-newsletters' ? (
-        <Button color='green' label='Archive' link />
+    const action = newsletter.status === 'active' ? (
+        <Button color='green' label='Archive' link onClick={() => {
+            NiceModal.show(ConfirmationModal, {
+                title: 'Archive newsletter',
+                prompt: <>
+                    <p>Your newsletter <strong>{newsletter.name}</strong> will no longer be visible to members or available as an option when publishing new posts.</p>
+                    <p>Existing posts previously sent as this newsletter will remain unchanged.</p>
+                </>,
+                okLabel: 'Archive',
+                onOk: async (modal) => {
+                    await editNewsletter({...newsletter, status: 'archived'});
+                    modal?.remove();
+                }
+            });
+        }} />
     ) : (
-        <Button color='green' label='Activate' link />
+        <Button color='green' label='Activate' link onClick={() => {
+            NiceModal.show(ConfirmationModal, {
+                title: 'Reactivate newsletter',
+                prompt: <>
+                    Reactivating <strong>{newsletter.name}</strong> will immediately make it visible to members and re-enable it as an option when publishing new posts.
+                </>,
+                okLabel: 'Reactivate',
+                onOk: async (modal) => {
+                    await editNewsletter({...newsletter, status: 'active'});
+                    modal?.remove();
+                }
+            });
+        }} />
     );
+
+    const showDetails = () => {
+        NiceModal.show(NewsletterDetailModal, {newsletter});
+    };
 
     return (
-        <Table>
-            <TableRow
-                action={action}
-                hideActions
-                onClick={() => {
-                    NiceModal.show(NewsletterDetailModal);
-                }}>
-                <TableCell>
-                    <div className={`flex grow flex-col`}>
-                        <span className='font-medium'>Amazing newsletter</span>
-                        <span className='whitespace-nowrap text-xs text-grey-700'>This one is pretty good</span>
-                    </div>
-                </TableCell>
-                <TableCell>
-                    <div className={`flex grow flex-col`}>
-                        <span>259</span>
-                        <span className='whitespace-nowrap text-xs text-grey-700'>Subscribers</span>
-                    </div>
-                </TableCell>
-                <TableCell>
-                    <div className={`flex grow flex-col`}>
-                        <span>14</span>
-                        <span className='whitespace-nowrap text-xs text-grey-700'>Emails sent</span>
-                    </div>
-                </TableCell>
-            </TableRow>
-            <TableRow
-                action={action}
-                hideActions
-                onClick={() => {
-                    NiceModal.show(NewsletterDetailModal);
-                }}>
-                <TableCell>
-                    <div className={`flex grow flex-col`}>
-                        <span className='line-clamp-1 font-medium'>Crappy newsletter</span>
-                        <span className='whitespace-nowrap text-xs text-grey-700'>This one is just spam</span>
-                    </div>
-                </TableCell>
-                <TableCell>
-                    <div className={`flex grow flex-col`}>
-                        <span>145</span>
-                        <span className='whitespace-nowrap text-xs text-grey-700'>Subscribers</span>
-                    </div>
-                </TableCell>
-                <TableCell>
-                    <div className={`flex grow flex-col`}>
-                        <span>754</span>
-                        <span className='whitespace-nowrap text-xs text-grey-700'>Emails sent</span>
-                    </div>
-                </TableCell>
-            </TableRow>
-        </Table>
-
-    // Newsletter list previously used the List component, can be removed
-    //
-    // <List>
-    //     <ListItem
-    //         action={action}
-    //         detail='This one is pretty good'
-    //         title='Amazing newsletter'
-    //         hideActions
-    //         onClick={() => {
-    //             NiceModal.show(NewsletterDetailModal);
-    //         }}
-    //     />
-    //     <ListItem
-    //         action={action}
-    //         detail='This one is just spam'
-    //         title='Awful newsletter'
-    //         hideActions
-    //         onClick={() => {
-    //             NiceModal.show(NewsletterDetailModal);
-    //         }}
-    //     />
-    // </List>
+        <TableRow action={action} hideActions>
+            <TableCell onClick={showDetails}>
+                <div className={`flex grow flex-col`}>
+                    <span className='font-medium'>{newsletter.name}</span>
+                    <span className='whitespace-nowrap text-xs text-grey-700'>{newsletter.description || 'No description'}</span>
+                </div>
+            </TableCell>
+            <TableCell onClick={showDetails}>
+                <div className={`flex grow flex-col`}>
+                    <span>{newsletter.count?.active_members}</span>
+                    <span className='whitespace-nowrap text-xs text-grey-700'>Subscribers</span>
+                </div>
+            </TableCell>
+            <TableCell onClick={showDetails}>
+                <div className={`flex grow flex-col`}>
+                    <span>{newsletter.count?.posts}</span>
+                    <span className='whitespace-nowrap text-xs text-grey-700'>Posts sent</span>
+                </div>
+            </TableCell>
+        </TableRow>
     );
+};
+
+const NewslettersList: React.FC<NewslettersListProps> = ({newsletters}) => {
+    if (newsletters.length) {
+        return <Table>
+            {newsletters.map(newsletter => <NewsletterItem key={newsletter.id} newsletter={newsletter} />)}
+        </Table>;
+    } else {
+        return <NoValueLabel icon='mail-block'>
+            No newsletters found.
+        </NoValueLabel>;
+    }
 };
 
 export default NewslettersList;
