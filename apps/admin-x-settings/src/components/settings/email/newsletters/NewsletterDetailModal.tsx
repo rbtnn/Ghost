@@ -1,4 +1,5 @@
 import ButtonGroup from '../../../../admin-x-ds/global/ButtonGroup';
+import ConfirmationModal from '../../../../admin-x-ds/global/modal/ConfirmationModal';
 import Form from '../../../../admin-x-ds/global/form/Form';
 import Heading from '../../../../admin-x-ds/global/Heading';
 import Hint from '../../../../admin-x-ds/global/Hint';
@@ -16,14 +17,15 @@ import TextField from '../../../../admin-x-ds/global/form/TextField';
 import Toggle from '../../../../admin-x-ds/global/form/Toggle';
 import ToggleGroup from '../../../../admin-x-ds/global/form/ToggleGroup';
 import useForm from '../../../../hooks/useForm';
+import useRouting from '../../../../hooks/useRouting';
 import validator from 'validator';
-import {Newsletter} from '../../../../types/api';
+import {Newsletter, useEditNewsletter} from '../../../../api/newsletters';
 import {PreviewModalContent} from '../../../../admin-x-ds/global/modal/PreviewModal';
-import {fullEmailAddress, getSettingValues} from '../../../../utils/helpers';
-import {getImageUrl, useUploadImage} from '../../../../utils/api/images';
+import {fullEmailAddress} from '../../../../api/site';
+import {getImageUrl, useUploadImage} from '../../../../api/images';
+import {getSettingValues} from '../../../../api/settings';
 import {showToast} from '../../../../admin-x-ds/global/Toast';
 import {toast} from 'react-hot-toast';
-import {useEditNewsletter} from '../../../../utils/api/newsletters';
 import {useGlobalData} from '../../../providers/GlobalDataProvider';
 
 interface NewsletterDetailModalProps {
@@ -278,13 +280,33 @@ const Sidebar: React.FC<{
 
 const NewsletterDetailModal: React.FC<NewsletterDetailModalProps> = ({newsletter}) => {
     const modal = useModal();
+    const {siteData} = useGlobalData();
     const {mutateAsync: editNewsletter} = useEditNewsletter();
+    const {updateRoute} = useRouting();
 
     const {formState, updateForm, handleSave, validate, errors, clearError} = useForm({
         initialState: newsletter,
         onSave: async () => {
-            await editNewsletter(formState);
-            modal.remove();
+            const {newsletters, meta} = await editNewsletter(formState);
+
+            if (meta?.sent_email_verification) {
+                NiceModal.show(ConfirmationModal, {
+                    title: 'Confirm newsletter email address',
+                    prompt: <>
+                        We&lsquo;ve sent a confirmation email to <strong>{formState.sender_email}</strong>.
+                        Until the address has been verified newsletters will be sent from the
+                        {newsletters[0].sender_email ? ' previous' : ' default'} email address
+                        ({fullEmailAddress(newsletters[0].sender_email || 'noreply', siteData)}).
+                    </>,
+                    cancelLabel: '',
+                    onOk: (confirmModal) => {
+                        confirmModal?.remove();
+                        modal.remove();
+                    }
+                });
+            } else {
+                modal.remove();
+            }
         },
         onValidate: () => {
             const newErrors: Record<string, string> = {};
@@ -309,6 +331,7 @@ const NewsletterDetailModal: React.FC<NewsletterDetailModalProps> = ({newsletter
     const sidebar = <Sidebar clearError={clearError} errors={errors} newsletter={formState} updateNewsletter={updateNewsletter} validate={validate} />;
 
     return <PreviewModalContent
+        afterClose={() => updateRoute('newsletters')}
         deviceSelector={false}
         okLabel='Save & close'
         preview={preview}
@@ -322,6 +345,7 @@ const NewsletterDetailModal: React.FC<NewsletterDetailModalProps> = ({newsletter
             toast.remove();
             if (await handleSave()) {
                 modal.remove();
+                updateRoute('newsletters');
             } else {
                 showToast({
                     type: 'pageError',

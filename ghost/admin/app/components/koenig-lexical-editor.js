@@ -244,7 +244,7 @@ export default class KoenigLexicalEditor extends Component {
             const collectionPostsEndpoint = this.ghostPaths.url.api('posts');
             const {posts} = await this.ajax.request(collectionPostsEndpoint, {
                 data: {
-                    collection: collectionSlug, 
+                    collection: collectionSlug,
                     limit: 12
                 }
             });
@@ -256,8 +256,39 @@ export default class KoenigLexicalEditor extends Component {
 
             const defaults = [
                 {label: 'Homepage', value: window.location.origin + '/'},
-                {label: 'Free signup', value: window.location.origin + '/#/portal/signup/free'}
+                {label: 'Free signup', value: '#/portal/signup/free'}
             ];
+
+            const memberLinks = () => {
+                let links = [];
+                if (this.membersUtils.paidMembersEnabled) {
+                    links = [
+                        {
+                            label: 'Paid signup',
+                            value: '#/portal/signup'
+                        },
+                        {
+                            label: 'Upgrade or change plan',
+                            value: '#/portal/account/plans'
+                        }];
+                }
+
+                return links;
+            };
+
+            const donationLink = () => {
+                // TODO: remove feature condition once Tips & Donations have been released
+                if (this.feature.tipsAndDonations) {
+                    if (this.settings.donationsEnabled) {
+                        return [{
+                            label: 'Tip or donation',
+                            value: '#/portal/support'
+                        }];
+                    }
+                }
+
+                return [];
+            };
 
             const offersLinks = offers.toArray().map((offer) => {
                 return {
@@ -266,23 +297,7 @@ export default class KoenigLexicalEditor extends Component {
                 };
             });
 
-            const memberLinks = () => {
-                let links = [];
-                if (this.membersUtils.paidMembersEnabled) {
-                    links = [
-                        {
-                            label: 'Paid signup',
-                            value: this.config.getSiteUrl('/#/portal/signup')
-                        },
-                        {
-                            label: 'Upgrade or change plan',
-                            value: this.config.getSiteUrl('/#/portal/account/plans')
-                        }];
-                }
-
-                return links;
-            };
-            return [...defaults, ...offersLinks, ...memberLinks()];
+            return [...defaults, ...memberLinks(), ...donationLink(), ...offersLinks];
         };
 
         const fetchLabels = async () => {
@@ -307,10 +322,11 @@ export default class KoenigLexicalEditor extends Component {
             fetchAutocompleteLinks,
             fetchLabels,
             feature: {
-                signupCard: true,
                 collectionsCard: this.feature.get('collectionsCard'),
-                collections: this.feature.get('collections'),
-                headerV2: this.feature.get('headerUpgrade')
+                collections: this.feature.get('collections')
+            },
+            depreciated: {
+                headerV1: true // if false, shows header v1 in the menu
             },
             membersEnabled: this.settings.get('membersSignupAccess') === 'all',
             siteTitle: this.settings.title,

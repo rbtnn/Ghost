@@ -17,12 +17,12 @@ import useRouting from '../../../../hooks/useRouting';
 import useSettingGroup from '../../../../hooks/useSettingGroup';
 import {ApiError} from '../../../../utils/apiRequests';
 import {ReactComponent as StripeVerified} from '../../../../assets/images/stripe-verified.svg';
-import {checkStripeEnabled, getGhostPaths, getSettingValue, getSettingValues} from '../../../../utils/helpers';
+import {checkStripeEnabled, getSettingValue, getSettingValues, useDeleteStripeSettings, useEditSettings} from '../../../../api/settings';
+import {getGhostPaths} from '../../../../utils/helpers';
 import {showToast} from '../../../../admin-x-ds/global/Toast';
 import {toast} from 'react-hot-toast';
-import {useBrowseMembers} from '../../../../utils/api/members';
-import {useBrowseTiers, useEditTier} from '../../../../utils/api/tiers';
-import {useDeleteStripeSettings, useEditSettings} from '../../../../utils/api/settings';
+import {useBrowseMembers} from '../../../../api/members';
+import {useBrowseTiers, useEditTier} from '../../../../api/tiers';
 import {useGlobalData} from '../../../providers/GlobalDataProvider';
 
 const RETRY_PRODUCT_SAVE_POLL_LENGTH = 1000;
@@ -186,7 +186,7 @@ const Connected: React.FC<{onClose?: () => void}> = ({onClose}) => {
         <section>
             <div className='flex items-center justify-between'>
                 <Button disabled={isFetchingMembers} icon='link-broken' label='Disconnect' link onClick={openDisconnectStripeModal} />
-                <Button icon='close' size='sm' link onClick={onClose} />
+                <Button icon='close' label='Close' size='sm' hideLabel link onClick={onClose} />
             </div>
             <div className='my-20 flex flex-col items-center'>
                 <div className='relative h-20 w-[200px]'>
@@ -290,6 +290,7 @@ const StripeConnectModal: React.FC = () => {
         cancelLabel=''
         footer={<></>}
         size={stripeConnectAccountId ? 740 : 520}
+        testId='stripe-modal'
         title=''
     >
         {contents}

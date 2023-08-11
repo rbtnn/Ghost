@@ -14,12 +14,11 @@ import useForm from '../../../../hooks/useForm';
 import useRouting from '../../../../hooks/useRouting';
 import useSettingGroup from '../../../../hooks/useSettingGroup';
 import useSortableIndexedList from '../../../../hooks/useSortableIndexedList';
-import {Tier} from '../../../../types/api';
+import {Tier, useAddTier, useEditTier} from '../../../../api/tiers';
 import {currencies, currencyFromDecimal, currencyGroups, currencyToDecimal, getSymbol} from '../../../../utils/currency';
-import {getSettingValues} from '../../../../utils/helpers';
+import {getSettingValues} from '../../../../api/settings';
 import {showToast} from '../../../../admin-x-ds/global/Toast';
 import {toast} from 'react-hot-toast';
-import {useAddTier, useEditTier} from '../../../../utils/api/tiers';
 
 interface TierDetailModalProps {
     tier?: Tier
@@ -133,6 +132,7 @@ const TierDetailModal: React.FC<TierDetailModalProps> = ({tier}) => {
             if (saveState !== 'unsaved') {
                 toast.dismiss();
                 modal.remove();
+                updateRoute('tiers');
             }
         }}
     >

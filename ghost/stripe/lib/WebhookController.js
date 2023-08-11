@@ -12,6 +12,7 @@ module.exports = class WebhookController {
      * @param {any} deps.memberRepository
      * @param {any} deps.productRepository
      * @param {import('@tryghost/donations').DonationRepository} deps.donationRepository
+     * @param {any} deps.staffServiceEmails
      * @param {any} deps.sendSignupEmail
      */
     constructor(deps) {
@@ -114,9 +115,9 @@ module.exports = class WebhookController {
                 // Track a one time payment event
                 const amount = invoice.amount_paid;
 
-                const member = await this.deps.memberRepository.get({
+                const member = invoice.customer ? (await this.deps.memberRepository.get({
                     customer_id: invoice.customer
-                });
+                })) : null;
 
                 const data = DonationPaymentEvent.create({
                     name: member?.get('name') ?? invoice.customer_name,
@@ -135,6 +136,9 @@ module.exports = class WebhookController {
                 });
 
                 await this.deps.donationRepository.save(data);
+                await this.deps.staffServiceEmails.notifyDonationReceived({
+                    donationPaymentEvent: data
+                });
             }
             return;
         }

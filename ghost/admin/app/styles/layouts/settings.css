@@ -2519,8 +2519,9 @@ p.theme-validation-details {
     font-size: 1.25rem;
 }
 
-.gh-setting-members-tierscontainer .gh-expandable:not(:first-of-type) {
-    margin-top: 20px;
+.gh-stripe-connect-link {
+    color:#635bff;
+    font-weight:500;
 }
 
 .gh-setting-members-portal-mock {
@@ -3185,7 +3186,7 @@ p.theme-validation-details {
 /* ---------------------------------------------------------- */
 .gh-tips-and-donations-suggested-amount {
     max-width: 200px;
-    margin-right: 12px;
+    margin-right: 24px;
 }
 
 .gh-tips-and-donations-suggested-amount .gh-input {

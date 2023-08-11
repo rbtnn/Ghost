@@ -1,24 +1,25 @@
 import Button from '../../../../admin-x-ds/global/Button';
 import ConfirmationModal from '../../../../admin-x-ds/global/modal/ConfirmationModal';
-import NewsletterDetailModal from './NewsletterDetailModal';
 import NiceModal from '@ebay/nice-modal-react';
 import NoValueLabel from '../../../../admin-x-ds/global/NoValueLabel';
 import React from 'react';
 import Table from '../../../../admin-x-ds/global/Table';
 import TableCell from '../../../../admin-x-ds/global/TableCell';
 import TableRow from '../../../../admin-x-ds/global/TableRow';
-import {Newsletter} from '../../../../types/api';
-import {useEditNewsletter} from '../../../../utils/api/newsletters';
+import useRouting from '../../../../hooks/useRouting';
+import {Newsletter, useEditNewsletter} from '../../../../api/newsletters';
+import {modalRoutes} from '../../../providers/RoutingProvider';
 
 interface NewslettersListProps {
     newsletters: Newsletter[]
 }
 
-const NewsletterItem: React.FC<{newsletter: Newsletter}> = ({newsletter}) => {
+const NewsletterItem: React.FC<{newsletter: Newsletter, onlyOne: boolean}> = ({newsletter, onlyOne}) => {
     const {mutateAsync: editNewsletter} = useEditNewsletter();
+    const {updateRoute} = useRouting();
 
     const action = newsletter.status === 'active' ? (
-        <Button color='green' label='Archive' link onClick={() => {
+        <Button color='green' disabled={onlyOne} label='Archive' link onClick={() => {
             NiceModal.show(ConfirmationModal, {
                 title: 'Archive newsletter',
                 prompt: <>
@@ -49,7 +50,7 @@ const NewsletterItem: React.FC<{newsletter: Newsletter}> = ({newsletter}) => {
     );
 
     const showDetails = () => {
-        NiceModal.show(NewsletterDetailModal, {newsletter});
+        updateRoute(modalRoutes.showNewsletter, {id: newsletter.id});
     };
 
     return (
@@ -79,7 +80,7 @@ const NewsletterItem: React.FC<{newsletter: Newsletter}> = ({newsletter}) => {
 const NewslettersList: React.FC<NewslettersListProps> = ({newsletters}) => {
     if (newsletters.length) {
         return <Table>
-            {newsletters.map(newsletter => <NewsletterItem key={newsletter.id} newsletter={newsletter} />)}
+            {newsletters.map(newsletter => <NewsletterItem key={newsletter.id} newsletter={newsletter} onlyOne={newsletters.length === 1} />)}
         </Table>;
     } else {
         return <NoValueLabel icon='mail-block'>
