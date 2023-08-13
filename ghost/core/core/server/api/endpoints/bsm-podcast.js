@@ -3172,6 +3172,14 @@ const tail_text = [
     '</rss>' + "\n",
     ].join('');
 
+function encodeHTML(s) {
+    return s.replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&apos;');
+}
+
 module.exports = {
     docName: 'bsm_podcast',
     browse: {
@@ -3197,7 +3205,7 @@ module.exports = {
                                         const title = o.get('title');
                                         const url = 'https://backspace.fm/' + o.get('slug') + '/';
                                         const published_at = (new Date(o.get('published_at'))).toUTCString();
-                                        const canonical_url = o.get('canonical_url');
+                                        const canonical_url = encodeHTML(o.get('canonical_url'));
                                         text += '        <item>' + "\n";
                                         text += `            <title><![CDATA[ ${title} ]]></title>` + "\n";
                                         text += '            <description>' + "\n";
