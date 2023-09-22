@@ -163,6 +163,18 @@ function setupGhostApi({siteUrl = window.location.origin, apiUrl, apiKey}) {
         }
     };
 
+    api.recommendations = {
+        trackClicked({recommendationId}) {
+            let url = endpointFor({type: 'members', resource: 'recommendations/' + recommendationId + '/clicked'});
+            navigator.sendBeacon(url);
+        },
+
+        trackSubscribed({recommendationId}) {
+            let url = endpointFor({type: 'members', resource: 'recommendations/' + recommendationId + '/subscribed'});
+            navigator.sendBeacon(url);
+        }
+    };
+
     api.member = {
         identity() {
             const url = endpointFor({type: 'members', resource: 'session'});
@@ -231,7 +243,7 @@ function setupGhostApi({siteUrl = window.location.origin, apiUrl, apiKey}) {
             });
         },
 
-        async sendMagicLink({email, emailType, labels, name, oldEmail, newsletters, redirect}) {
+        async sendMagicLink({email, emailType, labels, name, oldEmail, newsletters, redirect, customUrlHistory, outboundLinkTagging, autoRedirect = true}) {
             const url = endpointFor({type: 'members', resource: 'send-magic-link'});
             const body = {
                 name,
@@ -241,10 +253,11 @@ function setupGhostApi({siteUrl = window.location.origin, apiUrl, apiKey}) {
                 emailType,
                 labels,
                 requestSrc: 'portal',
-                redirect
+                redirect,
+                autoRedirect
             };
-            const urlHistory = getUrlHistory();
-            if (urlHistory) {
+            const urlHistory = customUrlHistory ?? getUrlHistory();
+            if (urlHistory && outboundLinkTagging) {
                 body.urlHistory = urlHistory;
             }
 

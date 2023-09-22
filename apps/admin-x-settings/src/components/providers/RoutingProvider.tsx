@@ -1,6 +1,6 @@
 import NiceModal, {NiceModalHocProps} from '@ebay/nice-modal-react';
-
 import React, {createContext, useCallback, useEffect, useState} from 'react';
+import {ScrollSectionProvider} from '../../hooks/useScrollSection';
 
 export type RouteParams = {[key: string]: string}
 
@@ -17,18 +17,14 @@ export type InternalLink = {
 
 export type RoutingContextData = {
     route: string;
-    scrolledRoute: string;
-    yScroll: number;
     updateRoute: (to: string | InternalLink | ExternalLink) => void;
-    updateScrolled: (newPath: string) => void;
+    loadingModal: boolean;
 };
 
 export const RouteContext = createContext<RoutingContextData>({
     route: '',
-    scrolledRoute: '',
-    yScroll: 0,
     updateRoute: () => {},
-    updateScrolled: () => {}
+    loadingModal: false
 });
 
 export type RoutingModalProps = {
@@ -72,6 +68,7 @@ const modalPaths: {[key: string]: () => Promise<{default: React.FC<NiceModalHocP
     'newsletters/add': AddNewsletterModal,
     'newsletters/show/:id': NewsletterDetailModal,
     'history/view': HistoryModal,
+    'history/view/:user': HistoryModal,
     'integrations/zapier': ZapierModal,
     'integrations/slack': SlackModal,
     'integrations/amp': AmpModal,
@@ -100,44 +97,35 @@ function getHashPath(urlPath: string | undefined) {
     return null;
 }
 
-const scrollToSectionGroup = (pathName: string) => {
-    const element = document.getElementById(pathName);
-    if (element) {
-        element.scrollIntoView({behavior: 'smooth'});
-    }
-};
-
-const handleNavigation = (scroll: boolean = true) => {
+const handleNavigation = () => {
     // Get the hash from the URL
     let hash = window.location.hash;
-
-    // Remove the leading '#' character from the hash
     hash = hash.substring(1);
 
-    // Get the path name from the hash
-    const pathName = getHashPath(hash);
+    // Create a URL to easily extract the path without query parameters
+    const domain = `${window.location.protocol}//${window.location.hostname}`;
+    let url = new URL(hash, domain);
+
+    const pathName = getHashPath(url.pathname);
 
     if (pathName) {
         const [path, modal] = Object.entries(modalPaths).find(([modalPath]) => matchRoute(pathName, modalPath)) || [];
 
-        if (path && modal) {
-            modal().then(({default: component}) => NiceModal.show(component, {params: matchRoute(pathName, path)}));
-        }
-
-        if (scroll) {
-            scrollToSectionGroup(pathName);
-        }
-
-        return pathName;
+        return {
+            pathName,
+            modal: (path && modal) ? 
+                modal().then(({default: component}) => {
+                    NiceModal.show(component, {params: matchRoute(pathName, path)});
+                }) :
+                undefined
+        };
     }
-    return '';
+    return {pathName: ''};
 };
 
 const matchRoute = (pathname: string, routeDefinition: string) => {
     const regex = new RegExp('^' + routeDefinition.replace(/:(\w+)/, '(?<$1>[^/]+)') + '$');
-
     const match = pathname.match(regex);
-
     if (match) {
         return match.groups || {};
     }
@@ -149,9 +137,15 @@ type RouteProviderProps = {
 };
 
 const RoutingProvider: React.FC<RouteProviderProps> = ({externalNavigate, children}) => {
-    const [route, setRoute] = useState<string>('');
-    const [yScroll, setYScroll] = useState(0);
-    const [scrolledRoute, setScrolledRoute] = useState<string>('');
+    const [route, setRoute] = useState<string | undefined>(undefined);
+    const [loadingModal, setLoadingModal] = useState(false);
+
+    useEffect(() => {
+        // Preload all the modals after initial render to avoid a delay when opening them
+        setTimeout(() => {
+            Object.values(modalPaths).forEach(modal => modal());
+        }, 1000);
+    }, []);
 
     const updateRoute = useCallback((to: string | InternalLink | ExternalLink) => {
         const options = typeof to === 'string' ? {route: to} : to;
@@ -164,56 +158,47 @@ const RoutingProvider: React.FC<RouteProviderProps> = ({externalNavigate, childr
         const newPath = options.route;
 
         if (newPath) {
-            if (newPath === route) {
-                scrollToSectionGroup(newPath);
-            } else {
-                window.location.hash = `/settings-x/${newPath}`;
-            }
+            window.location.hash = `/settings-x/${newPath}`;
         } else {
             window.location.hash = `/settings-x`;
         }
-    }, [externalNavigate, route]);
-
-    const updateScrolled = useCallback((newPath: string) => {
-        setScrolledRoute(newPath);
-    }, []);
+    }, [externalNavigate]);
 
     useEffect(() => {
         const handleHashChange = () => {
-            const matchedRoute = handleNavigation();
-            setRoute(matchedRoute);
+            const {pathName, modal} = handleNavigation();
+            setRoute(pathName);
+
+            if (modal) {
+                setLoadingModal(true);
+                modal.then(() => setLoadingModal(false));
+            }
         };
 
-        const handleScroll = () => {
-            const element = document.getElementById('admin-x-root');
-            const scrollPosition = element!.scrollTop;
-            setYScroll(scrollPosition);
-        };
-
-        const element = document.getElementById('admin-x-root');
-        const matchedRoute = handleNavigation();
-        setRoute(matchedRoute);
-        element!.addEventListener('scroll', handleScroll);
+        handleHashChange();
 
         window.addEventListener('hashchange', handleHashChange);
 
         return () => {
-            element!.removeEventListener('scroll', handleScroll);
             window.removeEventListener('hashchange', handleHashChange);
         };
     }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+    if (route === undefined) {
+        return null;
+    }
 
     return (
         <RouteContext.Provider
             value={{
                 route,
-                scrolledRoute,
-                yScroll,
                 updateRoute,
-                updateScrolled
+                loadingModal
             }}
         >
-            {children}
+            <ScrollSectionProvider navigatedSection={route.split('/')[0]}>
+                {children}
+            </ScrollSectionProvider>
         </RouteContext.Provider>
     );
 };

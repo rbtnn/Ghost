@@ -44,10 +44,10 @@ class PostsService {
     async browsePosts(options) {
         let posts;
         if (options.collection) {
-            let collection = await this.collectionsService.getById(options.collection);
+            let collection = await this.collectionsService.getById(options.collection, {transaction: options.transacting});
 
             if (!collection) {
-                collection = await this.collectionsService.getBySlug(options.collection);
+                collection = await this.collectionsService.getBySlug(options.collection, {transaction: options.transacting});
             }
 
             if (!collection) {
@@ -57,9 +57,26 @@ class PostsService {
             }
 
             const postIds = collection.posts;
-            options.filter = `id:[${postIds.join(',')}]+type:post`;
-            options.status = 'all';
-            posts = await this.models.Post.findPage(options);
+
+            if (postIds.length !== 0) {
+                options.filter = `id:[${postIds.join(',')}]+type:post`;
+                options.status = 'all';
+                posts = await this.models.Post.findPage(options);
+            } else {
+                posts = {
+                    data: [],
+                    meta: {
+                        pagination: {
+                            page: 1,
+                            pages: 1,
+                            total: 0,
+                            limit: options.limit || 15,
+                            next: null,
+                            prev: null
+                        }
+                    }
+                };
+            }
         } else {
             posts = await this.models.Post.findPage(options);
         }

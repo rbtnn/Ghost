@@ -4,6 +4,7 @@ import NoValueLabel from '../../../../admin-x-ds/global/NoValueLabel';
 import React from 'react';
 import useRouting from '../../../../hooks/useRouting';
 import {Tier, useEditTier} from '../../../../api/tiers';
+import {TrialDaysLabel} from './TierDetailPreview';
 import {currencyToDecimal, getSymbol} from '../../../../utils/currency';
 import {numberWithCommas} from '../../../../utils/helpers';
 
@@ -16,7 +17,7 @@ interface TierCardProps {
     tier: Tier;
 }
 
-const cardContainerClasses = 'tablet:group flex min-[900px]:min-h-[200px] flex-col items-start justify-between gap-4 self-stretch rounded-sm border border-grey-300 p-4 transition-all hover:border-grey-400';
+const cardContainerClasses = 'group/tiercard flex min-[900px]:min-h-[200px] flex-col items-start justify-between gap-4 self-stretch rounded-sm border border-grey-300 p-4 transition-all hover:border-grey-400 dark:border-grey-900 dark:hover:border-grey-700';
 
 const TierCard: React.FC<TierCardProps> = ({tier}) => {
     const {updateRoute} = useRouting();
@@ -35,17 +36,23 @@ const TierCard: React.FC<TierCardProps> = ({tier}) => {
                     <span className='text-xl font-bold tracking-tighter'>{numberWithCommas(currencyToDecimal(tier.monthly_price || 0))}</span>
                     {(tier.monthly_price && tier.monthly_price > 0) && <span className='text-sm text-grey-700'>/month</span>}
                 </div>
+                {tier.trial_days ?
+                    <div className='mb-4 mt-1'>
+                        <TrialDaysLabel size='sm' trialDays={tier.trial_days}/>
+                    </div>
+                    : ''
+                }
                 <div className='mt-2 line-clamp-2 text-[1.4rem] font-medium'>
                     {tier.description || <span className='opacity-50'>No description</span>}
                 </div>
             </div>
             {tier.monthly_price && (
                 tier.active ?
-                    <Button className='group group-hover:opacity-100 tablet:opacity-0' color='red' label='Archive' link onClick={() => {
+                    <Button className='group group-hover/tiercard:opacity-100 tablet:opacity-0' color='red' label='Archive' link onClick={() => {
                         updateTier({...tier, active: false});
                     }}/>
                     :
-                    <Button className='group group-hover:opacity-100 tablet:opacity-0' color='green' label='Activate' link onClick={() => {
+                    <Button className='group group-hover/tiercard:opacity-100 tablet:opacity-0' color='green' label='Activate' link onClick={() => {
                         updateTier({...tier, active: true});
                     }}/>
             )}

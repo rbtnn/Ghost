@@ -6,8 +6,7 @@ import RecommendationReasonForm from './RecommendationReasonForm';
 import useForm from '../../../../hooks/useForm';
 import useRouting from '../../../../hooks/useRouting';
 import {EditOrAddRecommendation, useAddRecommendation} from '../../../../api/recommendations';
-import {showToast} from '../../../../admin-x-ds/global/Toast';
-import {toast} from 'react-hot-toast';
+import {dismissAllToasts, showToast} from '../../../../admin-x-ds/global/Toast';
 
 interface AddRecommendationModalProps {
     recommendation: EditOrAddRecommendation,
@@ -26,6 +25,10 @@ const AddRecommendationModalConfirm: React.FC<AddRecommendationModalProps> = ({r
         onSave: async () => {
             await addRecommendation(formState);
             modal.remove();
+            showToast({
+                message: 'Successfully added a recommendation',
+                type: 'success'
+            });
             updateRoute('recommendations');
         },
         onValidate: () => {
@@ -38,9 +41,10 @@ const AddRecommendationModalConfirm: React.FC<AddRecommendationModalProps> = ({r
     });
 
     let okLabel = 'Add';
+    let loadingState = false;
 
     if (saveState === 'saving') {
-        okLabel = 'Adding...';
+        loadingState = true;
     } else if (saveState === 'saved') {
         okLabel = 'Added';
     }
@@ -78,6 +82,7 @@ const AddRecommendationModalConfirm: React.FC<AddRecommendationModalProps> = ({r
         leftButtonProps={leftButtonProps}
         okColor='black'
         okLabel={okLabel}
+        okLoading={loadingState}
         size='sm'
         testId='add-recommendation-modal'
         title={'Add recommendation'}
@@ -95,13 +100,13 @@ const AddRecommendationModalConfirm: React.FC<AddRecommendationModalProps> = ({r
                 return;
             }
 
-            toast.remove();
-            if (await handleSave({force: true})) {
-                // Already handled
-            } else {
+            dismissAllToasts();
+            try {
+                await handleSave({force: true});
+            } catch (e) {
                 showToast({
                     type: 'pageError',
-                    message: 'One or more fields have errors, please doublecheck you filled all mandatory fields'
+                    message: 'Something went wrong when adding this recommendation, please try again.'
                 });
             }
         }}

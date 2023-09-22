@@ -11,7 +11,7 @@ import {useGlobalData} from '../../providers/GlobalDataProvider';
 
 const StripeConnectedButton: React.FC<{className?: string; onClick: () => void;}> = ({className, onClick}) => {
     className = clsx(
-        'group flex shrink-0 items-center justify-center whitespace-nowrap rounded border border-grey-300 px-3 py-1.5 text-sm font-semibold text-grey-900 transition-all hover:border-grey-500',
+        'group flex shrink-0 items-center justify-center whitespace-nowrap rounded border border-grey-300 px-3 py-1.5 text-sm font-semibold text-grey-900 transition-all hover:border-grey-500 dark:border-grey-900 dark:text-white',
         className
     );
     return (
@@ -35,14 +35,7 @@ const Tiers: React.FC<{ keywords: string[] }> = ({keywords}) => {
     };
 
     const sortTiers = (t: Tier[]) => {
-        t.sort((a, b) => {
-            if ((a.monthly_price as number) < (b.monthly_price as number)) {
-                return -1;
-            } else {
-                return 1;
-            }
-        });
-        return t;
+        return [...t].sort((a, b) => (a.monthly_price ?? 0) - (b.monthly_price ?? 0));
     };
 
     const tabs = [

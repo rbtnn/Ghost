@@ -24,15 +24,35 @@ test.describe('Announcement Bar', async () => {
 
         await section.getByRole('button', {name: 'Customize'}).click();
 
+        await page.waitForSelector('[data-testid="announcement-bar-preview-iframe"]');
+
+        const checkTextInIframes = async (iframesHandles, textToSearch) => {
+            let textExists = false;
+            for (const iframeHandle of iframesHandles) {
+                const frame = await iframeHandle.contentFrame();
+                const textFound = await frame?.$eval('body', (body, text) => {
+                    return body.innerText.includes(text);
+                }, textToSearch);
+                if (textFound) {
+                    textExists = true;
+                    break;
+                }
+            }
+            return textExists;
+        };
+
+        const iframesHandleHome = await page.$$('[data-testid="announcement-bar-preview-iframe"] > iframe');
+        const textExistsInHomeIframes = await checkTextInIframes(iframesHandleHome, 'homepage preview');
+        expect(textExistsInHomeIframes).toBeTruthy();
+
         const modal = page.getByTestId('announcement-bar-modal');
-
-        // // Homepage and post preview
-
-        await expect(modal.frameLocator('[data-testid="announcement-bar-preview"]').getByText('homepage preview')).toHaveCount(1);
-
         await modal.getByTestId('design-toolbar').getByRole('tab', {name: 'Post'}).click();
 
-        await expect(modal.frameLocator('[data-testid="announcement-bar-preview"]').getByText('post preview')).toHaveCount(1);
+        await page.waitForSelector('[data-testid="announcement-bar-preview-iframe"]');
+
+        const iframesHandlePost = await page.$$('[data-testid="announcement-bar-preview-iframe"] > iframe');
+        const textExistsInPostIframes = await checkTextInIframes(iframesHandlePost, 'post preview');
+        expect(textExistsInPostIframes).toBeTruthy();
     });
 
     // TODO - lexical isn't loading in the preview

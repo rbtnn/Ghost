@@ -1,7 +1,7 @@
 import Button, {ButtonColor, ButtonProps} from '../Button';
 import ButtonGroup from '../ButtonGroup';
 import Heading from '../Heading';
-import React, {useEffect} from 'react';
+import React, {useEffect, useState} from 'react';
 import StickyFooter from '../StickyFooter';
 import clsx from 'clsx';
 import useGlobalDirtyState from '../../../hooks/useGlobalDirtyState';
@@ -21,6 +21,7 @@ export interface ModalProps {
     title?: string;
     okLabel?: string;
     okColor?: ButtonColor;
+    okLoading?: boolean;
     cancelLabel?: string;
     leftButtonProps?: ButtonProps;
     buttonsDisabled?: boolean;
@@ -41,11 +42,14 @@ export interface ModalProps {
     formSheet?: boolean;
 }
 
+export const topLevelBackdropClasses = 'bg-[rgba(98,109,121,0.2)] backdrop-blur-[3px]';
+
 const Modal: React.FC<ModalProps> = ({
     size = 'md',
     testId,
     title,
     okLabel = 'OK',
+    okLoading = false,
     cancelLabel = 'Cancel',
     footer,
     leftButtonProps,
@@ -68,6 +72,7 @@ const Modal: React.FC<ModalProps> = ({
 }) => {
     const modal = useModal();
     const {setGlobalDirtyState} = useGlobalDirtyState();
+    const [animationFinished, setAnimationFinished] = useState(false);
 
     useEffect(() => {
         setGlobalDirtyState(dirty);
@@ -94,6 +99,16 @@ const Modal: React.FC<ModalProps> = ({
             document.removeEventListener('keydown', handleEscapeKey);
         };
     }, [modal, dirty, afterClose, onCancel]);
+
+    // The animation classes apply a transform to the modal, which breaks anything inside using position:fixed
+    // We should remove the class as soon as the animation is finished
+    useEffect(() => {
+        const timeout = setTimeout(() => {
+            setAnimationFinished(true);
+        }, 250);
+
+        return () => clearTimeout(timeout);
+    }, []);
 
     let buttons: ButtonProps[] = [];
 
@@ -124,16 +139,18 @@ const Modal: React.FC<ModalProps> = ({
                 color: okColor,
                 className: 'min-w-[80px]',
                 onClick: onOk,
-                disabled: buttonsDisabled
+                disabled: buttonsDisabled,
+                loading: okLoading
             });
         }
     }
 
     let modalClasses = clsx(
-        'relative z-50 mx-auto flex max-h-[100%] w-full flex-col justify-between overflow-x-hidden rounded bg-white',
+        'relative z-50 mx-auto flex max-h-[100%] w-full flex-col justify-between overflow-x-hidden bg-white dark:bg-black',
+        size !== 'bleed' && 'rounded',
         formSheet ? 'shadow-md' : 'shadow-xl',
-        (animate && !formSheet) && 'animate-modal-in',
-        formSheet && 'animate-modal-in-reverse',
+        (animate && !formSheet && !animationFinished) && 'animate-modal-in',
+        (formSheet && !animationFinished) && 'animate-modal-in-reverse',
         scrolling ? 'overflow-y-auto' : 'overflow-y-hidden'
     );
 
@@ -246,8 +263,8 @@ const Modal: React.FC<ModalProps> = ({
         <div className={backdropClasses} id='modal-backdrop' onClick={handleBackdropClick}>
             <div className={clsx(
                 'pointer-events-none fixed inset-0 z-0',
-                (backDrop && !formSheet) && 'bg-[rgba(98,109,121,0.2)] backdrop-blur-[3px]',
-                formSheet && 'bg-[rgba(98,109,121,0.05)]'
+                (backDrop && !formSheet) && topLevelBackdropClasses,
+                formSheet && 'bg-[rgba(98,109,121,0.08)]'
             )}></div>
             <section className={modalClasses} data-testid={testId} style={modalStyles}>
                 <div className={contentClasses}>
@@ -256,7 +273,7 @@ const Modal: React.FC<ModalProps> = ({
                             (<>
                                 {title && <Heading level={3}>{title}</Heading>}
                                 <div className={`${topRightContent !== 'close' && 'md:!invisible md:!hidden'} ${hideXOnMobile && 'hidden'} absolute right-6 top-6`}>
-                                    <Button className='-m-2 cursor-pointer p-2 opacity-50 hover:opacity-100' icon='close' size='sm' unstyled onClick={removeModal} />
+                                    <Button className='-m-2 cursor-pointer p-2 opacity-50 hover:opacity-100' icon='close' iconColorClass='text-black dark:text-white' size='sm' unstyled onClick={removeModal} />
                                 </div>
                             </>)
                             :

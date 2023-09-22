@@ -1,12 +1,14 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
+import {EntityWithIncludes} from './EntityWithIncludes';
 import {AddRecommendation, EditRecommendation, Recommendation} from './Recommendation';
-import {RecommendationService} from './RecommendationService';
+import {RecommendationInclude, RecommendationService} from './RecommendationService';
 import errors from '@tryghost/errors';
 
 type Frame = {
     data: any,
     options: any,
-    user: any
+    user: any,
+    member: any,
 };
 
 function validateString(object: any, key: string, {required = true, nullable = false} = {}): string|undefined|null {
@@ -104,6 +106,29 @@ export class RecommendationController {
         return id;
     }
 
+    #getFrameInclude(frame: Frame, allowedIncludes: RecommendationInclude[]): RecommendationInclude[] {
+        if (!frame.options || !frame.options.withRelated) {
+            return [];
+        }
+
+        const includes = frame.options.withRelated;
+
+        // Check if all includes are allowed
+        const invalidIncludes = includes.filter((i: unknown) => {
+            if (typeof i !== 'string') {
+                return true;
+            }
+            return !allowedIncludes.includes(i as RecommendationInclude);
+        });
+
+        if (invalidIncludes.length) {
+            throw new errors.BadRequestError({
+                message: `Invalid include: ${invalidIncludes.join(',')}`
+            });
+        }
+        return includes as RecommendationInclude[];
+    }
+
     #getFramePage(frame: Frame): number {
         const page = validateInteger(frame.options, 'page', {required: false, nullable: true}) ?? 1;
         if (page < 1) {
@@ -119,6 +144,16 @@ export class RecommendationController {
             throw new errors.BadRequestError({message: 'limit must be greater or equal to 1'});
         }
         return limit;
+    }
+
+    #getFrameMemberId(frame: Frame): string {
+        if (!frame.options?.context?.member?.id) {
+            // This is an internal server error because authentication should happen outside this service.
+            throw new errors.UnauthorizedError({
+                message: 'Member not found'
+            });
+        }
+        return frame.options.context.member.id;
     }
 
     #getFrameRecommendation(frame: Frame): AddRecommendation {
@@ -164,21 +199,54 @@ export class RecommendationController {
         return cleanedRecommendation;
     }
 
-    #returnRecommendations(recommendations: Recommendation[], meta?: any) {
+    #returnRecommendations(recommendations: EntityWithIncludes<Recommendation, RecommendationInclude>[], meta?: any) {
         return {
-            data: recommendations.map((r) => {
-                return {
-                    id: r.id,
-                    title: r.title,
-                    reason: r.reason,
-                    excerpt: r.excerpt,
-                    featured_image: r.featuredImage?.toString() ?? null,
-                    favicon: r.favicon?.toString() ?? null,
-                    url: r.url.toString(),
-                    one_click_subscribe: r.oneClickSubscribe,
-                    created_at: r.createdAt,
-                    updated_at: r.updatedAt
+            data: recommendations.map(({entity, includes}) => {
+                const d = {
+                    id: entity.id,
+                    title: entity.title,
+                    reason: entity.reason,
+                    excerpt: entity.excerpt,
+                    featured_image: entity.featuredImage?.toString() ?? null,
+                    favicon: entity.favicon?.toString() ?? null,
+                    url: entity.url.toString(),
+                    one_click_subscribe: entity.oneClickSubscribe,
+                    created_at: entity.createdAt,
+                    updated_at: entity.updatedAt,
+                    count: undefined as undefined|{clicks?: number, subscribers?: number}
                 };
+
+                for (const [key, value] of includes) {
+                    if (key === 'count.clicks') {
+                        if (typeof value !== 'number') {
+                            continue;
+                        }
+                        d.count = {
+                            ...(d.count ?? {}),
+                            clicks: value
+                        };
+                        continue;
+                    }
+
+                    if (key === 'count.subscribers') {
+                        if (typeof value !== 'number') {
+                            continue;
+                        }
+                        d.count = {
+                            ...(d.count ?? {}),
+                            subscribers: value
+                        };
+                        continue;
+                    }
+
+                    // This should never happen (if you get a compile error: check if you added all includes above)
+                    const n: never = key;
+                    throw new errors.BadRequestError({
+                        message: `Unsupported include: ${n}`
+                    });
+                }
+
+                return d;
             }),
             meta
         };
@@ -221,6 +289,7 @@ export class RecommendationController {
     async listRecommendations(frame: Frame) {
         const page = this.#getFramePage(frame);
         const limit = this.#getFrameLimit(frame, 5);
+        const include = this.#getFrameInclude(frame, ['count.clicks', 'count.subscribers']);
         const order = [
             {
                 field: 'createdAt' as const,
@@ -229,7 +298,7 @@ export class RecommendationController {
         ];
 
         const count = await this.service.countRecommendations({});
-        const data = (await this.service.listRecommendations({page, limit, order}));
+        const data = (await this.service.listRecommendations({page, limit, order, include}));
 
         return this.#returnRecommendations(
             data,
@@ -237,5 +306,35 @@ export class RecommendationController {
                 pagination: this.#buildPagination({page, limit, count})
             }
         );
+    }
+
+    async trackClicked(frame: Frame) {
+        // First get the ID of the recommendation that was clicked
+        const id = this.#getFrameId(frame);
+        // Check type of event
+        let memberId: string | undefined;
+        try {
+            memberId = this.#getFrameMemberId(frame);
+        } catch (e) {
+            if (e instanceof errors.UnauthorizedError) {
+                // This is fine, this is not required
+            } else {
+                throw e;
+            }
+        }
+
+        await this.service.trackClicked({
+            id,
+            memberId
+        });
+    }
+    async trackSubscribed(frame: Frame) {
+        // First get the ID of the recommendation that was clicked
+        const id = this.#getFrameId(frame);
+        const memberId = this.#getFrameMemberId(frame);
+        await this.service.trackSubscribed({
+            id,
+            memberId
+        });
     }
 }
