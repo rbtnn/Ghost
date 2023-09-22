@@ -12,9 +12,10 @@ import React, {useEffect, useState} from 'react';
 import TabView from '../../../admin-x-ds/global/TabView';
 import ThemeInstalledModal from './theme/ThemeInstalledModal';
 import ThemePreview from './theme/ThemePreview';
+import handleError from '../../../utils/handleError';
 import useRouting from '../../../hooks/useRouting';
 import {HostLimitError, useLimiter} from '../../../hooks/useLimiter';
-import {InstalledTheme, Theme, useBrowseThemes, useInstallTheme, useUploadTheme} from '../../../api/themes';
+import {InstalledTheme, Theme, ThemesInstallResponseType, useBrowseThemes, useInstallTheme, useUploadTheme} from '../../../api/themes';
 import {OfficialTheme} from '../../providers/ServiceProvider';
 
 interface ThemeToolbarProps {
@@ -37,7 +38,6 @@ interface ThemeModalContentProps {
 const ThemeToolbar: React.FC<ThemeToolbarProps> = ({
     currentTab,
     setCurrentTab,
-    modal,
     themes
 }) => {
     const {updateRoute} = useRouting();
@@ -63,7 +63,6 @@ const ThemeToolbar: React.FC<ThemeToolbarProps> = ({
 
     const onClose = () => {
         updateRoute('design/edit');
-        modal.remove();
     };
 
     const handleThemeUpload = async ({
@@ -73,7 +72,18 @@ const ThemeToolbar: React.FC<ThemeToolbarProps> = ({
         file: File;
         onActivate?: () => void
     }) => {
-        const data = await uploadTheme({file});
+        let data: ThemesInstallResponseType | undefined;
+
+        try {
+            data = await uploadTheme({file});
+        } catch (e) {
+            handleError(e);
+        }
+
+        if (!data) {
+            return;
+        }
+
         const uploadedTheme = data.themes[0];
 
         let title = 'Upload successful';
@@ -216,7 +226,7 @@ const ThemeModalContent: React.FC<ThemeModalContentProps> = ({
     return null;
 };
 
-const ChangeThemeModal = NiceModal.create(() => {
+const ChangeThemeModal = () => {
     const [currentTab, setCurrentTab] = useState('official');
     const [selectedTheme, setSelectedTheme] = useState<OfficialTheme|null>(null);
     const [previewMode, setPreviewMode] = useState('desktop');
@@ -249,8 +259,18 @@ const ChangeThemeModal = NiceModal.create(() => {
                 prompt = <>By clicking below, <strong>{selectedTheme.name}</strong> will automatically be activated as the theme for your site.</>;
             } else {
                 setInstalling(true);
-                const data = await installTheme(selectedTheme.ref);
-                setInstalling(false);
+                let data: ThemesInstallResponseType | undefined;
+                try {
+                    data = await installTheme(selectedTheme.ref);
+                } catch (e) {
+                    handleError(e);
+                } finally {
+                    setInstalling(false);
+                }
+
+                if (!data) {
+                    return;
+                }
 
                 const newlyInstalledTheme = data.themes[0];
 
@@ -291,7 +311,6 @@ const ChangeThemeModal = NiceModal.create(() => {
                 installedTheme: installedTheme!,
                 onActivate: () => {
                     updateRoute('design/edit');
-                    modal.remove();
                 }
             });
         };
@@ -323,7 +342,6 @@ const ChangeThemeModal = NiceModal.create(() => {
                             }}
                             onClose={() => {
                                 updateRoute('design/edit');
-                                modal.remove();
                             }}
                             onInstall={onInstall} />
                     }
@@ -348,6 +366,6 @@ const ChangeThemeModal = NiceModal.create(() => {
             </div>
         </Modal>
     );
-});
+};
 
 export default ChangeThemeModal;

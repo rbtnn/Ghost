@@ -6,17 +6,17 @@ import React, {useEffect} from 'react';
 import TextArea from '../../../../admin-x-ds/global/form/TextArea';
 import TextField from '../../../../admin-x-ds/global/form/TextField';
 import Toggle from '../../../../admin-x-ds/global/form/Toggle';
+import handleError from '../../../../utils/handleError';
 import useForm from '../../../../hooks/useForm';
 import useRouting from '../../../../hooks/useRouting';
 import {HostLimitError, useLimiter} from '../../../../hooks/useLimiter';
+import {RoutingModalProps} from '../../../providers/RoutingProvider';
 import {showToast} from '../../../../admin-x-ds/global/Toast';
 import {toast} from 'react-hot-toast';
 import {useAddNewsletter} from '../../../../api/newsletters';
 import {useBrowseMembers} from '../../../../api/members';
 
-interface AddNewsletterModalProps {}
-
-const AddNewsletterModal: React.FC<AddNewsletterModalProps> = () => {
+const AddNewsletterModal: React.FC<RoutingModalProps> = () => {
     const modal = useModal();
     const {updateRoute} = useRouting();
 
@@ -40,6 +40,7 @@ const AddNewsletterModal: React.FC<AddNewsletterModalProps> = () => {
 
             updateRoute({route: `newsletters/show/${response.newsletters[0].id}`});
         },
+        onSaveError: handleError,
         onValidate: () => {
             const newErrors: Record<string, string> = {};
 

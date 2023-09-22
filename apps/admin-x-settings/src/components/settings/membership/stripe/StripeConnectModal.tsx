@@ -13,6 +13,7 @@ import StripeLogo from '../../../../assets/images/stripe-emblem.svg';
 import TextArea from '../../../../admin-x-ds/global/form/TextArea';
 import TextField from '../../../../admin-x-ds/global/form/TextField';
 import Toggle from '../../../../admin-x-ds/global/form/Toggle';
+import handleError from '../../../../utils/handleError';
 import useRouting from '../../../../hooks/useRouting';
 import useSettingGroup from '../../../../hooks/useSettingGroup';
 import {JSONError} from '../../../../utils/errors';
@@ -86,7 +87,8 @@ const Connect: React.FC = () => {
                         // no-op: will try saving again as stripe is not ready
                         continue;
                     } else {
-                        throw e;
+                        handleError(e);
+                        return;
                     }
                 }
             }
@@ -111,8 +113,10 @@ const Connect: React.FC = () => {
                 if (e instanceof JSONError && e.data?.errors) {
                     setError('Invalid secure key');
                     return;
+                } else {
+                    handleError(e);
+                    return;
                 }
-                throw error;
             }
         } else {
             setError('Please enter a secure key');
@@ -164,20 +168,18 @@ const Connected: React.FC<{onClose?: () => void}> = ({onClose}) => {
         // const hasActiveStripeSubscriptions = false; //...
         // this.ghostPaths.url.api('/members/') + '?filter=status:paid&limit=0';
         NiceModal.show(ConfirmationModal, {
-            title: 'Are you sure you want to disconnect?',
-            prompt: <>
-                {hasActiveStripeSubscriptions && <p className="text-red">
-                    Cannot disconnect while there are members with active Stripe subscriptions.
-                </p>}
-
-                You&lsquo;re about to disconnect your Stripe account {stripeConnectAccountName}
-                from this site. This will automatically turn off paid memberships on this site.
-            </>,
+            title: 'Disconnect Stripe',
+            prompt: (hasActiveStripeSubscriptions ? 'Cannot disconnect while there are members with active Stripe subscriptions.' : <>You&lsquo;re about to disconnect your Stripe account {stripeConnectAccountName}
+                from this site. This will automatically turn off paid memberships on this site.</>),
             okLabel: hasActiveStripeSubscriptions ? '' : 'Disconnect',
             onOk: async (modal) => {
-                await deleteStripeSettings(null);
-                modal?.remove();
-                onClose?.();
+                try {
+                    await deleteStripeSettings(null);
+                    modal?.remove();
+                    onClose?.();
+                } catch (e) {
+                    handleError(e);
+                }
             }
         });
     };
@@ -185,7 +187,7 @@ const Connected: React.FC<{onClose?: () => void}> = ({onClose}) => {
     return (
         <section>
             <div className='flex items-center justify-between'>
-                <Button className='dark:text-white' disabled={isFetchingMembers} icon='link-broken' iconColorClass='dark:text-white' label='Disconnect' link onClick={openDisconnectStripeModal} />
+                <Button color='red' disabled={isFetchingMembers} icon='link-broken' iconColorClass='text-red' label='Disconnect' link onClick={openDisconnectStripeModal} />
                 <Button icon='close' iconColorClass='dark:text-white' label='Close' size='sm' hideLabel link onClick={onClose} />
             </div>
             <div className='my-20 flex flex-col items-center'>

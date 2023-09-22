@@ -46,9 +46,9 @@ export class BookshelfRecommendationRepository extends BookshelfRepository<strin
                 title: model.get('title') as string,
                 reason: model.get('reason') as string | null,
                 excerpt: model.get('excerpt') as string | null,
-                featuredImage: (model.get('featured_image') as string | null) !== null ? new URL(model.get('featured_image') as string) : null,
-                favicon: (model.get('favicon') as string | null) !== null ? new URL(model.get('favicon') as string) : null,
-                url: new URL(model.get('url') as string),
+                featuredImage: model.get('featured_image') as string | null,
+                favicon: model.get('favicon') as string | null,
+                url: model.get('url') as string,
                 oneClickSubscribe: model.get('one_click_subscribe') as boolean,
                 createdAt: model.get('created_at') as Date,
                 updatedAt: model.get('updated_at') as Date | null
@@ -75,8 +75,8 @@ export class BookshelfRecommendationRepository extends BookshelfRepository<strin
         } as Record<keyof Recommendation, string>;
     }
 
-    async getByUrl(url: URL): Promise<Recommendation | null> {
-        const model = await (this.Model as RecommendationModelClass<string>).findOne({url: url.toString()}, {require: false});
-        return model ? this.modelToEntity(model) : null;
+    async getByUrl(url: URL): Promise<Recommendation[]> {
+        const urlFilter = `url:~'${url.host.replace('www.', '')}${url.pathname.replace(/\/$/, '')}'`;
+        return this.getPage({filter: urlFilter, page: 1, limit: 1});
     }
 }
