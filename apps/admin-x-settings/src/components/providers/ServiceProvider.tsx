@@ -12,14 +12,19 @@ export type OfficialTheme = {
     url?: string;
 };
 
+export type FetchKoenigLexical = () => Promise<any>
+
 interface ServicesContextProps {
     ghostVersion: string
     officialThemes: OfficialTheme[];
     zapierTemplates: ZapierTemplate[];
     search: SearchService;
     unsplashConfig: DefaultHeaderTypes;
-    toggleFeatureFlag: (flag: string, enabled: boolean) => void;
     sentryDSN: string | null;
+    onUpdate: (dataType: string, response: unknown) => void;
+    onInvalidate: (dataType: string) => void;
+    onDelete: (dataType: string, id: string) => void;
+    fetchKoenigLexical: FetchKoenigLexical;
 }
 
 interface ServicesProviderProps {
@@ -27,9 +32,12 @@ interface ServicesProviderProps {
     ghostVersion: string;
     zapierTemplates: ZapierTemplate[];
     officialThemes: OfficialTheme[];
-    toggleFeatureFlag: (flag: string, enabled: boolean) => void;
     unsplashConfig: DefaultHeaderTypes;
     sentryDSN: string | null;
+    onUpdate: (dataType: string, response: unknown) => void;
+    onInvalidate: (dataType: string) => void;
+    onDelete: (dataType: string, id: string) => void;
+    fetchKoenigLexical: FetchKoenigLexical;
 }
 
 const ServicesContext = createContext<ServicesContextProps>({
@@ -37,7 +45,6 @@ const ServicesContext = createContext<ServicesContextProps>({
     officialThemes: [],
     zapierTemplates: [],
     search: {filter: '', setFilter: () => {}, checkVisible: () => true},
-    toggleFeatureFlag: () => {},
     unsplashConfig: {
         Authorization: '',
         'Accept-Version': '',
@@ -45,10 +52,14 @@ const ServicesContext = createContext<ServicesContextProps>({
         'App-Pragma': '',
         'X-Unsplash-Cache': true
     },
-    sentryDSN: null
+    sentryDSN: null,
+    onUpdate: () => {},
+    onInvalidate: () => {},
+    onDelete: () => {},
+    fetchKoenigLexical: async () => {}
 });
 
-const ServicesProvider: React.FC<ServicesProviderProps> = ({children, ghostVersion, zapierTemplates, officialThemes, toggleFeatureFlag, unsplashConfig, sentryDSN}) => {
+const ServicesProvider: React.FC<ServicesProviderProps> = ({children, ghostVersion, zapierTemplates, officialThemes, unsplashConfig, sentryDSN, onUpdate, onInvalidate, onDelete, fetchKoenigLexical}) => {
     const search = useSearchService();
 
     return (
@@ -58,8 +69,11 @@ const ServicesProvider: React.FC<ServicesProviderProps> = ({children, ghostVersi
             zapierTemplates,
             search,
             unsplashConfig,
-            toggleFeatureFlag,
-            sentryDSN
+            sentryDSN,
+            onUpdate,
+            onInvalidate,
+            onDelete,
+            fetchKoenigLexical
         }}>
             {children}
         </ServicesContext.Provider>

@@ -15,8 +15,8 @@ import SettingGroupContent from '../../../admin-x-ds/settings/SettingGroupConten
 import TextField from '../../../admin-x-ds/global/form/TextField';
 import Toggle from '../../../admin-x-ds/global/form/Toggle';
 import clsx from 'clsx';
-import handleError from '../../../utils/handleError';
 import useFeatureFlag from '../../../hooks/useFeatureFlag';
+import useHandleError from '../../../utils/api/handleError';
 import usePinturaEditor from '../../../hooks/usePinturaEditor';
 import useRouting from '../../../hooks/useRouting';
 import useStaffUsers from '../../../hooks/useStaffUsers';
@@ -178,6 +178,7 @@ const Details: React.FC<UserDetailProps> = ({errors, validators, user, setUserDa
 
 const EmailNotificationsInputs: React.FC<UserDetailProps> = ({user, setUserData}) => {
     const hasWebmentions = useFeatureFlag('webmentions');
+    const hasRecommendations = useFeatureFlag('recommendations');
     const {currentUser} = useGlobalData();
 
     return (
@@ -199,6 +200,15 @@ const EmailNotificationsInputs: React.FC<UserDetailProps> = ({user, setUserData}
                     label='Mentions'
                     onChange={(e) => {
                         setUserData?.({...user, mention_notifications: e.target.checked});
+                    }}
+                />}
+                {hasRecommendations && <Toggle
+                    checked={user.recommendation_notifications}
+                    direction='rtl'
+                    hint='Every time another publisher recommends you to their audience'
+                    label='Recommendations'
+                    onChange={(e) => {
+                        setUserData?.({...user, recommendation_notifications: e.target.checked});
                     }}
                 />}
                 <Toggle
@@ -259,6 +269,7 @@ const StaffToken: React.FC<UserDetailProps> = () => {
     const {refetch: apiKey} = getStaffToken({
         enabled: false
     });
+    const handleError = useHandleError();
     const [token, setToken] = useState('');
     const {mutateAsync: newApiKey} = genStaffToken();
 
@@ -331,20 +342,18 @@ const UserDetailModalContent: React.FC<{user: User}> = ({user}) => {
     const {mutateAsync: deleteUser} = useDeleteUser();
     const {mutateAsync: makeOwner} = useMakeOwner();
     const limiter = useLimiter();
+    const handleError = useHandleError();
 
     // Pintura integration
     const {settings} = useGlobalData();
-    const [pintura] = getSettingValues<boolean>(settings, ['pintura']);
     const [pinturaJsUrl] = getSettingValues<string>(settings, ['pintura_js_url']);
     const [pinturaCssUrl] = getSettingValues<string>(settings, ['pintura_css_url']);
-    const pinturaEnabled = Boolean(pintura) && Boolean(pinturaJsUrl) && Boolean(pinturaCssUrl);
 
     const editor = usePinturaEditor(
         {config: {
             jsUrl: pinturaJsUrl || '',
             cssUrl: pinturaCssUrl || ''
-        },
-        disabled: !pinturaEnabled}
+        }}
     );
 
     const navigateOnClose = useCallback(() => {
@@ -642,7 +651,7 @@ const UserDetailModalContent: React.FC<{user: User}> = ({user}) => {
                         imageURL={userData.cover_image || ''}
                         pintura={
                             {
-                                isEnabled: pinturaEnabled,
+                                isEnabled: editor.isEnabled,
                                 openEditor: async () => editor.openEditor({
                                     image: userData.cover_image || '',
                                     handleSave: async (file:File) => {
@@ -674,7 +683,7 @@ const UserDetailModalContent: React.FC<{user: User}> = ({user}) => {
                             imageURL={userData.profile_image}
                             pintura={
                                 {
-                                    isEnabled: pinturaEnabled,
+                                    isEnabled: editor.isEnabled,
                                     openEditor: async () => editor.openEditor({
                                         image: userData.profile_image || '',
                                         handleSave: async (file:File) => {
@@ -715,8 +724,14 @@ const UserDetailModalContent: React.FC<{user: User}> = ({user}) => {
 };
 
 const UserDetailModal: React.FC<RoutingModalProps> = ({params}) => {
-    const {users} = useStaffUsers();
+    const {users, hasNextPage, fetchNextPage} = useStaffUsers();
     const user = users.find(({slug}) => slug === params?.slug);
+
+    useEffect(() => {
+        if (!user && !hasNextPage) {
+            fetchNextPage();
+        }
+    }, [fetchNextPage, hasNextPage, user]);
 
     if (user) {
         return <UserDetailModalContent user={user} />;

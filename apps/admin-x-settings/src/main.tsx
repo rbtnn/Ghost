@@ -8,6 +8,9 @@ ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
     <React.StrictMode>
         <App
             externalNavigate={() => {}}
+            fetchKoenigLexical={() => {
+                return Promise.resolve();
+            }}
             ghostVersion='5.x'
             officialThemes={[{
                 name: 'Casper',
@@ -30,10 +33,12 @@ ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
                 ref: 'TryGhost/Edition',
                 image: 'assets/img/themes/Edition.png'
             }]}
-            sentryDSN={'' as string | null}
-            toggleFeatureFlag={() => {}}
+            sentryDSN={null}
             unsplashConfig={{} as DefaultHeaderTypes}
             zapierTemplates={[]}
+            onDelete={() => {}}
+            onInvalidate={() => {}}
+            onUpdate={() => {}}
         />
     </React.StrictMode>
 );

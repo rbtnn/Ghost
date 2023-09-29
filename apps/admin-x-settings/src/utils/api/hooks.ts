@@ -1,12 +1,12 @@
 import * as Sentry from '@sentry/react';
-import handleError from './handleError';
 import handleResponse from './handleResponse';
-import {APIError, MaintenanceError, ServerUnreachableError, TimeoutError} from './errors';
-import {QueryClient, UseInfiniteQueryOptions, UseQueryOptions, useInfiniteQuery, useMutation, useQuery, useQueryClient} from '@tanstack/react-query';
-import {getGhostPaths} from './helpers';
-import {useEffect, useMemo} from 'react';
-import {usePage, usePagination} from '../hooks/usePagination';
-import {useSentryDSN, useServices} from '../components/providers/ServiceProvider';
+import useHandleError from './handleError';
+import {APIError, MaintenanceError, ServerUnreachableError, TimeoutError} from '../errors';
+import {UseInfiniteQueryOptions, UseQueryOptions, useInfiniteQuery, useMutation, useQuery, useQueryClient} from '@tanstack/react-query';
+import {getGhostPaths} from '../helpers';
+import {useCallback, useEffect, useMemo} from 'react';
+import {usePage, usePagination} from '../../hooks/usePagination';
+import {useSentryDSN, useServices} from '../../components/providers/ServiceProvider';
 
 export interface Meta {
     pagination: {
@@ -27,13 +27,15 @@ interface RequestOptions {
     };
     credentials?: 'include' | 'omit' | 'same-origin';
     timeout?: number;
+    retry?: boolean;
 }
 
 export const useFetchApi = () => {
     const {ghostVersion} = useServices();
-    const sentrydsn = useSentryDSN();
+    const sentryDSN = useSentryDSN();
 
-    return async (endpoint: string | URL, options: RequestOptions = {}) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return async <ResponseData = any>(endpoint: string | URL, options: RequestOptions = {}): Promise<ResponseData> => {
         // By default, we set the Content-Type header to application/json
         const defaultHeaders: Record<string, string> = {
             'app-pragma': 'no-cache',
@@ -55,25 +57,27 @@ export const useFetchApi = () => {
         // 1. Server Unreachable error from the browser (code 0 or TypeError), typically from short internet blips
         // 2. Maintenance error from Ghost, upgrade in progress so API is temporarily unavailable
         let attempts = 0;
+        let shouldRetry = options.retry === true || options.retry === undefined;
         let retryingMs = 0;
         const startTime = Date.now();
         const maxRetryingMs = 15_000;
         const retryPeriods = [500, 1000];
         const retryableErrors = [ServerUnreachableError, MaintenanceError, TypeError];
 
-        // const getErrorData = (error?: APIError, response?: Response) => {
-        //     const data: Record<string, unknown> = {
-        //         errorName: error?.name,
-        //         attempts,
-        //         totalSeconds: retryingMs / 1000
-        //     };
-        //     if (endpoint.toString().includes('/ghost/api/')) {
-        //         data.server = response?.headers.get('server');
-        //     }
-        //     return data;
-        // };
+        const getErrorData = (error?: APIError, response?: Response) => {
+            const data: Record<string, unknown> = {
+                errorName: error?.name,
+                attempts,
+                totalSeconds: retryingMs / 1000,
+                endpoint: endpoint.toString()
+            };
+            if (endpoint.toString().includes('/ghost/api/')) {
+                data.server = response?.headers.get('server');
+            }
+            return data;
+        };
 
-        while (true) {
+        while (attempts === 0 || shouldRetry) {
             try {
                 const response = await fetch(endpoint, {
                     headers: {
@@ -87,15 +91,15 @@ export const useFetchApi = () => {
                     ...options
                 });
 
-                if (attempts !== 0 && sentrydsn) {
-                    Sentry.captureMessage('Request took multiple attempts', {extra: {attempts, retryingMs, endpoint: endpoint.toString()}});
+                if (attempts !== 0 && sentryDSN) {
+                    Sentry.captureMessage('Request took multiple attempts', {extra: getErrorData()});
                 }
 
-                return handleResponse(response);
+                return handleResponse(response) as ResponseData;
             } catch (error) {
                 retryingMs = Date.now() - startTime;
 
-                if (import.meta.env.MODE !== 'development' && retryableErrors.some(errorClass => error instanceof errorClass) && retryingMs <= maxRetryingMs) {
+                if (shouldRetry && (import.meta.env.MODE !== 'development' && retryableErrors.some(errorClass => error instanceof errorClass) && retryingMs <= maxRetryingMs)) {
                     await new Promise((resolve) => {
                         setTimeout(resolve, retryPeriods[attempts] || retryPeriods[retryPeriods.length - 1]);
                     });
@@ -103,8 +107,8 @@ export const useFetchApi = () => {
                     continue;
                 }
 
-                if (attempts !== 0 && sentrydsn) {
-                    Sentry.captureMessage('Request failed after multiple attempts', {extra: {attempts, retryingMs, endpoint: endpoint.toString()}});
+                if (attempts !== 0 && sentryDSN) {
+                    Sentry.captureMessage('Request failed after multiple attempts', {extra: getErrorData()});
                 }
 
                 if (error && typeof error === 'object' && 'name' in error && error.name === 'AbortError') {
@@ -120,6 +124,11 @@ export const useFetchApi = () => {
                 throw newError;
             };
         }
+
+        // Used for type checking
+        // this can't happen, but TS isn't smart enough to undeerstand that the loop will never exit without an error or return
+        // because of shouldRetry + attemps usage combination
+        return undefined as never;
     };
 };
 
@@ -151,6 +160,7 @@ type QueryHookOptions<ResponseData> = UseQueryOptions<ResponseData> & {
 export const createQuery = <ResponseData>(options: QueryOptions<ResponseData>) => ({searchParams, ...query}: QueryHookOptions<ResponseData> = {}) => {
     const url = apiUrl(options.path, searchParams || options.defaultSearchParams);
     const fetchApi = useFetchApi();
+    const handleError = useHandleError();
 
     const result = useQuery<ResponseData>({
         queryKey: [options.dataType, url],
@@ -160,13 +170,13 @@ export const createQuery = <ResponseData>(options: QueryOptions<ResponseData>) =
 
     const data = useMemo(() => (
         (result.data && options.returnData) ? options.returnData(result.data) : result.data)
-    , [result]);
+    , [result.data]);
 
     useEffect(() => {
         if (result.error && query.defaultErrorHandler !== false) {
             handleError(result.error);
         }
-    }, [result.error, query.defaultErrorHandler]);
+    }, [handleError, result.error, query.defaultErrorHandler]);
 
     return {
         ...result,
@@ -183,6 +193,7 @@ export const createPaginatedQuery = <ResponseData extends {meta?: Meta}>(options
 
     const url = apiUrl(options.path, paginatedSearchParams);
     const fetchApi = useFetchApi();
+    const handleError = useHandleError();
 
     const result = useQuery<ResponseData>({
         queryKey: [options.dataType, url],
@@ -206,7 +217,7 @@ export const createPaginatedQuery = <ResponseData extends {meta?: Meta}>(options
         if (result.error && query.defaultErrorHandler !== false) {
             handleError(result.error);
         }
-    }, [result.error, query.defaultErrorHandler]);
+    }, [handleError, result.error, query.defaultErrorHandler]);
 
     return {
         ...result,
@@ -217,31 +228,35 @@ export const createPaginatedQuery = <ResponseData extends {meta?: Meta}>(options
 
 type InfiniteQueryOptions<ResponseData> = Omit<QueryOptions<ResponseData>, 'returnData'> & {
     returnData: NonNullable<QueryOptions<ResponseData>['returnData']>
+    defaultNextPageParams?: (data: ResponseData, params: Record<string, string>) => Record<string, string>;
 }
 
 type InfiniteQueryHookOptions<ResponseData> = UseInfiniteQueryOptions<ResponseData> & {
     searchParams?: Record<string, string>;
     defaultErrorHandler?: boolean;
-    getNextPageParams: (data: ResponseData, params: Record<string, string>) => Record<string, string>|undefined;
+    getNextPageParams?: (data: ResponseData, params: Record<string, string>) => Record<string, string> | undefined;
 };
 
-export const createInfiniteQuery = <ResponseData>(options: InfiniteQueryOptions<ResponseData>) => ({searchParams, getNextPageParams, ...query}: InfiniteQueryHookOptions<ResponseData>) => {
+export const createInfiniteQuery = <ResponseData>(options: InfiniteQueryOptions<ResponseData>) => ({searchParams, getNextPageParams, ...query}: InfiniteQueryHookOptions<ResponseData> = {}) => {
     const fetchApi = useFetchApi();
+    const handleError = useHandleError();
+
+    const nextPageParams = getNextPageParams || options.defaultNextPageParams || (() => ({}));
 
     const result = useInfiniteQuery<ResponseData>({
         queryKey: [options.dataType, apiUrl(options.path, searchParams || options.defaultSearchParams)],
         queryFn: ({pageParam}) => fetchApi(apiUrl(options.path, pageParam || searchParams || options.defaultSearchParams)),
-        getNextPageParam: data => getNextPageParams(data, searchParams || options.defaultSearchParams || {}),
+        getNextPageParam: data => nextPageParams(data, searchParams || options.defaultSearchParams || {}),
         ...query
     });
 
-    const data = useMemo(() => result.data && options.returnData(result.data), [result]);
+    const data = useMemo(() => result.data && options.returnData(result.data), [result.data]);
 
     useEffect(() => {
         if (result.error && query.defaultErrorHandler !== false) {
             handleError(result.error);
         }
-    }, [result.error, query.defaultErrorHandler]);
+    }, [handleError, result.error, query.defaultErrorHandler]);
 
     return {
         ...result,
@@ -259,7 +274,7 @@ interface MutationOptions<ResponseData, Payload> extends Omit<QueryOptions<Respo
     body?: (payload: Payload) => FormData | object;
     searchParams?: (payload: Payload) => { [key: string]: string; };
     invalidateQueries?: { dataType: string; };
-    updateQueries?: { dataType: string; update: (newData: ResponseData, currentData: unknown, payload: Payload) => unknown };
+    updateQueries?: { dataType: string; emberUpdateType: 'createOrUpdate' | 'delete' | 'skip'; update: (newData: ResponseData, currentData: unknown, payload: Payload) => unknown };
 }
 
 const mutate = <ResponseData, Payload>({fetchApi, path, payload, searchParams, options}: {
@@ -280,28 +295,39 @@ const mutate = <ResponseData, Payload>({fetchApi, path, payload, searchParams, o
         requestBody = JSON.stringify(generatedBody);
     }
 
-    return fetchApi(url, {
+    return fetchApi<ResponseData>(url, {
         body: requestBody,
         ...requestOptions
     });
 };
 
-const afterMutate = <ResponseData, Payload>(newData: ResponseData, payload: Payload, queryClient: QueryClient, options: MutationOptions<ResponseData, Payload>) => {
-    if (options.invalidateQueries) {
-        queryClient.invalidateQueries([options.invalidateQueries.dataType]);
-    }
-
-    if (options.updateQueries) {
-        queryClient.setQueriesData([options.updateQueries.dataType], (data: unknown) => options.updateQueries!.update(newData, data, payload));
-    }
-};
-
 export const createMutation = <ResponseData, Payload>(options: MutationOptions<ResponseData, Payload>) => () => {
     const fetchApi = useFetchApi();
     const queryClient = useQueryClient();
+    const {onUpdate, onInvalidate, onDelete} = useServices();
+
+    const afterMutate = useCallback((newData: ResponseData, payload: Payload) => {
+        if (options.invalidateQueries) {
+            queryClient.invalidateQueries([options.invalidateQueries.dataType]);
+            onInvalidate(options.invalidateQueries.dataType);
+        }
+
+        if (options.updateQueries) {
+            queryClient.setQueriesData([options.updateQueries.dataType], (data: unknown) => options.updateQueries!.update(newData, data, payload));
+            if (options.updateQueries.emberUpdateType === 'createOrUpdate') {
+                onUpdate(options.updateQueries.dataType, newData);
+            } else if (options.updateQueries.emberUpdateType === 'delete') {
+                if (typeof payload !== 'string') {
+                    throw new Error('Expected delete mutation to have a string (ID) payload. Either change the payload or update the createMutation hook');
+                }
+
+                onDelete(options.updateQueries.dataType, payload);
+            }
+        }
+    }, [onInvalidate, onUpdate, onDelete, queryClient]);
 
     return useMutation<ResponseData, unknown, Payload>({
         mutationFn: payload => mutate({fetchApi, path: options.path(payload), payload, searchParams: options.searchParams?.(payload) || options.defaultSearchParams, options}),
-        onSuccess: (newData, payload) => afterMutate(newData, payload, queryClient, options)
+        onSuccess: afterMutate
     });
 };
