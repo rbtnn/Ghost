@@ -1,4 +1,5 @@
-const {expect, test} = require('@playwright/test');
+const {expect} = require('@playwright/test');
+const test = require('../fixtures/ghost-test');
 const {createMember, impersonateMember} = require('../utils');
 
 /**
@@ -22,22 +23,24 @@ const addNewsletter = async (page) => {
 
 test.describe('Portal', () => {
     test.describe('Member actions', () => {
-        test.describe.configure({retries: 1});
+        // Use serial mode as the order of tests matters, we create newsletters during the tests
+        // TODO: Use a `before` block to create all the requisite newsletters before the tests run
+        test.describe.configure({retries: 1, mode: 'serial'});
 
-        test('can log out', async ({page}) => {
+        test('can log out', async ({sharedPage}) => {
             // create a new free member
-            await createMember(page, {
+            await createMember(sharedPage, {
                 name: 'Test Member Signout',
                 email: 'test.member.signout@example.com',
                 note: 'Test Member'
             });
 
             // impersonate the member on frontend
-            await impersonateMember(page);
+            await impersonateMember(sharedPage);
 
             // open portal
-            const portalTriggerButton = page.frameLocator('[data-testid="portal-trigger-frame"]').locator('[data-testid="portal-trigger-button"]');
-            const portalFrame = page.frameLocator('[data-testid="portal-popup-frame"]');
+            const portalTriggerButton = sharedPage.frameLocator('[data-testid="portal-trigger-frame"]').locator('[data-testid="portal-trigger-button"]');
+            const portalFrame = sharedPage.frameLocator('[data-testid="portal-popup-frame"]');
 
             // sign out
             await portalTriggerButton.click();
@@ -48,21 +51,21 @@ test.describe('Portal', () => {
             await expect(portalFrame.locator('[data-test-button="signin-switch"]')).toBeVisible();
         });
 
-        test('can unsubscribe from newsletter from account settings', async ({page}) => {
+        test('can unsubscribe from newsletter from account settings', async ({sharedPage}) => {
             // create a new free member
-            await createMember(page, {
+            await createMember(sharedPage, {
                 name: 'Test Member',
                 email: 'test.member@example.com',
                 note: 'Test Member'
             });
             //get the url of the current member on admin
-            const memberUrl = page.url();
+            const memberUrl = sharedPage.url();
 
             // impersonate the member on frontend
-            await impersonateMember(page);
+            await impersonateMember(sharedPage);
 
-            const portalTriggerButton = page.frameLocator('[data-testid="portal-trigger-frame"]').locator('[data-testid="portal-trigger-button"]');
-            const portalFrame = page.frameLocator('[data-testid="portal-popup-frame"]');
+            const portalTriggerButton = sharedPage.frameLocator('[data-testid="portal-trigger-frame"]').locator('[data-testid="portal-trigger-button"]');
+            const portalFrame = sharedPage.frameLocator('[data-testid="portal-popup-frame"]');
 
             // open portal
             await portalTriggerButton.click();
@@ -74,30 +77,30 @@ test.describe('Portal', () => {
             await expect(await defaultNewsletterToggle.isChecked()).not.toBeTruthy();
 
             // check that member's newsletters was updated in Admin
-            await page.waitForLoadState('networkidle');
-            await page.goto(memberUrl);
-            await expect(await page.locator('[data-test-member-settings-switch] input[type=checkbox]').first().isChecked()).not.toBeTruthy();
+            await sharedPage.waitForLoadState('networkidle');
+            await sharedPage.goto(memberUrl);
+            await expect(await sharedPage.locator('[data-test-member-settings-switch] input[type=checkbox]').first().isChecked()).not.toBeTruthy();
         });
 
-        test('can unsubscribe from all newsletters from account settings', async ({page}) => {
+        test('can unsubscribe from all newsletters from account settings', async ({sharedPage}) => {
             // create a new free member
-            await createMember(page, {
+            await createMember(sharedPage, {
                 name: 'Test Member All Unsubscribe',
                 email: 'test.member2@example.com',
                 note: 'Test Member'
             });
             // get the url of the current member on admin
-            const memberUrl = page.url();
+            const memberUrl = sharedPage.url();
 
             // add one more newsletter to have multiple
-            await addNewsletter(page);
+            await addNewsletter(sharedPage);
 
             // impersonate the member on frontend
-            await page.goto(memberUrl);
-            await impersonateMember(page);
+            await sharedPage.goto(memberUrl);
+            await impersonateMember(sharedPage);
 
-            const portalTriggerButton = page.frameLocator('[data-testid="portal-trigger-frame"]').locator('[data-testid="portal-trigger-button"]');
-            const portalFrame = page.frameLocator('[data-testid="portal-popup-frame"]');
+            const portalTriggerButton = sharedPage.frameLocator('[data-testid="portal-trigger-frame"]').locator('[data-testid="portal-trigger-button"]');
+            const portalFrame = sharedPage.frameLocator('[data-testid="portal-popup-frame"]');
 
             // open portal
             await portalTriggerButton.click();
@@ -126,12 +129,12 @@ test.describe('Portal', () => {
             }
 
             // check that member's newsletters was updated in Admin
-            await page.waitForLoadState('networkidle');
-            await page.goto(memberUrl);
+            await sharedPage.waitForLoadState('networkidle');
+            await sharedPage.goto(memberUrl);
 
             // check amount of newsletters in member's profile in Admin
-            await page.waitForSelector('[data-test-member-settings-switch]');
-            const membersNewsletters = await page.locator('[data-test-member-settings-switch]');
+            await sharedPage.waitForSelector('[data-test-member-settings-switch]');
+            const membersNewsletters = await sharedPage.locator('[data-test-member-settings-switch]');
             const newslettersCount = await membersNewsletters.count();
             await expect(newslettersCount).toEqual(2);
 

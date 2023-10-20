@@ -1,8 +1,7 @@
 const DataGenerator = require('../../utils/fixtures/data-generator');
 const {expect, test} = require('@playwright/test');
 const ObjectID = require('bson-objectid').default;
-const {promisify} = require('util');
-const {exec} = require('child_process');
+const Stripe = require('stripe').Stripe;
 
 /**
  * Tier
@@ -42,11 +41,6 @@ const setupGhost = async (page) => {
 
     // Add owner user data from usual fixture
     const ownerUser = DataGenerator.Content.users.find(user => user.id === '1');
-
-    if (process.env.CI && process.env.TEST_URL) {
-        ownerUser.email = process.env.TEST_OWNER_EMAIL;
-        ownerUser.password = process.env.TEST_OWNER_PASSWORD;
-    }
 
     if (action === actions.signin) {
         // Fill email + password
@@ -214,7 +208,7 @@ const impersonateMember = async (page) => {
  */
 const createTier = async (page, {name, monthlyPrice, yearlyPrice, trialDays}, enableInPortal = true) => {
     await test.step('Create a tier', async () => {
-    // Navigate to the member settings
+        // Navigate to the member settings
         await page.locator('[data-test-nav="settings"]').click();
 
         // Tiers request can take time, so waiting until there is no connections before interacting with them
@@ -339,7 +333,7 @@ const createOffer = async (page, {name, tierName, offerType, amount, discountTyp
     // Wait for the "Saved" button, ensures that next clicks don't trigger the unsaved work modal
     await page.getByRole('button', {name: 'Saved'}).waitFor({
         state: 'visible',
-        timeout: 1000
+        timeout: 10000
     });
     await page.locator('.gh-nav a[href="#/offers/"]').click();
 
@@ -469,29 +463,52 @@ const openTierModal = async (page, {slug}) => {
     });
 };
 
-const generateStripeIntegrationToken = async () => {
-    const inquirer = require('inquirer');
-    const {knex} = require('../../../core/server/data/db');
+// Memoized function to get the Stripe account ID
+let stripeAccountId;
+const getStripeAccountId = async () => {
+    if (stripeAccountId) {
+        return stripeAccountId;
+    }
 
-    const stripeDatabaseKeys = {
-        publishableKey: 'stripe_connect_publishable_key',
-        secretKey: 'stripe_connect_secret_key',
-        liveMode: 'stripe_connect_livemode'
-    };
-    const publishableKey = process.env.STRIPE_PUBLISHABLE_KEY ?? (await knex('settings').select('value').where('key', stripeDatabaseKeys.publishableKey).first())?.value
-        ?? (await inquirer.prompt([{
-            message: 'Stripe publishable key (starts "pk_test_")',
-            type: 'password',
-            name: 'value'
-        }])).value;
-    const secretKey = process.env.STRIPE_SECRET_KEY ?? (await knex('settings').select('value').where('key', stripeDatabaseKeys.secretKey).first())?.value
-        ?? (await inquirer.prompt([{
-            message: 'Stripe secret key (starts "sk_test_")',
-            type: 'password',
-            name: 'value'
-        }])).value;
+    if (!('STRIPE_PUBLISHABLE_KEY' in process.env) || !('STRIPE_SECRET_KEY' in process.env)) {
+        throw new Error('Missing STRIPE_PUBLISHABLE_KEY or STRIPE_SECRET_KEY environment variables');
+    }
 
-    const accountId = process.env.STRIPE_ACCOUNT_ID ?? JSON.parse((await promisify(exec)('stripe get account')).stdout).id;
+    const parallelIndex = process.env.TEST_PARALLEL_INDEX;
+    const accountEmail = `test${parallelIndex}@example.com`;
+
+    const secretKey = process.env.STRIPE_SECRET_KEY;
+    const stripe = new Stripe(secretKey, {
+        apiVersion: '2020-08-27'
+    });
+    const accounts = await stripe.accounts.list();
+    if (accounts.data.length > 0) {
+        const account = accounts.data.find(acc => acc.email === accountEmail);
+        if (account) {
+            await stripe.accounts.del(account.id);
+        }
+    }
+
+    const account = await stripe.accounts.create({
+        type: 'standard',
+        email: accountEmail,
+        business_type: 'company',
+        company: {
+            name: `Test Company ${parallelIndex}`
+        }
+    });
+    stripeAccountId = account.id;
+
+    return stripeAccountId;
+};
+
+const generateStripeIntegrationToken = async (accountId) => {
+    if (!('STRIPE_PUBLISHABLE_KEY' in process.env) || !('STRIPE_SECRET_KEY' in process.env)) {
+        throw new Error('Missing STRIPE_PUBLISHABLE_KEY or STRIPE_SECRET_KEY environment variables');
+    }
+
+    const publishableKey = process.env.STRIPE_PUBLISHABLE_KEY;
+    const secretKey = process.env.STRIPE_SECRET_KEY;
 
     return Buffer.from(JSON.stringify({
         a: secretKey,
@@ -506,6 +523,7 @@ module.exports = {
     setupStripe,
     disconnectStripe,
     enableLabs,
+    getStripeAccountId,
     generateStripeIntegrationToken,
     setupMailgun,
     deleteAllMembers,
