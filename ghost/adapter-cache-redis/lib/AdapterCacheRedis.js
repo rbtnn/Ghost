@@ -1,20 +1,22 @@
 const BaseCacheAdapter = require('@tryghost/adapter-base-cache');
 const logging = require('@tryghost/logging');
 const cacheManager = require('cache-manager');
-const redisStore = require('cache-manager-ioredis');
+const redisStoreFactory = require('./redis-store-factory');
 const calculateSlot = require('cluster-key-slot');
 
 class AdapterCacheRedis extends BaseCacheAdapter {
     /**
      *
      * @param {Object} config
-     * @param {Object} [config.cache] - caching instance compatible with cache-manager with redis store
+     * @param {Object} [config.cache] - caching instance compatible with cache-manager's redis store
      * @param {String} [config.host] - redis host used in case no cache instance provided
      * @param {Number} [config.port] - redis port used in case no cache instance provided
      * @param {String} [config.password] - redis password used in case no cache instance provided
      * @param {Object} [config.clusterConfig] - redis cluster config used in case no cache instance provided
+     * @param {Object} [config.storeConfig] - extra redis client config used in case no cache instance provided
      * @param {Number} [config.ttl] - default cached value Time To Live (expiration) in *seconds*
      * @param {String} [config.keyPrefix] - prefix to use when building a unique cache key, e.g.: 'some_id:image-sizes:'
+     * @param {Boolean} [config.reuseConnection] - specifies if the redis store/connection should be reused within the process
      */
     constructor(config) {
         super();
@@ -33,13 +35,20 @@ class AdapterCacheRedis extends BaseCacheAdapter {
                 config.clusterConfig.options.ttl = config.ttl;
             }
 
-            this.cache = cacheManager.caching({
-                store: redisStore,
+            const storeOptions = {
                 ttl: config.ttl,
                 host: config.host,
                 port: config.port,
+                username: config.username,
                 password: config.password,
+                ...config.storeConfig,
                 clusterConfig: config.clusterConfig
+            };
+            const store = redisStoreFactory.getRedisStore(storeOptions, config.reuseConnection);
+
+            this.cache = cacheManager.caching({
+                store: store,
+                ...storeOptions
             });
         }
 
@@ -54,6 +63,9 @@ class AdapterCacheRedis extends BaseCacheAdapter {
     }
 
     #getPrimaryRedisNode() {
+        if (this.redisClient.constructor.name !== 'Cluster') {
+            return this.redisClient;
+        }
         const slot = calculateSlot(this.keyPrefix);
         const [ip, port] = this.redisClient.slots[slot][0].split(':');
         for (const node of this.redisClient.nodes()) {
@@ -78,6 +90,14 @@ class AdapterCacheRedis extends BaseCacheAdapter {
                 resolve(keys);
             });
         });
+    }
+
+    async #getKeys() {
+        const primaryNode = this.#getPrimaryRedisNode();
+        if (primaryNode === null) {
+            return [];
+        }
+        return await this.#scanNodeForKeys(primaryNode);
     }
 
     /**
@@ -129,10 +149,18 @@ class AdapterCacheRedis extends BaseCacheAdapter {
         }
     }
 
+    /**
+     * Reset the cache by deleting everything from redis
+     */
     async reset() {
-        // NOTE: dangerous in shared environment, and not used in production code anyway!
-        // return await this.cache.reset();
-        logging.error('Cache reset has not been implemented with shared cache environment in mind');
+        try {
+            const keys = await this.#getKeys();
+            for (const key of keys) {
+                await this.cache.del(key);
+            }
+        } catch (err) {
+            logging.error(err);
+        }
     }
 
     /**
@@ -141,12 +169,7 @@ class AdapterCacheRedis extends BaseCacheAdapter {
      */
     async keys() {
         try {
-            const primaryNode = this.#getPrimaryRedisNode();
-            if (primaryNode === null) {
-                return [];
-            }
-            const rawKeys = await this.#scanNodeForKeys(primaryNode);
-            return rawKeys.map((key) => {
+            return (await this.#getKeys()).map((key) => {
                 return this._removeKeyPrefix(key);
             });
         } catch (err) {

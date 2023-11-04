@@ -4,12 +4,12 @@ import List from '../../../../admin-x-ds/global/List';
 import ListItem from '../../../../admin-x-ds/global/ListItem';
 import NiceModal from '@ebay/nice-modal-react';
 import React, {ReactNode, useState} from 'react';
+import useHandleError from '../../../../utils/api/handleError';
 import {ConfirmationModalContent} from '../../../../admin-x-ds/global/modal/ConfirmationModal';
-import {InstalledTheme, Theme, ThemeProblem} from '../../../../types/api';
+import {InstalledTheme, ThemeProblem, useActivateTheme} from '../../../../api/themes';
 import {showToast} from '../../../../admin-x-ds/global/Toast';
-import {useApi} from '../../../providers/ServiceProvider';
 
-const ThemeProblemView = ({problem}:{problem: ThemeProblem}) => {
+export const ThemeProblemView = ({problem}:{problem: ThemeProblem}) => {
     const [isExpanded, setExpanded] = useState(false);
 
     return <ListItem
@@ -44,16 +44,16 @@ const ThemeInstalledModal: React.FC<{
     title: string
     prompt: ReactNode
     installedTheme: InstalledTheme;
-    setThemes: (callback: (themes: Theme[]) => Theme[]) => void;
     onActivate?: () => void;
-}> = ({title, prompt, installedTheme, setThemes, onActivate}) => {
-    const api = useApi();
+}> = ({title, prompt, installedTheme, onActivate}) => {
+    const {mutateAsync: activateTheme} = useActivateTheme();
+    const handleError = useHandleError();
 
     let errorPrompt = null;
-    if (installedTheme.errors) {
+    if (installedTheme.gscan_errors) {
         errorPrompt = <div className="mt-6">
             <List hint={<>Highly recommended to fix, functionality <strong>could</strong> be restricted</>} title="Errors">
-                {installedTheme.errors?.map(error => <ThemeProblemView problem={error} />)}
+                {installedTheme.gscan_errors?.map(error => <ThemeProblemView problem={error} />)}
             </List>
         </div>;
     }
@@ -67,7 +67,7 @@ const ThemeInstalledModal: React.FC<{
         </div>;
     }
 
-    let okLabel = `Activate${installedTheme.errors?.length ? ' with errors' : ''}`;
+    let okLabel = `Activate${installedTheme.gscan_errors?.length ? ' with errors' : ''}`;
 
     if (installedTheme.active) {
         okLabel = 'OK';
@@ -87,26 +87,17 @@ const ThemeInstalledModal: React.FC<{
         title={title}
         onOk={async (activateModal) => {
             if (!installedTheme.active) {
-                const resData = await api.themes.activate(installedTheme.name);
-                const updatedTheme = resData.themes[0];
+                try {
+                    const resData = await activateTheme(installedTheme.name);
+                    const updatedTheme = resData.themes[0];
 
-                setThemes((_themes) => {
-                    const updatedThemes: Theme[] = _themes.map((t) => {
-                        if (t.name === updatedTheme.name) {
-                            return updatedTheme;
-                        }
-                        return {
-                            ...t,
-                            active: false
-                        };
+                    showToast({
+                        type: 'success',
+                        message: <div><span className='capitalize'>{updatedTheme.name}</span> is now your active theme.</div>
                     });
-                    return updatedThemes;
-                });
-
-                showToast({
-                    type: 'success',
-                    message: <div><span className='capitalize'>{updatedTheme.name}</span> is now your active theme.</div>
-                });
+                } catch (e) {
+                    handleError(e);
+                }
             }
             onActivate?.();
             activateModal?.remove();

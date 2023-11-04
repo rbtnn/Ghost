@@ -1,11 +1,14 @@
-import React, {useId} from 'react';
+import React, {FocusEventHandler, HTMLProps, useId} from 'react';
 
 import Heading from '../Heading';
 import Hint from '../Hint';
+import clsx from 'clsx';
+import {useFocusContext} from '../../providers/DesignSystemProvider';
 
 type ResizeOptions = 'both' | 'vertical' | 'horizontal' | 'none';
+type FontStyles = 'sans' | 'mono';
 
-interface TextAreaProps {
+interface TextAreaProps extends HTMLProps<HTMLTextAreaElement> {
     inputRef?: React.RefObject<HTMLTextAreaElement>;
     title?: string;
     value?: string;
@@ -16,6 +19,8 @@ interface TextAreaProps {
     placeholder?: string;
     hint?: React.ReactNode;
     clearBg?: boolean;
+    fontStyle?: FontStyles;
+    className?: string;
     onChange?: (event: React.ChangeEvent<HTMLTextAreaElement>) => void;
 }
 
@@ -29,13 +34,33 @@ const TextArea: React.FC<TextAreaProps> = ({
     error,
     placeholder,
     hint,
-    clearBg = true,
+    fontStyle = 'sans',
+    className,
     onChange,
+    onFocus,
+    onBlur,
     ...props
 }) => {
     const id = useId();
+    const {setFocusState} = useFocusContext();
 
-    let styles = `border-b ${clearBg ? 'bg-transparent' : 'bg-grey-75 px-[10px]'} py-2 ${error ? `border-red` : `border-grey-500 hover:border-grey-700 focus:border-black`} ${(title && !clearBg) && `mt-2`}`;
+    const handleFocus: FocusEventHandler<HTMLTextAreaElement> = (e) => {
+        setFocusState(true);
+        onFocus?.(e);
+    };
+
+    const handleBlur: FocusEventHandler<HTMLTextAreaElement> = (e) => {
+        setFocusState(false);
+        onBlur?.(e);
+    };
+
+    let styles = clsx(
+        'order-2 rounded-md border bg-grey-150 px-3 py-2 transition-all dark:bg-grey-900 dark:text-white',
+        error ? 'border-red bg-white' : 'border-transparent placeholder:text-grey-500 hover:bg-grey-100 focus:border-green focus:bg-white focus:shadow-[0_0_0_1px_rgba(48,207,67,1)] dark:placeholder:text-grey-800 dark:hover:bg-grey-925 dark:focus:bg-grey-925',
+        title && 'mt-1.5',
+        fontStyle === 'mono' && 'font-mono text-sm',
+        className
+    );
 
     switch (resize) {
     case 'both':
@@ -57,7 +82,6 @@ const TextArea: React.FC<TextAreaProps> = ({
 
     return (
         <div className='flex flex-col'>
-            {title && <Heading grey={value ? true : false} htmlFor={id} useLabelTag={true}>{title}</Heading>}
             <textarea
                 ref={inputRef}
                 className={styles}
@@ -66,10 +90,13 @@ const TextArea: React.FC<TextAreaProps> = ({
                 placeholder={placeholder}
                 rows={rows}
                 value={value}
+                onBlur={handleBlur}
                 onChange={onChange}
+                onFocus={handleFocus}
                 {...props}>
             </textarea>
-            {hint && <Hint color={error ? 'red' : ''}>{hint}</Hint>}
+            {title && <Heading className={'order-1 dark:!text-grey-300'} grey={false} htmlFor={id} useLabelTag={true}>{title}</Heading>}
+            {hint && <Hint className='order-3' color={error ? 'red' : ''}>{hint}</Hint>}
             {maxLength && <Hint>Max length is {maxLength}</Hint>}
         </div>
     );

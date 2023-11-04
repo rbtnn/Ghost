@@ -99,7 +99,7 @@ module.exports = class MemberBREADService {
                     default_payment_card_last4: '****',
                     cancel_at_period_end: false,
                     cancellation_reason: null,
-                    current_period_end: moment(startDate).add(1, 'year'),
+                    current_period_end: moment(product.expiry_at),
                     price: {
                         id: '',
                         price_id: '',
@@ -325,6 +325,12 @@ module.exports = class MemberBREADService {
         let model;
 
         try {
+            // Update email_disabled based on whether the new email is suppressed
+            if (data.email) {
+                const isSuppressed = (await this.emailSuppressionList.getSuppressionData(data.email))?.suppressed;
+                data.email_disabled = !!isSuppressed;
+            }
+
             model = await this.memberRepository.update(data, options);
         } catch (error) {
             if (error.code && error.message.toLowerCase().indexOf('unique') !== -1) {

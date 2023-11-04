@@ -20,6 +20,9 @@ import {FeedbackPageStyles} from './pages/FeedbackPage';
 import EmailSuppressedPage from './pages/EmailSuppressedPage.css';
 import EmailSuppressionFAQ from './pages/EmailSuppressionFAQ.css';
 import EmailReceivingFAQ from './pages/EmailReceivingFAQ.css';
+import {TipsAndDonationsSuccessStyle} from './pages/SupportSuccess';
+import {TipsAndDonationsErrorStyle} from './pages/SupportError';
+import {RecommendationsPageStyles} from './pages/RecommendationsPage';
 
 // Global styles
 const FrameStyles = `
@@ -1224,6 +1227,9 @@ export function getFrameStyles({site}) {
         FeedbackPageStyles +
         EmailSuppressedPage +
         EmailSuppressionFAQ +
-        EmailReceivingFAQ;
+        EmailReceivingFAQ +
+        TipsAndDonationsSuccessStyle +
+        TipsAndDonationsErrorStyle +
+        RecommendationsPageStyles;
     return FrameStyle;
 }

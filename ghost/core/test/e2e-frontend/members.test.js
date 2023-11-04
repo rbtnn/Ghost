@@ -9,8 +9,9 @@ const settingsCache = require('../../core/shared/settings-cache');
 const DomainEvents = require('@tryghost/domain-events');
 const {MemberPageViewEvent} = require('@tryghost/member-events');
 const models = require('../../core/server/models');
-const {mockManager} = require('../utils/e2e-framework');
+const {mockManager, fixtureManager} = require('../utils/e2e-framework');
 const DataGenerator = require('../utils/fixtures/data-generator');
+const members = require('../../core/server/services/members');
 
 function assertContentIsPresent(res) {
     res.text.should.containEql('<h2 id="markdown">markdown</h2>');
@@ -18,6 +19,12 @@ function assertContentIsPresent(res) {
 
 function assertContentIsAbsent(res) {
     res.text.should.not.containEql('<h2 id="markdown">markdown</h2>');
+}
+
+async function createMember(data) {
+    return await members.api.members.create({
+        ...data
+    });
 }
 
 describe('Front-end members behavior', function () {
@@ -186,6 +193,15 @@ describe('Front-end members behavior', function () {
             getJsonResponse.should.not.have.property('id');
             getJsonResponse.newsletters.should.have.length(1);
 
+            // NOTE: these should be snapshots not code
+            Object.keys(getJsonResponse.newsletters[0]).should.have.length(4);
+            getJsonResponse.newsletters[0].should.have.properties([
+                'id',
+                'name',
+                'description',
+                'sort_order'
+            ]);
+
             // Can update newsletter subscription
             const originalNewsletters = getJsonResponse.newsletters;
             const originalNewsletterName = originalNewsletters[0].name;
@@ -215,36 +231,12 @@ describe('Front-end members behavior', function () {
             restoreJsonResponse.should.not.have.property('id');
             restoreJsonResponse.newsletters.should.have.length(1);
             // @NOTE: this seems like too much exposed information, needs a review
+            Object.keys(restoreJsonResponse.newsletters[0]).should.have.length(4);
             restoreJsonResponse.newsletters[0].should.have.properties([
                 'id',
-                'uuid',
                 'name',
                 'description',
-                'feedback_enabled',
-                'slug',
-                'sender_name',
-                'sender_email',
-                'sender_reply_to',
-                'status',
-                'visibility',
-                'subscribe_on_signup',
-                'sort_order',
-                'header_image',
-                'show_header_icon',
-                'show_header_title',
-                'title_font_category',
-                'title_alignment',
-                'show_feature_image',
-                'body_font_category',
-                'footer_content',
-                'show_badge',
-                'show_header_name',
-                'show_post_title_section',
-                'show_comment_cta',
-                'show_subscription_details',
-                'show_latest_posts',
-                'created_at',
-                'updated_at'
+                'sort_order'
             ]);
 
             should.equal(restoreJsonResponse.newsletters[0].name, originalNewsletterName);
@@ -264,6 +256,10 @@ describe('Front-end members behavior', function () {
     });
 
     describe('Unsubscribe', function () {
+        beforeEach(function () {
+            mockManager.mockLabsEnabled('listUnsubscribeHeader');
+        });
+
         afterEach(function () {
             mockManager.restore();
         });
@@ -283,6 +279,157 @@ describe('Front-end members behavior', function () {
         it('should reject when missing a uuid', async function () {
             await request.get('/unsubscribe/')
                 .expect(400);
+        });
+
+        it('should do an actual unsubscribe on POST', async function () {
+            const newsletterId = fixtureManager.get('newsletters', 0).id;
+            const member = await createMember({
+                email: 'unsubscribe-member-test@example.com',
+                newsletters: [
+                    {id: newsletterId}
+                ]
+            });
+
+            const memberUUID = member.get('uuid');
+
+            // Can fetch newsletter subscriptions
+            let getRes = await request
+                .get(`/members/api/member/newsletters?uuid=${memberUUID}`)
+                .expect(200);
+            let getJsonResponse = getRes.body;
+            assert.equal(getJsonResponse.newsletters.length, 1);
+
+            await request.post(`/unsubscribe/?uuid=${memberUUID}`)
+                .expect(201);
+
+            getRes = await request
+                .get(`/members/api/member/newsletters?uuid=${memberUUID}`)
+                .expect(200);
+            getJsonResponse = getRes.body;
+
+            assert.equal(getJsonResponse.newsletters.length, 0, 'Sending a POST request to the unsubscribe endpoint should unsubscribe the member');
+        });
+
+        it('should only do a partial unsubscribe on POST', async function () {
+            const newsletterId = fixtureManager.get('newsletters', 0).id;
+            const newsletter2Id = fixtureManager.get('newsletters', 1).id;
+            const newsletter2Uuid = fixtureManager.get('newsletters', 1).uuid;
+
+            const member = await createMember({
+                email: 'unsubscribe-member-test-2@example.com',
+                newsletters: [
+                    {id: newsletterId},
+                    {id: newsletter2Id}
+                ]
+            });
+
+            const memberUUID = member.get('uuid');
+
+            // Can fetch newsletter subscriptions
+            let getRes = await request
+                .get(`/members/api/member/newsletters?uuid=${memberUUID}`)
+                .expect(200);
+            let getJsonResponse = getRes.body;
+            assert.equal(getJsonResponse.newsletters.length, 2);
+
+            await request.post(`/unsubscribe/?uuid=${memberUUID}&newsletter=${newsletter2Uuid}`)
+                .expect(201);
+
+            getRes = await request
+                .get(`/members/api/member/newsletters?uuid=${memberUUID}`)
+                .expect(200);
+            getJsonResponse = getRes.body;
+
+            assert.equal(getJsonResponse.newsletters.length, 1, 'Sending a POST request to the unsubscribe endpoint should unsubscribe the member from that specific newsletter');
+        });
+
+        it('should unsubscribe from comment notifications on POST', async function () {
+            const newsletterId = fixtureManager.get('newsletters', 0).id;
+
+            const member = await createMember({
+                email: 'unsubscribe-member-test-3@example.com',
+                newsletters: [
+                    {id: newsletterId}
+                ],
+                enable_comment_notifications: true
+            });
+
+            const memberUUID = member.get('uuid');
+
+            // Can fetch newsletter subscriptions
+            let getRes = await request
+                .get(`/members/api/member/newsletters?uuid=${memberUUID}`)
+                .expect(200);
+            let getJsonResponse = getRes.body;
+            assert.equal(getJsonResponse.newsletters.length, 1);
+
+            await request.post(`/unsubscribe/?uuid=${memberUUID}&comments=1`)
+                .expect(201);
+
+            const updatedMember = await members.api.members.get({id: member.id}, {withRelated: ['newsletters']});
+            assert.equal(updatedMember.get('enable_comment_notifications'), false);
+            assert.equal(updatedMember.related('newsletters').models.length, 1);
+        });
+
+        it('unsubscribe post works with x-www-form-urlencoded', async function () {
+            const newsletterId = fixtureManager.get('newsletters', 0).id;
+            const member = await createMember({
+                email: 'unsubscribe-member-test-4@example.com',
+                newsletters: [
+                    {id: newsletterId}
+                ]
+            });
+
+            const memberUUID = member.get('uuid');
+
+            // Can fetch newsletter subscriptions
+            let getRes = await request
+                .get(`/members/api/member/newsletters?uuid=${memberUUID}`)
+                .expect(200);
+            let getJsonResponse = getRes.body;
+            assert.equal(getJsonResponse.newsletters.length, 1);
+
+            await request.post(`/unsubscribe/?uuid=${memberUUID}`)
+                .type('form')
+                .send({'List-Unsubscribe': 'One-Click'})
+                .expect(201);
+
+            getRes = await request
+                .get(`/members/api/member/newsletters?uuid=${memberUUID}`)
+                .expect(200);
+            getJsonResponse = getRes.body;
+
+            assert.equal(getJsonResponse.newsletters.length, 0, 'Sending a POST request to the unsubscribe endpoint should unsubscribe the member');
+        });
+
+        it('unsubscribe post works with multipart/form-data', async function () {
+            const newsletterId = fixtureManager.get('newsletters', 0).id;
+            const member = await createMember({
+                email: 'unsubscribe-member-test-5@example.com',
+                newsletters: [
+                    {id: newsletterId}
+                ]
+            });
+
+            const memberUUID = member.get('uuid');
+
+            // Can fetch newsletter subscriptions
+            let getRes = await request
+                .get(`/members/api/member/newsletters?uuid=${memberUUID}`)
+                .expect(200);
+            let getJsonResponse = getRes.body;
+            assert.equal(getJsonResponse.newsletters.length, 1);
+
+            await request.post(`/unsubscribe/?uuid=${memberUUID}`)
+                .field('List-Unsubscribe', 'One-Click')
+                .expect(201);
+
+            getRes = await request
+                .get(`/members/api/member/newsletters?uuid=${memberUUID}`)
+                .expect(200);
+            getJsonResponse = getRes.body;
+
+            assert.equal(getJsonResponse.newsletters.length, 0, 'Sending a POST request to the unsubscribe endpoint should unsubscribe the member');
         });
     });
 
@@ -486,6 +633,43 @@ describe('Front-end members behavior', function () {
                         should.exist(redirectUrl.searchParams.get('success'));
                         redirectUrl.searchParams.get('success').should.eql('true');
                     });
+            });
+
+            it('can fetch member data', async function () {
+                const res = await request.get('/members/api/member')
+                    .expect(200);
+
+                const memberData = res.body;
+                should.exist(memberData);
+
+                // @NOTE: this should be a snapshot test not code
+                memberData.should.have.properties([
+                    'uuid',
+                    'email',
+                    'name',
+                    'firstname',
+                    'expertise',
+                    'avatar_image',
+                    'subscribed',
+                    'subscriptions',
+                    'paid',
+                    'created_at',
+                    'enable_comment_notifications',
+                    'newsletters',
+                    'email_suppression'
+                ]);
+                Object.keys(memberData).should.have.length(13);
+                memberData.should.not.have.property('id');
+                memberData.newsletters.should.have.length(1);
+
+                // @NOTE: this should be a snapshot test not code
+                Object.keys(memberData.newsletters[0]).should.have.length(4);
+                memberData.newsletters[0].should.have.properties([
+                    'id',
+                    'name',
+                    'description',
+                    'sort_order'
+                ]);
             });
 
             it('can read public post content', async function () {

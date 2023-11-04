@@ -1,16 +1,19 @@
 import Heading from '../Heading';
 import Hint from '../Hint';
-import React, {useId} from 'react';
+import React, {FocusEventHandler, useId} from 'react';
 import clsx from 'clsx';
+import {useFocusContext} from '../../providers/DesignSystemProvider';
 
 export type TextFieldProps = React.InputHTMLAttributes<HTMLInputElement> & {
     inputRef?: React.RefObject<HTMLInputElement>;
     title?: string;
+    titleColor?: 'auto' | 'black' | 'grey';
     hideTitle?: boolean;
     type?: React.InputHTMLAttributes<HTMLInputElement>['type'];
     value?: string;
     error?: boolean;
     placeholder?: string;
+    rightPlaceholder?: React.ReactNode;
     hint?: React.ReactNode;
     clearBg?: boolean;
     onChange?: (event: React.ChangeEvent<HTMLInputElement>) => void;
@@ -21,6 +24,8 @@ export type TextFieldProps = React.InputHTMLAttributes<HTMLInputElement> & {
     hintClassName?: string;
     unstyled?: boolean;
     disabled?: boolean;
+    border?: boolean;
+    autoFocus?: boolean;
 }
 
 const TextField: React.FC<TextFieldProps> = ({
@@ -31,10 +36,12 @@ const TextField: React.FC<TextFieldProps> = ({
     value,
     error,
     placeholder,
+    rightPlaceholder,
     hint,
-    clearBg = true,
     onChange,
+    onFocus,
     onBlur,
+    clearBg = false,
     className = '',
     maxLength,
     containerClassName = '',
@@ -44,17 +51,46 @@ const TextField: React.FC<TextFieldProps> = ({
     ...props
 }) => {
     const id = useId();
+    const {setFocusState} = useFocusContext();
+
+    const handleFocus: FocusEventHandler<HTMLInputElement> = (e) => {
+        onFocus?.(e);
+        setFocusState(true);
+    };
+
+    const handleBlur: FocusEventHandler<HTMLInputElement> = (e) => {
+        onBlur?.(e);
+        setFocusState(false);
+    };
+
+    const fieldContainerClasses = clsx(
+        'relative order-2 flex w-full items-center',
+        (title && !hideTitle) && `mt-1.5`
+    );
+
+    const bgClasses = clsx(
+        'absolute inset-0 rounded-md border text-grey-300 transition-all peer-hover:bg-grey-100 peer-focus:border-green peer-focus:bg-white peer-focus:shadow-[0_0_0_1px_rgba(48,207,67,1)] dark:peer-hover:bg-grey-925 dark:peer-focus:bg-grey-925',
+        error ? `border-red bg-white dark:bg-grey-925` : 'border-transparent bg-grey-150 dark:bg-grey-900',
+        disabled && 'bg-grey-100 dark:bg-grey-925'
+    );
 
     const textFieldClasses = !unstyled && clsx(
-        'h-10 border-b py-2',
-        clearBg ? 'bg-transparent' : 'bg-grey-75 px-[10px]',
-        error ? `border-red` : `${disabled ? 'border-grey-300' : 'border-grey-500 hover:border-grey-700 focus:border-black'}`,
-        (title && !hideTitle && !clearBg) && `mt-2`,
-        (disabled ? 'text-grey-700' : ''),
+        'peer z-[1] order-2 h-8 w-full bg-transparent px-3 py-1 text-sm placeholder:text-grey-500 dark:placeholder:text-grey-700 md:h-9 md:py-2 md:text-md',
+        disabled ? 'cursor-not-allowed text-grey-700 opacity-60 dark:text-grey-700' : 'dark:text-white',
+        rightPlaceholder ? 'w-0 grow rounded-l-md' : 'rounded-md',
         className
     );
 
-    const field = <input
+    const rightPlaceholderClasses = !unstyled && clsx(
+        'z-[1] order-3 rounded-r-lg',
+        (rightPlaceholder ?
+            ((typeof (rightPlaceholder) === 'string') ? 'flex h-8 items-center py-1 pr-3 text-right text-sm text-grey-500 md:h-9 md:text-base' : 'h-9 pr-1')
+            : 'pr-2')
+    );
+
+    let field = <></>;
+
+    const inputField = <input
         ref={inputRef}
         className={textFieldClasses || className}
         disabled={disabled}
@@ -63,20 +99,39 @@ const TextField: React.FC<TextFieldProps> = ({
         placeholder={placeholder}
         type={type}
         value={value}
-        onBlur={onBlur}
+        onBlur={handleBlur}
         onChange={onChange}
+        onFocus={handleFocus}
         {...props} />;
+
+    field = (
+        <div className={fieldContainerClasses}>
+            {inputField}
+            {!clearBg && <div className={bgClasses}></div>}
+            {rightPlaceholder && <span className={rightPlaceholderClasses || ''}>{rightPlaceholder}</span>}
+        </div>
+    );
+
+    hintClassName = clsx(
+        'order-3',
+        hintClassName
+    );
+
+    containerClassName = clsx(
+        'flex flex-col',
+        containerClassName
+    );
 
     if (title || hint) {
         return (
-            <div className={`flex flex-col ${containerClassName}`}>
-                {title && <Heading className={hideTitle ? 'sr-only' : ''} grey={value ? true : false} htmlFor={id} useLabelTag={true}>{title}</Heading>}
+            <div className={containerClassName}>
                 {field}
-                {hint && <Hint className={hintClassName} color={error ? 'red' : ''}>{hint}</Hint>}
+                {title && <Heading className={hideTitle ? 'sr-only' : 'order-1 peer-focus:!text-black dark:!text-grey-300 dark:peer-focus:!text-white'} htmlFor={id} useLabelTag={true}>{title}</Heading>}
+                {hint && <Hint className={hintClassName} color={error ? 'red' : 'default'}>{hint}</Hint>}
             </div>
         );
     } else {
-        return field;
+        return (field);
     }
 };
 

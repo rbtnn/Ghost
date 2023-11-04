@@ -1,4 +1,4 @@
-import FileUpload from './FileUpload';
+import FileUpload, {FileUploadProps} from './FileUpload';
 import Icon from '../Icon';
 import React, {MouseEventHandler} from 'react';
 import clsx from 'clsx';
@@ -16,9 +16,17 @@ interface ImageUploadProps {
     imageClassName?: string;
     imageBWCheckedBg?: boolean;
     fileUploadClassName?: string;
+    fileUploadProps?: Partial<FileUploadProps>;
     deleteButtonClassName?: string;
     deleteButtonContent?: React.ReactNode;
     deleteButtonUnstyled?: boolean;
+    editButtonClassName?: string;
+    editButtonContent?: React.ReactNode;
+    editButtonUnstyled?: boolean;
+    buttonContainerClassName?: string;
+    unsplashButtonClassName?: string;
+    unsplashButtonUnstyled?: boolean;
+    unsplashButtonContent?: React.ReactNode;
 
     /**
      * Removes all the classnames from all elements so you can set a completely custom styling
@@ -27,6 +35,17 @@ interface ImageUploadProps {
     onUpload: (file: File) => void;
     onDelete: () => void;
     onImageClick?: MouseEventHandler<HTMLImageElement>;
+
+    /**
+     * Pintura config
+     */
+    pintura?: {
+        isEnabled: boolean;
+        openEditor: () => void;
+    };
+
+    unsplashEnabled?: boolean;
+    openUnsplash?: () => void;
 }
 
 const ImageUpload: React.FC<ImageUploadProps> = ({
@@ -39,6 +58,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
     imageContainerClassName,
     imageClassName,
     fileUploadClassName,
+    fileUploadProps,
     deleteButtonClassName,
     deleteButtonContent,
     deleteButtonUnstyled = false,
@@ -46,7 +66,17 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
     unstyled = false,
     onUpload,
     onDelete,
-    onImageClick
+    onImageClick,
+    pintura,
+    editButtonClassName,
+    editButtonContent,
+    editButtonUnstyled = false,
+    buttonContainerClassName,
+    unsplashButtonClassName,
+    unsplashButtonUnstyled = false,
+    unsplashButtonContent,
+    unsplashEnabled,
+    openUnsplash
 }) => {
     if (!unstyled) {
         imageContainerClassName = clsx(
@@ -64,20 +94,36 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
         );
 
         fileUploadClassName = clsx(
-            'flex cursor-pointer items-center justify-center rounded border border-grey-100 bg-grey-75 p-3 text-sm font-semibold text-grey-800 hover:text-black',
+            'flex cursor-pointer items-center justify-center rounded border border-grey-100 bg-grey-75 p-3 text-sm font-semibold text-grey-800 hover:text-black dark:border-grey-900 dark:bg-grey-900 dark:text-grey-400',
             fileUploadClassName
 
         );
 
         if (!deleteButtonUnstyled) {
             deleteButtonClassName = clsx(
-                'invisible absolute right-4 top-4 flex h-8 w-8 cursor-pointer items-center justify-center rounded bg-[rgba(0,0,0,0.75)] text-white hover:bg-black group-hover:!visible',
+                'absolute right-4 top-4 flex h-8 w-8 cursor-pointer items-center justify-center rounded bg-[rgba(0,0,0,0.75)] text-white hover:bg-black group-hover:!visible md:invisible',
                 deleteButtonClassName
+            );
+        }
+
+        if (!editButtonUnstyled) {
+            editButtonClassName = clsx(
+                'absolute right-16 top-4 flex h-8 w-8 cursor-pointer items-center justify-center rounded bg-[rgba(0,0,0,0.75)] text-white hover:bg-black group-hover:!visible md:invisible',
+                editButtonClassName
+            );
+        }
+
+        if (!unsplashButtonUnstyled) {
+            unsplashButtonClassName = clsx(
+                'absolute right-16 top-4 flex h-8 w-8 cursor-pointer items-center justify-center rounded bg-[rgba(255,255,255)] text-white',
+                unsplashButtonClassName
             );
         }
     }
 
     deleteButtonContent = deleteButtonContent || <Icon colorClass='text-white' name='trash' size='sm' />;
+    editButtonContent = editButtonContent || <Icon colorClass='text-white' name='pen' size='sm' />;
+    unsplashButtonContent = unsplashButtonContent || <Icon colorClass='text-black' name='unsplash-logo' size='sm' />;
 
     if (imageURL) {
         let image = (
@@ -89,15 +135,23 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
                     width: (unstyled ? '' : width || '100%'),
                     height: (unstyled ? '' : height || 'auto')
                 }} onClick={onImageClick} />
-                <button className={deleteButtonClassName} type='button' onClick={onDelete}>
-                    {deleteButtonContent}
-                </button>
+                <div className={buttonContainerClassName}>
+                    {
+                        pintura?.isEnabled && pintura?.openEditor &&
+                    <button className={editButtonClassName} type='button' onClick={pintura.openEditor}>
+                        {editButtonContent}
+                    </button>
+                    }
+                    <button className={deleteButtonClassName} type='button' onClick={onDelete}>
+                        {deleteButtonContent}
+                    </button>
+                </div>
             </div>
         );
 
         if (imageBWCheckedBg) {
-            const dark = '#ddd';
-            const light = '#f9f9f9';
+            const dark = '#d9d9d9';
+            const light = '#f1f1f1';
             image = (
                 <div style={{
                     backgroundImage: `
@@ -117,14 +171,24 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
         return image;
     } else {
         return (
-            <FileUpload className={fileUploadClassName} id={id} style={
+            <div className={`${buttonContainerClassName} ${unsplashEnabled ? 'relative' : ''}`}>
                 {
-                    width: (unstyled ? '' : width),
-                    height: (unstyled ? '' : height)
+                    unsplashEnabled &&
+                        <button className={unsplashButtonClassName} type='button' onClick={openUnsplash}>
+                            {unsplashButtonContent}
+                        </button>
                 }
-            } unstyled={unstyled} onUpload={onUpload}>
-                <span>{children}</span>
-            </FileUpload>
+                <FileUpload className={fileUploadClassName} id={id} style={
+                    {
+                        width: (unstyled ? '' : width),
+                        height: (unstyled ? '' : height)
+                    }
+                } unstyled={unstyled} onUpload={onUpload} {...fileUploadProps}>
+                    <>
+                        <span className='text-center'>{children}</span>
+                    </>
+                </FileUpload>
+            </div>
         );
     }
 };

@@ -11,21 +11,21 @@ import TitleAndDescription from './TitleAndDescription';
 import Twitter from './Twitter';
 import Users from './Users';
 
-const searchKeywords = {
-    titleAndDescription: ['title and description', 'site title', 'site description'],
-    timeZone: ['time', 'date', 'site timezone', 'time zone'],
-    publicationLanguage: ['publication language', 'locale'],
-    metadata: ['metadata', 'title', 'description', 'search', 'engine', 'google'],
-    twitter: ['twitter card', 'structured data', 'rich cards'],
-    facebook: ['facebook card', 'structured data', 'rich cards'],
-    socialAccounts: ['social accounts', 'facebook', 'twitter', 'structured data', 'rich cards'],
-    lockSite: ['private', 'password', 'lock site'],
-    users: ['users and permissions', 'roles', 'staff']
+export const searchKeywords = {
+    titleAndDescription: ['general', 'title and description', 'site title', 'site description', 'title & description'],
+    timeZone: ['general', 'time', 'date', 'site timezone', 'time zone'],
+    publicationLanguage: ['general', 'publication language', 'locale'],
+    metadata: ['general', 'metadata', 'title', 'description', 'search', 'engine', 'google', 'meta data'],
+    twitter: ['general', 'twitter card', 'structured data', 'rich cards', 'x card'],
+    facebook: ['general', 'facebook card', 'structured data', 'rich cards'],
+    socialAccounts: ['general', 'social accounts', 'facebook', 'twitter', 'structured data', 'rich cards'],
+    lockSite: ['general', 'password protection', 'lock site', 'make this site private'],
+    users: ['general', 'users and permissions', 'roles', 'staff', 'invite people', 'contributors', 'editors', 'authors', 'administrators']
 };
 
 const GeneralSettings: React.FC = () => {
     return (
-        <SettingSection keywords={Object.values(searchKeywords).flat()} title="General">
+        <SettingSection keywords={Object.values(searchKeywords).flat()} title="General settings">
             <TitleAndDescription keywords={searchKeywords.titleAndDescription} />
             <TimeZone keywords={searchKeywords.timeZone} />
             <PublicationLanguage keywords={searchKeywords.publicationLanguage} />

@@ -73,7 +73,7 @@ async function sendEmail(agent, settings, email_recipient_filter) {
 
     assert.ok(emailModel.get('subject'));
     assert.ok(emailModel.get('from'));
-    assert.equal(emailModel.get('source_type'), settings && settings.lexical ? 'lexical' : 'mobiledoc');
+    assert.equal(emailModel.get('source_type'), settings && settings.mobiledoc ? 'mobiledoc' : 'lexical');
 
     // Await sending job
     await completedPromise;
@@ -98,7 +98,7 @@ async function sendFailedEmail(agent, settings, email_recipient_filter) {
 
     assert.ok(emailModel.get('subject'));
     assert.ok(emailModel.get('from'));
-    assert.equal(emailModel.get('source_type'), settings && settings.lexical ? 'lexical' : 'mobiledoc');
+    assert.equal(emailModel.get('source_type'), settings && settings.mobiledoc ? 'mobiledoc' : 'lexical');
 
     // Await sending job
     await completedPromise;

@@ -373,8 +373,10 @@ const Member = ghostBookshelf.Model.extend({
     },
 
     searchQuery: function searchQuery(queryBuilder, query) {
-        queryBuilder.where('members.name', 'like', `%${query}%`);
-        queryBuilder.orWhere('members.email', 'like', `%${query}%`);
+        queryBuilder.where(function () {
+            this.where('members.name', 'like', `%${query}%`)
+                .orWhere('members.email', 'like', `%${query}%`);
+        });
     },
 
     orderRawQuery(field, direction) {
@@ -471,7 +473,11 @@ const Member = ghostBookshelf.Model.extend({
         // we use raw queries instead of model relationships because model hydration is expensive
         const query = ghostBookshelf.knex('members_newsletters')
             .join('newsletters', 'members_newsletters.newsletter_id', '=', 'newsletters.id')
-            .where('newsletters.status', 'active')
+            .join('members', 'members_newsletters.member_id', '=', 'members.id')
+            .where({
+                'newsletters.status': 'active',
+                'members.email_disabled': false
+            })
             .distinct('member_id as id');
 
         if (unfilteredOptions.transacting) {
