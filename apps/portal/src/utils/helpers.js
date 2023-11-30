@@ -789,7 +789,7 @@ export const getUpdatedOfferPrice = ({offer, price, useFormatted = false}) => {
         updatedAmount = ((originalAmount - offer.amount));
         updatedAmount = updatedAmount > 0 ? updatedAmount : 0;
     } else if (offer.type === 'percent') {
-        updatedAmount = (originalAmount - ((originalAmount * offer.amount) / 100)) / 100;
+        updatedAmount = originalAmount - ((originalAmount * offer.amount) / 100);
     } else {
         updatedAmount = originalAmount;
     }
