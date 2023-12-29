@@ -29,8 +29,24 @@ module.exports = {
         permissions: true,
         async query(frame) {
             frame.response = async function (req, res) {
+                // /home/ubuntu/ghost-mysql/versions/5.54.0/node_modules/@tryghost/express-dynamic-redirects/lib/DynamicRedirectManager.js
+                //
+                //            if (-1 != req.url.indexOf('/bsm_podcast/')) {
+                //                res.set({
+                //                    "Cache-Control" : "no-store"
+                //                });
+                //            }
+                //            else {
+                //                res.set({
+                //                    'Cache-Control': `public, max-age=${maxAge}`
+                //                });
+                //            }
+                //
+                //            res.redirect(permanent ? 301 : 302, formatURL(toURL));
+                //        });
+
                 res.writeHead(200, {
-                    "Content-Type" : "application/rss+xml",
+                    "Content-Type" : "application/rss+xml;charset=UTF8",
                     "Cache-Control" : "no-store"
                 });
                 const memberRows = await models.Member.getFilteredCollectionQuery({}).select('members.*').distinct();
