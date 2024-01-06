@@ -2,7 +2,7 @@ const models = require('../../models');
 const https = require('https');
 
 const fetch_feed = async () => {
-  const URL = 'https://rbtnn.github.io/bsm-feed-generator/bsm-feed.xml';
+  const URL = atob('aHR0cHM6Ly9yYnRubi5naXRodWIuaW8vYnNtLWZlZWQtZ2VuZXJhdG9yL2JzbS1mZWVkLnhtbA==');
   return new Promise((resolve, reject) => {
     https.get(URL, (resp) => {
       let data = '';
