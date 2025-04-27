@@ -20,16 +20,20 @@ module.exports = {
             return;
         }
 
-        frame.response = {};
-
-        if (response.data) {
-            frame.response[docName] = response.data.map(model => mapResponse(docName, model, frame));
+        if (docName === 'bsm_podcast') {
+            // Does not initialize frame.response!
         } else {
-            frame.response[docName] = [mapResponse(docName, response, frame)];
-        }
+            frame.response = {};
 
-        if (response.meta) {
-            frame.response.meta = response.meta;
+            if (response.data) {
+                frame.response[docName] = response.data.map(model => mapResponse(docName, model, frame));
+            } else {
+                frame.response[docName] = [mapResponse(docName, response, frame)];
+            }
+
+            if (response.meta) {
+                frame.response.meta = response.meta;
+            }
         }
     }
 };

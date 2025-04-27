@@ -236,6 +236,7 @@ const TierDetailModalContent: React.FC<{tier?: Tier}> = ({tier}) => {
                                 </div>
                                 <div className='flex flex-col gap-2'>
                                     <CurrencyField
+                                        currency={formState.currency || ''}
                                         error={Boolean(errors.monthly_price)}
                                         hint={errors.monthly_price}
                                         placeholder='5'
@@ -248,6 +249,7 @@ const TierDetailModalContent: React.FC<{tier?: Tier}> = ({tier}) => {
                                         onKeyDown={() => clearError('monthly_price')}
                                     />
                                     <CurrencyField
+                                        currency={formState.currency || ''}
                                         error={Boolean(errors.yearly_price)}
                                         hint={errors.yearly_price}
                                         placeholder='50'

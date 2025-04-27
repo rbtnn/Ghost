@@ -27,6 +27,9 @@ module.exports = {
         },
         {
             files: 'core/server/api/endpoints/*',
+            excludedFiles: [
+                'core/server/api/endpoints/bsm-podcast.js'
+            ],
             rules: {
                 'ghost/ghost-custom/max-api-complexity': 'error'
             }

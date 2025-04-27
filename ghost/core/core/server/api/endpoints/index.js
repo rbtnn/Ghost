@@ -253,6 +253,10 @@ module.exports = {
         return apiFramework.pipeline(require('./offers-public'), localUtils, 'content');
     },
 
+    get bsmPodcast() {
+        return apiFramework.pipeline(require('./bsm-podcast'), localUtils, 'content');
+    },
+
     get commentsMembers() {
         return apiFramework.pipeline(require('./comments-members'), localUtils, 'members');
     },

@@ -180,9 +180,9 @@ if (GHOST_APP_FLAGS.includes('portal') || GHOST_APP_FLAGS.includes('all')) {
         //        reverse_proxy http://localhost:4175
         //    }
 
-        COMMAND_GHOST.env['portal__url'] = 'https://localhost:4176/portal.min.js';
+        COMMAND_GHOST.env['portal__url'] = 'https://localhost:2368/assets/portal.min.js';
     } else {
-        COMMAND_GHOST.env['portal__url'] = 'http://localhost:4175/portal.min.js';
+        COMMAND_GHOST.env['portal__url'] = 'http://localhost:2368/assets/portal.min.js';
     }
 }
 

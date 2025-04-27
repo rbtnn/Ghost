@@ -97,6 +97,7 @@ const TipsAndDonations: React.FC<{ keywords: string[] }> = ({keywords}) => {
                 <div className='flex max-w-[180px] items-end gap-[.6rem]'>
                     <CurrencyField
                         key={donationsSuggestedAmount}
+                        currency={donationsCurrency}
                         error={!!errors.donationsSuggestedAmount}
                         hint={errors.donationsSuggestedAmount}
                         inputRef={focusRef}

@@ -39,7 +39,7 @@ const OfferSuccess: React.FC<{id: string}> = ({id}) => {
             discount = offer?.amount + '% discount';
             break;
         case 'fixed':
-            discount = numberWithCommas(currencyToDecimal(offer?.amount)) + ' ' + offer?.currency + ' discount';
+            discount = numberWithCommas(currencyToDecimal(offer?.amount, offer?.currency || 'USD')) + ' ' + offer?.currency + ' discount';
             break;
         case 'trial':
             discount = offer?.amount + ' days free trial';

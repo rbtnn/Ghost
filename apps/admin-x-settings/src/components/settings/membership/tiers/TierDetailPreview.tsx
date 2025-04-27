@@ -78,8 +78,8 @@ const TierDetailPreview: React.FC<TierDetailPreviewProps> = ({tier, isFreeTier})
 
     const defaultMonthlyPrice = isFreeTier ? 0 : 500;
     const defaultYearlyPrice = isFreeTier ? 0 : 5000;
-    const monthlyPrice = currencyToDecimal(tier?.monthly_price ?? defaultMonthlyPrice);
-    const yearlyPrice = currencyToDecimal(tier?.yearly_price ?? defaultYearlyPrice);
+    const monthlyPrice = currencyToDecimal(tier?.monthly_price ?? defaultMonthlyPrice, currency);
+    const yearlyPrice = currencyToDecimal(tier?.yearly_price ?? defaultYearlyPrice, currency);
     const yearlyDiscount = tier?.monthly_price && tier?.yearly_price
         ? Math.ceil(((monthlyPrice * 12 - yearlyPrice) / (monthlyPrice * 12)) * 100)
         : 0;

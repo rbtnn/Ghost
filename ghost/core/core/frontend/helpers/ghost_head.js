@@ -33,15 +33,19 @@ function finaliseStructuredData(meta) {
         if (property === 'article:tag') {
             _.each(meta.keywords, function (keyword) {
                 if (keyword !== '') {
-                    keyword = escapeExpression(keyword);
-                    head.push(writeMetaTag(property,
-                        escapeExpression(keyword)));
+                    if ((property !== 'twitter:url') && (property !== 'og:url')) {
+                        keyword = escapeExpression(keyword);
+                        head.push(writeMetaTag(property,
+                            escapeExpression(keyword)));
+                    }
                 }
             });
             head.push('');
         } else if (content !== null && content !== undefined) {
-            head.push(writeMetaTag(property,
-                escapeExpression(content)));
+            if ((property !== 'twitter:url') && (property !== 'og:url')) {
+                head.push(writeMetaTag(property,
+                    escapeExpression(content)));
+            }
         }
     });
 
@@ -263,7 +267,7 @@ module.exports = async function ghost_head(options) { // eslint-disable-line cam
                     head.push('<link rel="icon" href="' + favicon + '" type="image/' + iconType + '">');
                 }
 
-                head.push('<link rel="canonical" href="' + escapeExpression(meta.canonicalUrl) + '">');
+                //head.push('<link rel="canonical" href="' + escapeExpression(meta.canonicalUrl) + '">');
 
                 if (_.includes(context, 'preview')) {
                     head.push(writeMetaTag('robots', 'noindex,nofollow', 'name'));

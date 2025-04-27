@@ -3,7 +3,7 @@ import TextField, {TextFieldProps} from './TextField';
 
 export type CurrencyFieldProps = Omit<TextFieldProps, 'type' | 'onChange' | 'value'> & {
     valueInCents?: number | '';
-    currency?: string;
+    currency: string;
     onChange?: (cents: number) => void;
 }
 
@@ -16,24 +16,29 @@ export type CurrencyFieldProps = Omit<TextFieldProps, 'type' | 'onChange' | 'val
  */
 const CurrencyField: React.FC<CurrencyFieldProps> = ({
     valueInCents,
+    currency,
     onChange,
     ...props
 }) => {
-    const [localValue, setLocalValue] = useState(valueInCents === '' ? '' : ((valueInCents || 0) / 100).toString());
+    const [localValue, setLocalValue] = useState(valueInCents === '' ? '' : ((valueInCents || 0) / (currency === 'JPY' ? 1 : 100)).toString());
 
     // While the user is editing we allow more lenient input, e.g. "1.32.566" to make it easier to type and change
-    const stripNonNumeric = (input: string) => input.replace(/[^\d.]+/g, '');
+    const stripNonNumeric = (input: string) => input.replace((currency === 'JPY' ? /[^\d]+/g : /[^\d.]+/g), '');
 
     // The saved value is strictly a number with 2 decimal places
     const forceCurrencyValue = (input: string) => {
-        return Math.round(parseFloat(input.match(/[\d]+\.?[\d]{0,2}/)?.[0] || '0') * 100);
+        if (currency === 'JPY') {
+            return parseFloat(input.match(/[\d]+/)?.[0] || '0');
+        } else {
+            return Math.round(parseFloat(input.match(/[\d]+\.?[\d]{0,2}/)?.[0] || '0') * 100);
+        }
     };
 
     return <TextField
         {...props}
         value={localValue}
         onBlur={(e) => {
-            setLocalValue((forceCurrencyValue(e.target.value) / 100).toString());
+            setLocalValue((forceCurrencyValue(e.target.value) / (currency === 'JPY' ? 1 : 100)).toString());
             props.onBlur?.(e);
         }}
         onChange={(e) => {
