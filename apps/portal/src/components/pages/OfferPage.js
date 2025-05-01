@@ -489,22 +489,25 @@ export default class OfferPage extends React.Component {
         const price = offer.cadence === 'month' ? product.monthlyPrice : product.yearlyPrice;
         const originalAmount = price.amount;
         let updatedAmount;
-        if (offer.type === 'fixed' && isSameCurrency(offer.currency, price.currency)) {
-            if (offer.currency === 'JPY') {
+        if (price.currency === 'JPY') {
+            if (offer.type === 'fixed' && isSameCurrency(offer.currency, price.currency)) {
                 updatedAmount = (originalAmount - offer.amount / 100);
-            } else {
-                updatedAmount = (originalAmount - offer.amount) / 100;
-            }
-            return updatedAmount > 0 ? updatedAmount : 0;
-        } else if (offer.type === 'percent') {
-            if (offer.currency === 'JPY') {
+                return updatedAmount > 0 ? updatedAmount : 0;
+            } else if (offer.type === 'percent') {
                 updatedAmount = (originalAmount - ((originalAmount * offer.amount) / 100)).toFixed(0);
-            } else {
-                updatedAmount = (originalAmount - ((originalAmount * offer.amount) / 100)) / 100;
+                return updatedAmount > 0 ? updatedAmount : 0;
             }
-            return updatedAmount > 0 ? updatedAmount : 0;
+            return originalAmount;
+        } else {
+            if (offer.type === 'fixed' && isSameCurrency(offer.currency, price.currency)) {
+                updatedAmount = ((originalAmount - offer.amount)) / 100;
+                return updatedAmount > 0 ? updatedAmount : 0;
+            } else if (offer.type === 'percent') {
+                updatedAmount = (originalAmount - ((originalAmount * offer.amount) / 100)) / 100;
+                return updatedAmount;
+            }
+            return originalAmount / 100;
         }
-        return originalAmount / (offer.currency === 'JPY' ? 1 : 100);
     }
 
     renderRoundedPrice(price, currency) {
@@ -517,11 +520,11 @@ export default class OfferPage extends React.Component {
 
     getOffAmount({offer}) {
         if (offer.type === 'fixed') {
-            return `${getCurrencySymbol(offer.currency)}${offer.currency === 'JPY' ? offer.amount : (offer.amount / 100) }`;
+            return `${getCurrencySymbol(offer.currency)}${offer.amount / 100}`;
         } else if (offer.type === 'percent') {
             return `${offer.amount}%`;
         } else if (offer.type === 'trial') {
-            return offer.amount;
+            return offer.amount / 100;
         }
         return '';
     }
@@ -592,7 +595,7 @@ export default class OfferPage extends React.Component {
         if (offer.type === 'trial') {
             return (
                 <div className="gh-portal-product-card-pricecontainer offer-type-trial">
-                    <div className="gh-portal-product-price">
+                    <div className="gh-portal-product-price rbtnn_modified_004">
                         <span className={'currency-sign ' + currencyClass}>{getCurrencySymbol(price.currency)}</span>
                         <span className="amount">{formatNumber(this.renderRoundedPrice(updatedPrice))}</span>
                     </div>
@@ -601,7 +604,7 @@ export default class OfferPage extends React.Component {
         }
         return (
             <div className="gh-portal-product-card-pricecontainer">
-                <div className="gh-portal-product-price">
+                <div className="gh-portal-product-price rbtnn_modified_005">
                     <span className={'currency-sign ' + currencyClass}>{getCurrencySymbol(price.currency)}</span>
                     <span className="amount">{formatNumber(this.renderRoundedPrice(updatedPrice))}</span>
                 </div>

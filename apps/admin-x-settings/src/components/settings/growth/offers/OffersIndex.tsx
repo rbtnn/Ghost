@@ -49,7 +49,7 @@ export const getOfferDiscount = (type: string, amount: number, cadence: string, 
         break;
     case 'fixed':
         discountColor = 'text-blue';
-        discountOffer = numberWithCommas(formatToTwoDecimals(currencyToDecimal(amount, currency))) + ' ' + currency + ' off';
+        discountOffer = numberWithCommas(formatToTwoDecimals(currencyToDecimal((currency === 'JPY' ? amount / 100 : amount), currency))) + ' ' + currency + ' off';
         updatedPrice = originalPrice - (currency === 'JPY' ? amount / 100 : amount); 
         break;
     case 'trial':
@@ -176,7 +176,7 @@ export const OffersIndexModal = () => {
 
                 const isTierArchived = offerTier?.active === false;
 
-                const {discountOffer, originalPriceWithCurrency, updatedPriceWithCurrency} = getOfferDiscount(offer.type, offer.amount, offer.cadence, offer.currency || 'USD', offerTier);
+                const {discountOffer, originalPriceWithCurrency, updatedPriceWithCurrency} = getOfferDiscount(offer.type, offer.amount, offer.cadence, offer.currency || 'JPY', offerTier);
 
                 return (
                     <tr className={`group relative scale-100 border-b border-b-grey-200 dark:border-grey-800`} data-testid="offer-item">

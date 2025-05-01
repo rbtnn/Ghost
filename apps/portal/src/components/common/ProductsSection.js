@@ -623,7 +623,7 @@ function ProductCardPrice({product}) {
             <>
                 <div className="gh-portal-product-card-pricecontainer">
                     <div className="gh-portal-product-card-price-trial">
-                        <div className="gh-portal-product-price">
+                        <div className="gh-portal-product-price rbtnn_modified_001">
                             <span className={'currency-sign' + (currencySymbol.length > 1 ? ' long' : '')}>{currencySymbol}</span>
                             <span className="amount" data-testid="product-amount">{formatNumber(getStripeAmount(activePrice.amount, activePrice.currency))}</span>
                             <span className="billing-period">/{interval}</span>
@@ -641,7 +641,7 @@ function ProductCardPrice({product}) {
     return (
         <div className="gh-portal-product-card-pricecontainer">
             <div className="gh-portal-product-card-price-trial">
-                <div className="gh-portal-product-price">
+                <div className="gh-portal-product-price rbtnn_modified_002">
                     <span className={'currency-sign' + (currencySymbol.length > 1 ? ' long' : '')}>{currencySymbol}</span>
                     <span className="amount" data-testid="product-amount">{formatNumber(getStripeAmount(activePrice.amount, activePrice.currency))}</span>
                     <span className="billing-period">/{interval}</span>
@@ -699,7 +699,7 @@ function FreeProductCard({products, handleChooseSignup, error}) {
                     <h4 className="gh-portal-product-name">{getFreeTierTitle({site})}</h4>
                     {(!hasOnlyFree ?
                         <div className="gh-portal-product-card-pricecontainer free-trial-disabled">
-                            <div className="gh-portal-product-price">
+                            <div className="gh-portal-product-price rbtnn_modified_003">
                                 <span className={'currency-sign' + (currencySymbol.length > 1 ? ' long' : '')}>{currencySymbol}</span>
                                 <span className="amount" data-testid="product-amount">0</span>
                             </div>
