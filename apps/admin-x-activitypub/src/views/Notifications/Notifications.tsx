@@ -5,6 +5,7 @@ import {ActorProperties} from '@tryghost/admin-x-framework/api/activitypub';
 import {LoadingIndicator} from '@tryghost/admin-x-design-system';
 
 import APAvatar from '@components/global/APAvatar';
+import FeedItemStats from '@components/feed/FeedItemStats';
 import NotificationItem from './components/NotificationItem';
 import Separator from '@components/global/Separator';
 
@@ -60,6 +61,10 @@ function groupNotifications(notifications: Notification[]): NotificationGroup[] 
             // Group follows that are next to each other in the array
             groupKey = `follow_${notification.type}`;
             break;
+        case 'mention':
+            // Don't group mentions
+            groupKey = `mention_${notification.id}`;
+            break;
         }
 
         if (!groups[groupKey]) {
@@ -114,8 +119,11 @@ const NotificationGroupDescription: React.FC<NotificationGroupDescriptionProps> 
         return <>{actorText} reposted your {group.post?.type === 'article' ? 'post' : 'note'}</>;
     case 'reply':
         if (group.inReplyTo && typeof group.inReplyTo !== 'string') {
-            return <>{actorText} replied to your {group.inReplyTo?.type === 'article' ? 'post' : 'note'}</>;
+            return actorText;
         }
+        break;
+    case 'mention':
+        return actorText;
     }
 
     return <></>;
@@ -132,6 +140,17 @@ const Notifications: React.FC = () => {
         }));
     };
 
+    const handleLikeClick = () => {
+        // Do API req or smth
+        // Don't need to know about setting timeouts or anything like that
+    };
+
+    const handleCommentClick = (postId?: string) => {
+        if (postId) {
+            navigate(`/feed/${encodeURIComponent(postId)}`);
+        }
+    };
+
     const maxAvatars = 5;
 
     const {data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading} = useNotificationsForUser('index');
@@ -140,8 +159,8 @@ const Notifications: React.FC = () => {
         data?.pages.flatMap((page) => {
             return groupNotifications(page.notifications);
         })
-        // If no notifications, return 5 empty groups for the loading state
-        ?? Array(5).fill({actors: [{}]}));
+        // If no notifications, return 10 empty groups for the loading state
+        ?? Array(10).fill({actors: [{}]}));
 
     const observerRef = useRef<IntersectionObserver | null>(null);
     const loadMoreRef = useRef<HTMLDivElement | null>(null);
@@ -192,6 +211,11 @@ const Notifications: React.FC = () => {
                 handleProfileClickRR(group.actors[0].handle, navigate);
             }
             break;
+        case 'mention':
+            if (group.post) {
+                navigate(`/feed/${encodeURIComponent(group.post.id)}`);
+            }
+            break;
         }
     };
 
@@ -213,6 +237,7 @@ const Notifications: React.FC = () => {
                                 {notificationGroups.map((group, index) => (
                                     <React.Fragment key={group.id || `${group.type}_${index}`}>
                                         <NotificationItem
+                                            centerAlign={group.actors.length < 2 && group.type === 'follow'}
                                             className='hover:bg-gray-75 dark:hover:bg-gray-950'
                                             isGrouped={group.actors.length > 1}
                                             onClick={() => handleNotificationClick(group, index)}
@@ -221,7 +246,7 @@ const Notifications: React.FC = () => {
                                                 <Skeleton className='rounded-full' containerClassName='flex h-10 w-10' /> :
                                                 (group.actors.length > 1 ?
                                                     <NotificationItem.Icon type={group.type} /> :
-                                                    <div className='relative mt-0.5'>
+                                                    <div className='relative'>
                                                         <APAvatar
                                                             key={group.actors[0].id}
                                                             author={{
@@ -261,7 +286,7 @@ const Notifications: React.FC = () => {
                                                         )}
 
                                                         {group.actors.length > 1 && (
-                                                            <Button className={`group flex items-center gap-0.5 text-gray-700 hover:bg-transparent hover:text-black dark:text-gray-600 dark:hover:text-white ${openStates[group.id || `${group.type}_${index}`] ? 'ml-[-20px]' : 'ml-0 w-[28px]'}`} variant='ghost' onClick={(event) => {
+                                                            <Button className={`group flex items-center gap-0.5 text-gray-700 hover:bg-transparent hover:text-black dark:text-gray-600 dark:hover:text-white ${openStates[group.id || `${group.type}_${index}`] ? 'ml-[-20px]' : 'ml-0 w-[28px]'}`} variant='ghost' onClick={(event?: React.MouseEvent<HTMLElement>) => {
                                                                 event?.stopPropagation();
                                                                 toggleOpen(group.id || `${group.type}_${index}`);
                                                             }}>
@@ -299,7 +324,7 @@ const Notifications: React.FC = () => {
                                                 </div>
                                             </NotificationItem.Avatars>}
                                             <NotificationItem.Content>
-                                                <div className='text-gray-700 dark:text-gray-600'>
+                                                <div>
                                                     {isLoading ?
                                                         <>
                                                             <Skeleton />
@@ -307,33 +332,58 @@ const Notifications: React.FC = () => {
                                                         </> :
                                                         <div className='flex items-center gap-1'>
                                                             <span className='truncate'><NotificationGroupDescription group={group} /></span>
-                                                            <span className='mt-px text-[8px]'>&bull;</span>
-                                                            <span className='mt-0.5 text-sm'>{renderTimestamp(group, false)}</span>
+                                                            {group.actors.length < 2 &&
+                                                                <>
+                                                                    <span className='mt-px text-[8px] text-gray-700 dark:text-gray-600'>&bull;</span>
+                                                                    <span className='mt-0.5 text-sm text-gray-700 dark:text-gray-600'>{renderTimestamp(group, false)}</span>
+                                                                </>
+                                                            }
                                                         </div>
                                                     }
                                                 </div>
                                                 {(
-                                                    (group.type === 'reply' && group.inReplyTo) ||
+                                                    ((group.type === 'reply' && group.inReplyTo) || group.type === 'mention') ||
                                                     (group.type === 'like' && !group.post?.name && group.post?.content) ||
                                                     (group.type === 'repost' && !group.post?.name && group.post?.content)
                                                 ) && (
-                                                    (group.post?.type === 'note' ?
+                                                    (group.type !== 'reply' && group.type !== 'mention' ?
                                                         <div
                                                             dangerouslySetInnerHTML={{__html: stripHtml(group.post?.content || '')}}
-                                                            className='ap-note-content mt-0.5 line-clamp-2 text-pretty text-black dark:text-white'
+                                                            className='ap-note-content mt-0.5 line-clamp-1 text-pretty text-sm text-gray-700 dark:text-gray-600'
                                                         /> :
-                                                        <div className='mt-3 flex flex-col gap-1 rounded-md border border-gray-150 p-4 text-black dark:border-gray-950 dark:text-white'>
-                                                            <span className='-mt-0.5 font-semibold'>{group.post?.title}</span>
-                                                            <div
-                                                                dangerouslySetInnerHTML={{__html: stripHtml(group.post?.content || '')}}
-                                                                className='ap-note-content line-clamp-2 text-pretty'
-                                                            />
-                                                        </div>
+                                                        <>
+                                                            <div className='mt-2.5 rounded-md bg-gray-100 px-5 py-[14px] group-hover:bg-gray-200 dark:bg-gray-925/30 group-hover:dark:bg-black/40'>
+                                                                <div
+                                                                    dangerouslySetInnerHTML={{__html: stripHtml(group.post?.content || '')}}
+                                                                    className='ap-note-content text-pretty'
+                                                                />
+                                                            </div>
+                                                        </>
                                                     )
+                                                )}
+                                                {((group.type === 'reply' && group.post) || group.type === 'mention') && (
+                                                    <div className="mt-1.5">
+                                                        <FeedItemStats
+                                                            buttonClassName='hover:bg-gray-200'
+                                                            commentCount={group.post.replyCount || 0}
+                                                            layout="notification"
+                                                            likeCount={group.post.likeCount || 0}
+                                                            object={{
+                                                                ...group.post,
+                                                                liked: group.post.likedByMe,
+                                                                reposted: group.post.repostedByMe
+                                                            }}
+                                                            repostCount={group.post.repostCount || 0}
+                                                            onCommentClick={() => handleCommentClick(group.post?.id)}
+                                                            onLikeClick={handleLikeClick}
+                                                        />
+                                                    </div>
                                                 )}
                                             </NotificationItem.Content>
                                         </NotificationItem>
-                                        {index < notificationGroups.length - 1 && <div className='pl-14'><Separator /></div>}
+                                        {index < notificationGroups.length - 1 &&
+                                            <div className='pl-[52px]'><Separator /></div>
+                                        }
                                     </React.Fragment>
                                 ))}
                             </div>

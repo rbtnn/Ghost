@@ -9,9 +9,8 @@ import {Button, Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger,
 import {Heading, Icon, NoValueLabel, Button as OldButton, Tab, TabView, showToast} from '@tryghost/admin-x-design-system';
 import {ProfileTab} from '../Profile';
 import {SettingAction} from '@src/views/Preferences/components/Settings';
-import {useAccountForUser, useBlockMutationForUser, useUnblockMutationForUser} from '@src/hooks/use-activity-pub-queries';
+import {useAccountForUser, useBlockDomainMutationForUser, useBlockMutationForUser, useUnblockDomainMutationForUser, useUnblockMutationForUser} from '@src/hooks/use-activity-pub-queries';
 import {useEffect, useRef, useState} from 'react';
-import {useFeatureFlags} from '@src/lib/feature-flags';
 import {useNavigationStack, useParams} from '@tryghost/admin-x-framework';
 
 const noop = () => {};
@@ -38,8 +37,6 @@ const ProfilePage:React.FC<ProfilePageProps> = ({
     followingTab,
     followersTab
 }) => {
-    const {isEnabled} = useFeatureFlags();
-
     const [selectedTab, setSelectedTab] = useState<ProfileTab>('posts');
     const params = useParams();
     const {canGoBack} = useNavigationStack();
@@ -50,12 +47,15 @@ const ProfilePage:React.FC<ProfilePageProps> = ({
 
     const blockMutation = useBlockMutationForUser('index');
     const unblockMutation = useUnblockMutationForUser('index');
+    const blockDomainMutation = useBlockDomainMutationForUser('index');
+    const unblockDomainMutation = useUnblockDomainMutationForUser('index');
 
     const currentAccountQuery = useAccountForUser('index', 'me');
     const {data: currentUser} = params.handle ? currentAccountQuery : {data: undefined};
     const isCurrentUser = params.handle === currentUser?.handle || !params.handle;
 
     const isBlocked = account?.blockedByMe;
+    const isDomainBlocked = account?.domainBlockedByMe;
     const [viewBlockedPosts, setViewBlockedPosts] = useState(false);
 
     const handleBlock = () => {
@@ -63,6 +63,23 @@ const ProfilePage:React.FC<ProfilePageProps> = ({
             unblockMutation.mutate(account);
         } else {
             blockMutation.mutate(account);
+            showToast({
+                title: 'User blocked',
+                type: 'success'
+            });
+        }
+        setViewBlockedPosts(false);
+    };
+
+    const handleDomainBlock = () => {
+        if (isDomainBlocked) {
+            unblockDomainMutation.mutate({url: account.apId, handle: account.handle});
+        } else {
+            blockDomainMutation.mutate({url: account.apId, handle: account.handle});
+            showToast({
+                title: 'Domain blocked',
+                type: 'success'
+            });
         }
         setViewBlockedPosts(false);
     };
@@ -79,13 +96,15 @@ const ProfilePage:React.FC<ProfilePageProps> = ({
         {
             id: 'posts',
             title: 'Posts',
-            contents: (!isBlocked || viewBlockedPosts) ? postsTab : <NoValueLabel icon='block'>
-                <div className='mt-2 flex flex-col items-center gap-0.5'>
-                    <H4>{account.name} is blocked</H4>
-                    <p>You can view the posts, but it won&apos;t unblock the user.</p>
-                    <Button className='mt-4' variant='secondary' onClick={() => setViewBlockedPosts(true)}>View posts</Button>
-                </div>
-            </NoValueLabel>
+            contents: ((isBlocked || isDomainBlocked) && !viewBlockedPosts) ?
+                <NoValueLabel icon='block'>
+                    <div className='mt-2 flex flex-col items-center gap-0.5'>
+                        <H4>{account.name} is blocked</H4>
+                        <p>You can view the posts, but it won&apos;t unblock the user.</p>
+                        <Button className='mt-4' variant='secondary' onClick={() => setViewBlockedPosts(true)}>View posts</Button>
+                    </div>
+                </NoValueLabel> :
+                postsTab
         },
         !params.handle && {
             id: 'likes',
@@ -166,7 +185,7 @@ const ProfilePage:React.FC<ProfilePageProps> = ({
                                 </div>
                                 {!isCurrentUser && !isLoadingAccount &&
                                     <div className='flex gap-2'>
-                                        {!isEnabled('block') || !isBlocked ?
+                                        {!(isBlocked || isDomainBlocked) ?
                                             <FollowButton
                                                 following={account?.followedByMe}
                                                 handle={account?.handle}
@@ -174,17 +193,21 @@ const ProfilePage:React.FC<ProfilePageProps> = ({
                                                 onFollow={noop}
                                                 onUnfollow={noop}
                                             /> :
-                                            <UnblockButton account={account} onUnblock={handleBlock} />
-                                        }
-                                        {isEnabled('block') &&
-                                            <ProfileMenu
+                                            <UnblockButton
                                                 account={account}
-                                                isBlocked={isBlocked}
-                                                trigger={<Button aria-label='Open profile menu' variant='outline'><LucideIcon.Ellipsis /></Button>}
-                                                onBlockAccount={handleBlock}
-                                                onCopyHandle={handleCopy}
+                                                onDomainUnblock={handleDomainBlock}
+                                                onUnblock={handleBlock}
                                             />
                                         }
+                                        <ProfileMenu
+                                            account={account}
+                                            isBlocked={isBlocked}
+                                            isDomainBlocked={isDomainBlocked}
+                                            trigger={<Button aria-label='Open profile menu' variant='outline'><LucideIcon.Ellipsis /></Button>}
+                                            onBlockAccount={handleBlock}
+                                            onBlockDomain={handleDomainBlock}
+                                            onCopyHandle={handleCopy}
+                                        />
                                     </div>
                                 }
                                 {isCurrentUser && !isLoadingAccount &&
