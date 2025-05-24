@@ -1,9 +1,8 @@
 import Customizer, {COLOR_OPTIONS, type ColorOption, type FontSize, useCustomizerSettings} from './Customizer';
 import React, {useCallback, useEffect, useRef, useState} from 'react';
 import getUsername from '../../../utils/get-username';
-import {Skeleton} from '@tryghost/shade';
+import {LoadingIndicator, Skeleton} from '@tryghost/shade';
 
-import {LoadingIndicator} from '@tryghost/admin-x-design-system';
 import {renderTimestamp} from '../../../utils/render-timestamp';
 import {usePostForUser, useThreadForUser} from '@hooks/use-activity-pub-queries';
 
@@ -16,7 +15,7 @@ import FeedItemStats from '@src/components/feed/FeedItemStats';
 import TableOfContents, {TOCItem} from '@src/components/feed/TableOfContents';
 import articleBodyStyles from '@src/components/articleBodyStyles';
 import getReadingTime from '../../../utils/get-reading-time';
-import {handleProfileClickRR} from '@src/utils/handle-profile-click';
+import {handleProfileClick} from '@src/utils/handle-profile-click';
 import {isPendingActivity} from '../../../utils/pending-activity';
 import {openLinksInNewTab} from '@src/utils/content-formatters';
 import {useDebounce} from 'use-debounce';
@@ -627,7 +626,7 @@ export const Reader: React.FC<ReaderProps> = ({
                                             <div className='relative z-10 pt-[3px]'>
                                                 <APAvatar author={actor}/>
                                             </div>
-                                            <div className='relative z-10 flex w-full min-w-0 cursor-pointer flex-col overflow-visible text-[1.5rem]' onClick={e => handleProfileClickRR(actor, navigate, e)}>
+                                            <div className='relative z-10 flex w-full min-w-0 cursor-pointer flex-col overflow-visible text-[1.5rem]' onClick={e => handleProfileClick(actor, navigate, e)}>
                                                 <div className='flex w-full'>
                                                     <span className='min-w-0 truncate whitespace-nowrap font-semibold text-black hover:underline dark:text-white'>{actor.name}</span>
                                                 </div>

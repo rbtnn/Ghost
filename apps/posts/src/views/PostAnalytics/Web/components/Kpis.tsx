@@ -1,37 +1,41 @@
-import CustomTooltipContent from '@src/components/chart/CustomTooltipContent';
-import EmptyStatView from '../EmptyStatView';
+import EmptyStatView from '../../components/EmptyStatView';
 import React, {useState} from 'react';
-import {Card, CardContent, ChartConfig, ChartContainer, ChartTooltip, KpiTabTrigger, KpiTabValue, Recharts, Tabs, TabsList, formatDisplayDate, formatDuration, formatNumber, formatPercentage} from '@tryghost/shade';
-import {calculateYAxisWidth, getYTicks} from '@src/utils/chart-helpers';
+import {AlignedAxisTick, Card, CardContent, ChartConfig, ChartContainer, ChartTooltip, DateTooltipContent, KpiTabTrigger, KpiTabValue, Recharts, Tabs, TabsList, calculateYAxisWidth, formatDisplayDateWithRange, formatDuration, formatNumber, formatPercentage, getYRange, sanitizeChartData} from '@tryghost/shade';
+import {KpiDataItem, getWebKpiValues} from '@src/utils/kpi-helpers';
 import {getStatEndpointUrl, getToken} from '@tryghost/admin-x-framework';
-import {useGlobalData} from '@src/providers/GlobalDataProvider';
+import {useGlobalData} from '@src/providers/PostAnalyticsContext';
 import {useQuery} from '@tinybirdco/charts';
 
-type KpiMetric = {
+export type KpiMetric = {
     dataKey: string;
     label: string;
+    color?: string;
     formatter: (value: number) => string;
 };
 
-const KPI_METRICS: Record<string, KpiMetric> = {
+export const KPI_METRICS: Record<string, KpiMetric> = {
     visits: {
         dataKey: 'visits',
         label: 'Visitors',
+        color: 'hsl(var(--chart-blue))',
         formatter: formatNumber
     },
     views: {
         dataKey: 'pageviews',
         label: 'Pageviews',
+        color: 'hsl(var(--chart-green))',
         formatter: formatNumber
     },
     'bounce-rate': {
         dataKey: 'bounce_rate',
         label: 'Bounce rate',
+        color: 'hsl(var(--chart-purple))',
         formatter: formatPercentage
     },
     duration: {
         dataKey: 'avg_session_sec',
         label: 'Time on page',
+        color: 'hsl(var(--chart-orange))',
         formatter: formatDuration
     }
 };
@@ -41,7 +45,7 @@ interface KpisProps {
 }
 
 const Kpis:React.FC<KpisProps> = ({queryParams}) => {
-    const {statsConfig, isLoading: isConfigLoading} = useGlobalData();
+    const {statsConfig, isLoading: isConfigLoading, range} = useGlobalData();
     const [currentTab, setCurrentTab] = useState('visits');
 
     const {data, loading} = useQuery({
@@ -54,45 +58,17 @@ const Kpis:React.FC<KpisProps> = ({queryParams}) => {
 
     const currentMetric = KPI_METRICS[currentTab];
 
-    const chartData = data?.map((item) => {
+    const chartData = sanitizeChartData<KpiDataItem>(data as KpiDataItem[] || [], range, currentMetric.dataKey as keyof KpiDataItem, 'sum')?.map((item: KpiDataItem) => {
         const value = Number(item[currentMetric.dataKey]);
         return {
-            date: item.date,
+            date: String(item.date),
             value,
             formattedValue: currentMetric.formatter(value),
             label: currentMetric.label
         };
     });
 
-    // Calculate KPI values
-    const getKpiValues = () => {
-        if (!data?.length) {
-            return {visits: 0, views: 0, bounceRate: 0, duration: 0};
-        }
-
-        // Sum total KPI value from the trend, ponderating using sessions
-        const _ponderatedKPIsTotal = (kpi: keyof typeof data[0]) => {
-            return data.reduce((prev, curr) => {
-                const currValue = Number(curr[kpi] ?? 0);
-                const currVisits = Number(curr.visits);
-                return prev + (currValue * currVisits / totalVisits);
-            }, 0);
-        };
-
-        const totalVisits = data.reduce((sum, item) => sum + Number(item.visits), 0);
-        const totalViews = data.reduce((sum, item) => sum + Number(item.pageviews), 0);
-        const avgBounceRate = _ponderatedKPIsTotal('bounce_rate');
-        const avgDuration = _ponderatedKPIsTotal('avg_session_sec');
-
-        return {
-            visits: formatNumber(totalVisits),
-            views: formatNumber(totalViews),
-            bounceRate: formatPercentage(avgBounceRate),
-            duration: formatDuration(avgDuration)
-        };
-    };
-
-    const kpiValues = getKpiValues();
+    const kpiValues = getWebKpiValues(data as unknown as KpiDataItem[] | null);
 
     const chartConfig = {
         value: {
@@ -100,9 +76,11 @@ const Kpis:React.FC<KpisProps> = ({queryParams}) => {
         }
     } satisfies ChartConfig;
 
+    const yRange = [getYRange(chartData).min, getYRange(chartData).max];
+
     return (
         <>
-            {isLoading ? 'Loading' :
+            {isLoading ? '' :
                 <>
                     {(data && data.length !== 0 && kpiValues.visits !== '0') ?
                         <Card>
@@ -112,37 +90,39 @@ const Kpis:React.FC<KpisProps> = ({queryParams}) => {
                                         <KpiTabTrigger value="visits" onClick={() => {
                                             setCurrentTab('visits');
                                         }}>
-                                            <KpiTabValue label="Unique visitors" value={kpiValues.visits} />
+                                            <KpiTabValue color={KPI_METRICS.visits.color} label="Unique visitors" value={kpiValues.visits} />
                                         </KpiTabTrigger>
                                         <KpiTabTrigger value="views" onClick={() => {
                                             setCurrentTab('views');
                                         }}>
-                                            <KpiTabValue label="Total views" value={kpiValues.views} />
+                                            <KpiTabValue color={KPI_METRICS.views.color} label="Total views" value={kpiValues.views} />
                                         </KpiTabTrigger>
                                     </TabsList>
                                     <div className='my-4 [&_.recharts-cartesian-axis-tick-value]:fill-gray-500'>
                                         <ChartContainer className='-mb-3 h-[16vw] max-h-[320px] w-full' config={chartConfig}>
-                                            <Recharts.LineChart
+                                            <Recharts.AreaChart
                                                 data={chartData}
                                                 margin={{
                                                     left: 0,
                                                     right: 20,
                                                     top: 12
                                                 }}
-                                                accessibilityLayer
                                             >
                                                 <Recharts.CartesianGrid horizontal={false} vertical={false} />
                                                 <Recharts.XAxis
                                                     axisLine={false}
                                                     dataKey="date"
                                                     interval={0}
-                                                    tickFormatter={formatDisplayDate}
+                                                    tick={props => <AlignedAxisTick {...props} formatter={value => formatDisplayDateWithRange(value, range)} />}
+                                                    tickFormatter={value => formatDisplayDateWithRange(value, range)}
                                                     tickLine={false}
                                                     tickMargin={8}
                                                     ticks={chartData && chartData.length > 0 ? [chartData[0].date, chartData[chartData.length - 1].date] : []}
                                                 />
                                                 <Recharts.YAxis
                                                     axisLine={false}
+                                                    domain={yRange}
+                                                    scale="linear"
                                                     tickFormatter={(value) => {
                                                         switch (currentTab) {
                                                         case 'bounce-rate':
@@ -157,22 +137,40 @@ const Kpis:React.FC<KpisProps> = ({queryParams}) => {
                                                         }
                                                     }}
                                                     tickLine={false}
-                                                    ticks={getYTicks(chartData || [])}
-                                                    width={calculateYAxisWidth(getYTicks(chartData || []), currentMetric.formatter)}
+                                                    ticks={yRange}
+                                                    width={calculateYAxisWidth(yRange, currentMetric.formatter)}
                                                 />
                                                 <ChartTooltip
-                                                    content={<CustomTooltipContent />}
+                                                    content={<DateTooltipContent color={currentMetric.color} range={range} />}
                                                     cursor={true}
-                                                />
-                                                <Recharts.Line
-                                                    dataKey="value"
-                                                    dot={false}
                                                     isAnimationActive={false}
-                                                    stroke="hsl(var(--chart-1))"
-                                                    strokeWidth={2}
-                                                    type='bump'
+                                                    position={{y: 20}}
                                                 />
-                                            </Recharts.LineChart>
+                                                <defs>
+                                                    <linearGradient id="fillChart" x1="0" x2="0" y1="0" y2="1">
+                                                        <stop
+                                                            offset="5%"
+                                                            stopColor={currentMetric.color}
+                                                            stopOpacity={0.8}
+                                                        />
+                                                        <stop
+                                                            offset="95%"
+                                                            stopColor={currentMetric.color}
+                                                            stopOpacity={0.1}
+                                                        />
+                                                    </linearGradient>
+                                                </defs>
+                                                <Recharts.Area
+                                                    dataKey="value"
+                                                    fill="url(#fillChart)"
+                                                    fillOpacity={0.2}
+                                                    isAnimationActive={false}
+                                                    stackId="a"
+                                                    stroke={currentMetric.color}
+                                                    strokeWidth={2}
+                                                    type="linear"
+                                                />
+                                            </Recharts.AreaChart>
                                         </ChartContainer>
                                     </div>
                                 </Tabs>

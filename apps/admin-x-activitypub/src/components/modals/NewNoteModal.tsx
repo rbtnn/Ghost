@@ -1,11 +1,11 @@
 import * as FormPrimitive from '@radix-ui/react-form';
 import APAvatar from '@components/global/APAvatar';
 import {ActorProperties} from '@tryghost/admin-x-framework/api/activitypub';
-import {Button, Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, LucideIcon, Skeleton} from '@tryghost/shade';
+import {Button, Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, LoadingIndicator, LucideIcon, Skeleton} from '@tryghost/shade';
 import {ChangeEvent, useEffect, useRef, useState} from 'react';
 import {ComponentPropsWithoutRef, ReactNode} from 'react';
 import {FILE_SIZE_ERROR_MESSAGE, MAX_FILE_SIZE} from '@utils/image';
-import {LoadingIndicator, showToast} from '@tryghost/admin-x-design-system';
+import {toast} from 'sonner';
 import {uploadFile, useAccountForUser, useNoteMutationForUser, useUserDataForUser} from '@hooks/use-activity-pub-queries';
 import {useNavigate} from '@tryghost/admin-x-framework';
 
@@ -79,10 +79,7 @@ const NewNoteModal: React.FC<NewNoteModalProps> = ({children, ...props}) => {
                     // Use the default error message
                 }
             }
-            showToast({
-                message: errorMessage,
-                type: 'error'
-            });
+            toast.error(errorMessage);
         } finally {
             setIsImageUploading(false);
         }
@@ -95,10 +92,7 @@ const NewNoteModal: React.FC<NewNoteModalProps> = ({children, ...props}) => {
             const file = files[0];
 
             if (file.size > MAX_FILE_SIZE) {
-                showToast({
-                    message: FILE_SIZE_ERROR_MESSAGE,
-                    type: 'error'
-                });
+                toast.error(FILE_SIZE_ERROR_MESSAGE);
                 e.target.value = '';
                 return;
             }

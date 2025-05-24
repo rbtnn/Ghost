@@ -21,7 +21,7 @@ module.exports = {
         colors: {
             transparent: 'transparent',
             current: 'currentColor',
-            accent: 'var(--accent-color, #ff0095)',
+            ghostaccent: 'var(--accent-color, #ff0095)',
             white: '#FFF',
             black: '#15171A',
 
@@ -149,7 +149,7 @@ module.exports = {
         },
         letterSpacing: {
             tightest: '-.05em',
-            tighter: '-.02em',
+            tighter: '-.025em',
             tight: '-.01em',
             normal: '0',
             wide: '.01em',

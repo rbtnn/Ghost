@@ -41,7 +41,7 @@ const errors = require('@tryghost/errors');
 
 /**
  * @typedef {Object} NewsletterSubscriberStats
- * @property {number} total - Total current subscriber count 
+ * @property {number} total - Total current subscriber count
  * @property {Array<{date: string, value: number}>} deltas - Daily subscription deltas
  */
 
@@ -427,45 +427,47 @@ class PostsStatsService {
     }
 
     /**
-     * Get newsletter stats for sent or published posts with a newsletter_id
+     * Get newsletter stats for sent or published posts with a specific newsletter_id
      *
+     * @param {string} newsletterId - ID of the newsletter to get stats for
      * @param {Object} options - Query options
      * @param {string} [options.order='date desc'] - Field to order by ('date', 'open_rate', or 'click_rate') and direction
      * @param {number|string} [options.limit=20] - Maximum number of results to return
      * @param {string} [options.date_from] - Optional start date filter (YYYY-MM-DD)
      * @param {string} [options.date_to] - Optional end date filter (YYYY-MM-DD)
-     * @returns {Promise<{data: NewsletterStatResult[]}>} The newsletter stats for sent/published posts with a newsletter_id
+     * @returns {Promise<{data: NewsletterStatResult[]}>} The newsletter stats for sent/published posts with the specified newsletter_id
      */
-    async getNewsletterStats(options = {}) {
+    async getNewsletterStats(newsletterId, options = {}) {
         try {
             const order = options.order || 'date desc';
             const limitRaw = Number.parseInt(String(options.limit ?? 20), 10);
             const limit = Number.isFinite(limitRaw) && limitRaw > 0 ? limitRaw : 20;
-            
+
             // Parse order field and direction
             let [orderField, orderDirection = 'desc'] = order.split(' ');
-            
+
             // Map frontend order fields to database fields (simplified for ORDER BY)
             const orderFieldMap = {
                 date: 'send_date',
                 open_rate: 'open_rate',
-                click_rate: 'click_rate'
+                click_rate: 'click_rate',
+                sent_to: 'sent_to'
             };
-            
+
             // Validate order field
             if (!Object.keys(orderFieldMap).includes(orderField)) {
                 throw new errors.BadRequestError({
                     message: `Invalid order field: ${orderField}. Must be one of: date, open_rate, click_rate`
                 });
             }
-            
+
             // Validate order direction
             if (!['asc', 'desc'].includes(orderDirection.toLowerCase())) {
                 throw new errors.BadRequestError({
                     message: `Invalid order direction: ${orderDirection}`
                 });
             }
-            
+
             // Build date filters if provided
             let dateFilter = this.knex.raw('1=1');
             if (options.date_from) {
@@ -476,7 +478,7 @@ class PostsStatsService {
                     ? this.knex.raw(`p.published_at >= ? AND p.published_at <= ?`, [options.date_from, options.date_to])
                     : this.knex.raw(`p.published_at <= ?`, [options.date_to]);
             }
-            
+
             // Subquery to count clicks from members_click_events
             const clicksSubquery = this.knex
                 .select('r.post_id')
@@ -486,7 +488,7 @@ class PostsStatsService {
                 .whereNotNull('r.post_id')
                 .groupBy('r.post_id')
                 .as('clicks');
-            
+
             // Build the query to get newsletter stats
             const query = this.knex
                 .select(
@@ -502,45 +504,52 @@ class PostsStatsService {
                 .from('posts as p')
                 .leftJoin('emails as e', 'p.id', 'e.post_id')
                 .leftJoin(clicksSubquery, 'p.id', 'clicks.post_id')
-                .whereNotNull('p.newsletter_id')
+                .where('p.newsletter_id', newsletterId)
                 .whereIn('p.status', ['sent', 'published'])
                 .whereNotNull('e.id') // Ensure there is an associated email record
                 .whereRaw(dateFilter)
                 .orderBy(orderFieldMap[orderField], orderDirection)
                 .limit(limit);
-            
+
             const results = await query;
-            
+
             return {data: results};
         } catch (error) {
-            logging.error('Error fetching newsletter stats:', error);
+            logging.error(`Error fetching newsletter stats for newsletter ${newsletterId}:`, error);
             return {data: []};
         }
     }
 
     /**
-     * Get newsletter subscriber statistics including total count and daily deltas
-     * 
+     * Get newsletter subscriber statistics including total count and daily deltas for a specific newsletter
+     *
+     * @param {string} newsletterId - ID of the newsletter to get subscriber stats for
      * @param {Object} options - Query options
      * @param {string} [options.date_from] - Optional start date filter (YYYY-MM-DD)
      * @param {string} [options.date_to] - Optional end date filter (YYYY-MM-DD)
      * @returns {Promise<{data: Array<{total: number, deltas: Array<{date: string, value: number}>}>}>} The newsletter subscriber stats
      */
-    async getNewsletterSubscriberStats(options = {}) {
+    async getNewsletterSubscriberStats(newsletterId, options = {}) {
         try {
-            // Get total subscriber count from members_newsletters table
-            const totalResult = await this.knex('members_newsletters')
-                .countDistinct('member_id as total');
+            // Get total subscriber count, filtering out members with email disabled
+            const totalResult = await this.knex('members_newsletters as mn')
+                .countDistinct('mn.member_id as total')
+                .join('members as m', 'm.id', 'mn.member_id')
+                .where('mn.newsletter_id', newsletterId)
+                .where('m.email_disabled', 0);
 
             const totalValue = totalResult[0] ? totalResult[0].total : 0;
             const total = parseInt(String(totalValue), 10);
 
-            // Get daily deltas within date range
+            // Get daily deltas within date range for the specific newsletter
             let deltasQuery = this.knex('members_subscribe_events as mse')
                 .select(
                     this.knex.raw(`DATE(mse.created_at) as date`),
                     this.knex.raw(`SUM(CASE WHEN mse.subscribed = 1 THEN 1 ELSE -1 END) as value`)
                 )
+                .join('members as m', 'm.id', 'mse.member_id')
+                .where('mse.newsletter_id', newsletterId)
+                .where('m.email_disabled', 0) // Only include events for members with emails enabled
                 .groupByRaw('DATE(mse.created_at)')
                 .orderBy('date', 'asc');
 
@@ -553,7 +562,7 @@ class PostsStatsService {
             }
 
             const rawDeltas = await deltasQuery;
-            
+
             // Transform raw database results to properly typed objects
             const deltas = [];
             for (const row of rawDeltas) {
@@ -576,7 +585,7 @@ class PostsStatsService {
                 }]
             };
         } catch (error) {
-            logging.error('Error fetching newsletter subscriber stats:', error);
+            logging.error(`Error fetching subscriber stats for newsletter ${newsletterId}:`, error);
             return {
                 data: [{
                     total: 0,

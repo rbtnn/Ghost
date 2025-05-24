@@ -46,6 +46,7 @@ const PRIVATE_FEATURES = [
     'importMemberTier',
     'urlCache',
     'emailCustomization',
+    'emailCustomizationPrototype',
     'emailCustomizationAlpha',
     'mailEvents',
     'collectionsCard',
