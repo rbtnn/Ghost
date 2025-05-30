@@ -86,7 +86,7 @@ hr {
     height: 1px;
     background-color: transparent;
     border: 0;
-    border-top: 1px solid #e0e7eb;
+    border-top: 1px solid {{dividerColor}};
 }
 
 p,
@@ -264,6 +264,18 @@ h6 {
     line-height: 1.3em;
 }
 
+/* Post content headings */
+.post-content-row h1,
+.post-content-row h2,
+.post-content-row h3,
+.post-content-row h4,
+.post-content-row h5,
+.post-content-row h6 {
+    {{#if sectionTitleColor}}
+    color: {{sectionTitleColor}};
+    {{/if}}
+}
+
 h1 strong,
 h2 strong,
 h3 strong,
@@ -375,6 +387,14 @@ figure blockquote p {
     font-weight: {{titleWeight}};
     text-align: center;
 }
+
+{{#hasFeature "emailCustomization" "emailCustomizationAlpha"}}
+{{#if postTitleColor}}
+.post-title-color a {
+    color: {{postTitleColor}} !important;
+}
+{{/if}}
+{{/hasFeature}}
 
 .post-title-with-excerpt {
     padding-bottom: 8px;
@@ -515,6 +535,13 @@ figure blockquote p {
     FEEDBACK BUTTONS
 ------------------------------------- */
 
+.feedback-buttons-container {
+    padding: 32px 0 24px;
+    border-bottom: 1px solid {{dividerColor}};
+    background-color: #ffffff;
+    text-align: center;
+}
+
 .feedback-buttons {
     /*width: auto !important;*/
     width: 100% !important;
@@ -541,6 +568,11 @@ figure blockquote p {
 /* -------------------------------------
     LATEST POSTS TABLE
 ------------------------------------- */
+
+.latest-posts-container {
+    padding: 24px 0;
+    border-bottom: 1px solid {{dividerColor}};
+}
 
 h3.latest-posts-header {
     margin: 0;
@@ -604,13 +636,26 @@ h3.latest-posts-header {
     color: #73818c !important;
 }
 
+/* Custom heading colors for latest posts */
+.latest-post-title h4 {
+    {{#if sectionTitleColor}}
+    color: {{sectionTitleColor}};
+    {{/if}}
+}
+
+.latest-post-title h4 a {
+    {{#if sectionTitleColor}}
+    color: {{sectionTitleColor}} !important;
+    {{/if}}
+}
+
 /* -------------------------------------
     SUBSCRIPTION DETAILS BOX
 ------------------------------------- */
 
 .subscription-box {
     padding: 32px 0;
-    border-bottom: 1px solid #e0e7eb;
+    border-bottom: 1px solid {{dividerColor}};
     color: #15212A;
 }
 
@@ -657,7 +702,7 @@ h3.latest-posts-header {
     line-height: 1.5em;
     color: #15212A;
     padding-bottom: 20px;
-    border-bottom: 1px solid #e0e7eb;
+    border-bottom: 1px solid {{dividerColor}};
 }
 
 .post-content-sans-serif {
@@ -666,7 +711,7 @@ h3.latest-posts-header {
     line-height: 1.5em;
     color: #15212A;
     padding-bottom: 20px;
-    border-bottom: 1px solid #e0e7eb;
+    border-bottom: 1px solid {{dividerColor}};
 }
 
 .post-content-row:first-child > td, .header-image-row + .post-content-row > td {
@@ -688,6 +733,10 @@ h3.latest-posts-header {
 
 a[data-flickr-embed] img {
     height: auto;
+}
+
+td.kg-card-spacing {
+    padding: 0 0 1.5em 0;
 }
 
 /* Any card with altered visibility is wrapped in a div with the .kg-visibility-wrapper class */
@@ -981,11 +1030,11 @@ a[data-flickr-embed] img {
 }
 
 .kg-cta-card.kg-cta-bg-none:not(.kg-cta-no-dividers) {
-    border-bottom: 1px solid #e0e7eb;
+    border-bottom: 1px solid {{dividerColor}};
 }
 
 .kg-cta-bg-none.kg-cta-no-label:not(.kg-cta-no-dividers) {
-    border-top: 1px solid #e0e7eb;
+    border-top: 1px solid {{dividerColor}};
 }
 
 .kg-cta-bg-white {
@@ -1023,7 +1072,7 @@ a[data-flickr-embed] img {
 
 .kg-cta-sponsor-label {
     padding: 12px 0;
-    border-bottom: 1px solid #e0e7eb;
+    border-bottom: 1px solid {{dividerColor}};
 }
 
 .kg-cta-bg-none .kg-cta-sponsor-label {
@@ -1037,7 +1086,7 @@ a[data-flickr-embed] img {
 
 .kg-cta-bg-none .kg-cta-sponsor-label,
 .kg-cta-bg-white .kg-cta-sponsor-label {
-    border-color: #e0e7eb;
+    border-color: {{dividerColor}};
 }
 
 .kg-cta-bg-grey .kg-cta-sponsor-label {
