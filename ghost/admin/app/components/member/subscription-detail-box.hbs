@@ -40,7 +40,7 @@
                     <h4>Offer</h4>
                     <span class="gh-cp-membertier-pricelabel"> {{@sub.offer.name}}
                     {{#if (eq @sub.offer.type 'fixed')}}
-                    &ndash; {{currency-symbol @sub.offer.currency}}{{gh-price-amount @sub.offer.amount}} off
+                    &ndash; {{currency-symbol @sub.offer.currency}}{{gh-price-amount @sub.offer.amount @sub.offer.currency}} off
                     {{else}}
                     &ndash; {{@sub.offer.amount}}% off
                     {{/if}}

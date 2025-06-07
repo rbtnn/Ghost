@@ -130,7 +130,7 @@ export default class Anchor extends Component {
             return '-';
         }
 
-        const valueText = ghPriceAmount(this.currentMRR, {cents: false});
+        const valueText = ghPriceAmount(this.currentMRR, 'JPY', {cents: false});
         return `${this.mrrCurrencySymbol}${valueText}`;
     }
 
@@ -344,7 +344,7 @@ export default class Anchor extends Component {
                 callbacks: {
                     label: (tooltipItems, data) => {
                         if (this.selectedChartDisplay === 'mrr') {
-                            const value = `${that.mrrCurrencySymbol}${ghPriceAmount(data.datasets[tooltipItems.datasetIndex].data[tooltipItems.index], {cents: false})}`;
+                            const value = `${that.mrrCurrencySymbol}${ghPriceAmount(data.datasets[tooltipItems.datasetIndex].data[tooltipItems.index], 'JPY', {cents: false})}`;
                             document.querySelector('#gh-dashboard-anchor-tooltip .gh-dashboard-tooltip-value .value').innerHTML = value;
                         } else {
                             const value = data.datasets[tooltipItems.datasetIndex].data[tooltipItems.index].toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
