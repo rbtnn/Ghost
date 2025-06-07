@@ -74,11 +74,16 @@ type formStateTypes = {
 };
 
 const calculateAmount = (formState: formStateTypes): number => {
-    const {fixedAmount = 0, percentAmount = 0, trialAmount = 0, amount = 0} = formState;
+    const {currency = 'JPY', fixedAmount = 0, percentAmount = 0, trialAmount = 0, amount = 0} = formState;
 
     switch (formState.type) {
     case 'fixed':
-        return fixedAmount * 100;
+        if (currency === 'JPY') {
+            return fixedAmount;
+        }
+        else {
+            return fixedAmount * 100;
+        }
     case 'percent':
         return percentAmount;
     case 'trial':

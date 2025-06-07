@@ -49,8 +49,8 @@ export const getOfferDiscount = (type: string, amount: number, cadence: string, 
         break;
     case 'fixed':
         discountColor = 'text-blue';
-        discountOffer = numberWithCommas(formatToTwoDecimals(currencyToDecimal((currency === 'JPY' ? amount / 100 : amount), currency))) + ' ' + currency + ' off';
-        updatedPrice = originalPrice - (currency === 'JPY' ? amount / 100 : amount); 
+        discountOffer = numberWithCommas(formatToTwoDecimals(currencyToDecimal(amount, currency))) + ' ' + currency + ' off';
+        updatedPrice = originalPrice - amount;
         break;
     case 'trial':
         discountColor = 'text-pink';

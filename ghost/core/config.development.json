@@ -1,9 +1,3 @@
 {
-    "enableDeveloperExperiments": true,
-    "portal": {
-        "url": "https://backspace.fm/assets/new/portal.min.js?v=20250427"
-    },
-    "bsm_podcast": {
-        "url": "https://backspace.fm/assets/new/portal.min.js?v=20250427"
-    }
+    "enableDeveloperExperiments": true
 }

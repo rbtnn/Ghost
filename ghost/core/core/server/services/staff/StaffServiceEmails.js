@@ -74,7 +74,7 @@ class StaffServiceEmails {
 
             const subject = `💸 Paid subscription started: ${memberData.name}`;
 
-            const amount = this.getAmount(subscription?.amount);
+            const amount = this.getAmount(subscription?.amount, subscription?.currency);
             const formattedAmount = this.getFormattedAmount({currency: subscription?.currency, amount});
             const interval = subscription?.interval || '';
             const tierData = {
@@ -133,7 +133,7 @@ class StaffServiceEmails {
             const memberData = this.getMemberData(member);
             const subject = `⚠️ Cancellation: ${memberData.name}`;
 
-            const amount = this.getAmount(subscription?.amount);
+            const amount = this.getAmount(subscription?.amount, subscription?.currency);
             const formattedAmount = this.getFormattedAmount({currency: subscription?.currency, amount});
             const interval = subscription?.interval;
             const tierDetail = `${formattedAmount}/${interval}`;
@@ -270,9 +270,9 @@ class StaffServiceEmails {
     async notifyDonationReceived({donationPaymentEvent}) {
         const emailPromises = [];
         const users = await this.models.User.getEmailAlertUsers('donation');
-        const formattedAmount = this.getFormattedAmount({currency: donationPaymentEvent.currency, amount: donationPaymentEvent.amount / 100});
+        const formattedAmount = this.getFormattedAmount({currency: donationPaymentEvent.currency, amount: donationPaymentEvent.amount / (donationPaymentEvent.currency.toUpperCase() === 'JPY' ? 1 : 100)});
 
-        const subject = `💰 One-time payment received: ${formattedAmount} from ${donationPaymentEvent.name ?? donationPaymentEvent.email}`;
+        const subject = `💰 One-time payment received: ${formattedAmount} from ${donationPaymentEvent.name ?? donationPaymentEvent.email} DEBUG(currency:"${donationPaymentEvent.currency}", amount:"${donationPaymentEvent.amount}")`;
         const memberData = donationPaymentEvent.memberId ? this.getMemberData({
             id: donationPaymentEvent.memberId,
             name: donationPaymentEvent.name ?? null,
@@ -358,23 +358,31 @@ class StaffServiceEmails {
             return amount > 0 ? Intl.NumberFormat('en', {maximumFractionDigits}).format(amount) : '';
         }
 
-        return Intl.NumberFormat('en', {
-            style: 'currency',
-            currency,
-            currencyDisplay: 'symbol',
-            maximumFractionDigits,
-            // see https://github.com/andyearnshaw/Intl.js/issues/123
-            minimumFractionDigits: maximumFractionDigits
-        }).format(amount);
+        if (currency.toUpperCase() === 'JPY') {
+            return Intl.NumberFormat('en', {
+                style: 'currency',
+                currency,
+                currencyDisplay: 'symbol'
+            }).format(amount > 0 ? amount : 0);
+        } else {
+            return Intl.NumberFormat('en', {
+                style: 'currency',
+                currency,
+                currencyDisplay: 'symbol',
+                maximumFractionDigits,
+                // see https://github.com/andyearnshaw/Intl.js/issues/123
+                minimumFractionDigits: maximumFractionDigits
+            }).format(amount);
+        }
     }
 
     /** @private */
-    getAmount(amount) {
+    getAmount(amount, currency) {
         if (!amount) {
             return 0;
         }
 
-        return amount / 100;
+        return amount / (currency.toUpperCase() === 'JPY' ? 1 : 100);
     }
 
     /** @private */
@@ -404,7 +412,7 @@ class StaffServiceEmails {
             if (offer.type === 'percent') {
                 offAmount = `${offer.amount}% off`;
             } else if (offer.type === 'fixed') {
-                const amount = this.getAmount(offer.amount);
+                const amount = this.getAmount(offer.amount, offer.currency);
                 offAmount = `${this.getFormattedAmount({currency: offer.currency, amount})} off`;
             } else if (offer.type === 'trial') {
                 offAmount = `${offer.amount} days free`;
