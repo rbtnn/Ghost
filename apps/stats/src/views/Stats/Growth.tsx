@@ -1,11 +1,10 @@
-import AreaChart, {AreaChartDataItem} from './components/AreaChart';
 import DateRangeSelect from './components/DateRangeSelect';
 import React, {useMemo, useState} from 'react';
 import SortButton from './components/SortButton';
 import StatsHeader from './layout/StatsHeader';
 import StatsLayout from './layout/StatsLayout';
 import StatsView from './layout/StatsView';
-import {Button, Card, CardContent, CardDescription, CardHeader, CardTitle, KpiTabTrigger, KpiTabValue, Separator, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Tabs, TabsList, centsToDollars, formatNumber} from '@tryghost/shade';
+import {Button, Card, CardContent, CardDescription, CardHeader, CardTitle, GhAreaChart, GhAreaChartDataItem, KpiTabTrigger, KpiTabValue, Separator, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Tabs, TabsList, centsToDollars, formatNumber} from '@tryghost/shade';
 import {DiffDirection, useGrowthStats} from '@src/hooks/useGrowthStats';
 import {getPeriodText, sanitizeChartData} from '@src/utils/chart-helpers';
 import {useGlobalData} from '@src/providers/GlobalDataProvider';
@@ -81,7 +80,7 @@ const GrowthKPIs: React.FC<{
         sanitizedData = sanitizeChartData(allChartData, range, fieldName, 'exact');
 
         // Then map the sanitized data to the final format
-        let processedData: AreaChartDataItem[] = [];
+        let processedData: GhAreaChartDataItem[] = [];
 
         switch (currentTab) {
         case 'free-members':
@@ -122,16 +121,16 @@ const GrowthKPIs: React.FC<{
 
     const tabConfig = {
         'total-members': {
-            color: 'hsl(var(--chart-blue))'
+            color: 'hsl(var(--chart-teal))'
         },
         'free-members': {
-            color: 'hsl(var(--chart-green))'
+            color: 'hsl(var(--chart-blue))'
         },
         'paid-members': {
-            color: 'hsl(var(--chart-purple))'
+            color: 'hsl(var(--chart-yellow))'
         },
         mrr: {
-            color: 'hsl(var(--chart-orange))'
+            color: 'hsl(var(--chart-purple))'
         }
     };
 
@@ -142,7 +141,7 @@ const GrowthKPIs: React.FC<{
                     setCurrentTab('total-members');
                 }}>
                     <KpiTabValue
-                        color={tabConfig['total-members'].color}
+                        color='hsl(var(--chart-teal))'
                         diffDirection={directions.total}
                         diffValue={percentChanges.total}
                         label="Total members"
@@ -153,7 +152,7 @@ const GrowthKPIs: React.FC<{
                     setCurrentTab('free-members');
                 }}>
                     <KpiTabValue
-                        color={tabConfig['free-members'].color}
+                        color='hsl(var(--chart-blue))'
                         diffDirection={directions.free}
                         diffValue={percentChanges.free}
                         label="Free members"
@@ -164,7 +163,7 @@ const GrowthKPIs: React.FC<{
                     setCurrentTab('paid-members');
                 }}>
                     <KpiTabValue
-                        color={tabConfig['paid-members'].color}
+                        color='hsl(var(--chart-yellow))'
                         diffDirection={directions.paid}
                         diffValue={percentChanges.paid}
                         label="Paid members"
@@ -175,7 +174,7 @@ const GrowthKPIs: React.FC<{
                     setCurrentTab('mrr');
                 }}>
                     <KpiTabValue
-                        color={tabConfig.mrr.color}
+                        color='hsl(var(--chart-purple))'
                         diffDirection={directions.mrr}
                         diffValue={percentChanges.mrr}
                         label="MRR"
@@ -184,8 +183,7 @@ const GrowthKPIs: React.FC<{
                 </KpiTabTrigger>
             </TabsList>
             <div className='my-4 [&_.recharts-cartesian-axis-tick-value]:fill-gray-500'>
-                <AreaChart
-                    allowDataOverflow={true}
+                <GhAreaChart
                     className='-mb-3 h-[16vw] max-h-[320px] w-full'
                     color={tabConfig[currentTab as keyof typeof tabConfig].color}
                     data={chartData}

@@ -13,6 +13,8 @@ const {registerHelpers} = require('./helpers/register-helpers');
 const crypto = require('crypto');
 
 const DEFAULT_LOCALE = 'en-gb';
+const DEFAULT_ACCENT_COLOR = '#15212A';
+const VALID_HEX_REGEX = /#([0-9a-f]{3}){1,2}$/i;
 
 // Wrapper function so that i18next-parser can find these strings
 const t = (x) => {
@@ -324,8 +326,15 @@ class EmailRenderer {
 
         const labs = this.getLabs();
 
+        let accentColor = this.#settingsCache?.get('accent_color') || DEFAULT_ACCENT_COLOR;
+        if (!VALID_HEX_REGEX.test(accentColor)) {
+            accentColor = DEFAULT_ACCENT_COLOR;
+        }
+
         if (labs?.isSet('emailCustomization') || labs?.isSet('emailCustomizationAlpha')) {
-            renderOptions.design = {};
+            renderOptions.design = {
+                accentColor
+            };
         }
 
         const betaDesignOptions = {
@@ -335,7 +344,15 @@ class EmailRenderer {
             linkStyle: newsletter?.get('link_style'),
             imageCorners: newsletter?.get('image_corners'),
             postTitleColor: newsletter?.get('post_title_color'),
-            sectionTitleColor: newsletter?.get('section_title_color')
+            sectionTitleColor: newsletter?.get('section_title_color'),
+            linkColor: newsletter?.get('link_color'),
+            // TODO:
+            // if the other options above have default or calculated values we
+            // should follow the same pattern as the options below to avoid
+            //duplicating magic values or logic in renderers
+            dividerColor: this.#getDividerColor(newsletter),
+            buttonColor: this.#getButtonColor(newsletter, accentColor),
+            buttonTextColor: this.#getButtonTextColor(newsletter, accentColor)
         };
 
         if (labs?.isSet('emailCustomization')) {
@@ -348,11 +365,7 @@ class EmailRenderer {
         if (labs?.isSet('emailCustomizationAlpha')) {
             renderOptions.design = {
                 ...renderOptions.design,
-                ...betaDesignOptions,
-                // TODO:
-                // if the other options have default values we should follow the same pattern
-                // as the divider color to avoid duplicating magic values in renderers
-                dividerColor: this.#getDividerColor(newsletter)
+                ...betaDesignOptions
             };
         }
 
@@ -932,14 +945,12 @@ class EmailRenderer {
         /** @type {'light' | 'dark' | string | null} */
         const value = newsletter.get('background_color');
 
-        const validHex = /#([0-9a-f]{3}){1,2}$/i;
-
-        if (validHex.test(value)) {
+        if (VALID_HEX_REGEX.test(value)) {
             return value;
         }
 
         if (value === 'dark') {
-            return '#15212a';
+            return DEFAULT_ACCENT_COLOR;
         }
 
         // value === dark, value === null, value is not valid hex
@@ -950,9 +961,7 @@ class EmailRenderer {
         /** @type {'accent' | 'auto' | string | null} */
         const value = newsletter.get('post_title_color');
 
-        const validHex = /#([0-9a-f]{3}){1,2}$/i;
-
-        if (validHex.test(value)) {
+        if (VALID_HEX_REGEX.test(value)) {
             return value;
         }
 
@@ -973,9 +982,8 @@ class EmailRenderer {
 
         /** @type {'accent' | 'auto' | string | null} */
         const value = newsletter.get('section_title_color');
-        const validHex = /#([0-9a-f]{3}){1,2}$/i;
 
-        if (validHex.test(value)) {
+        if (VALID_HEX_REGEX.test(value)) {
             return value;
         }
 
@@ -1032,13 +1040,13 @@ class EmailRenderer {
     #getDividerColor(newsletter) {
         const labs = this.getLabs();
 
-        if (labs?.isSet('emailCustomizationAlpha')) {
+        if (labs?.isSet('emailCustomization') || labs?.isSet('emailCustomizationAlpha')) {
             const value = newsletter?.get('divider_color');
-            const validHex = /#([0-9a-f]{3}){1,2}$/i;
 
             if (value === 'accent') {
-                return this.#settingsCache.get('accent_color');
-            } else if (validHex.test(value)) {
+                const accentColor = this.#settingsCache?.get('accent_color') || DEFAULT_ACCENT_COLOR;
+                return VALID_HEX_REGEX.test(accentColor) ? accentColor : DEFAULT_ACCENT_COLOR;
+            } else if (VALID_HEX_REGEX.test(value)) {
                 return value;
             }
         }
@@ -1047,13 +1055,58 @@ class EmailRenderer {
         return '#e0e7eb';
     }
 
+    #getLinkColor(newsletter, accentColor) {
+        const value = newsletter.get('link_color');
+
+        if (value === 'accent') {
+            return accentColor;
+        }
+
+        if (VALID_HEX_REGEX.test(value)) {
+            return value;
+        }
+
+        return accentColor; // default to accent color
+    }
+
+    #getButtonColor(newsletter, accentColor) {
+        /** @type {'accent' | 'auto' | string | null} */
+        const buttonColor = newsletter?.get('button_color') || 'accent';
+
+        if (buttonColor === 'accent') {
+            return accentColor;
+        }
+
+        if (buttonColor === 'auto') {
+            const backgroundColor = this.#getBackgroundColor(newsletter);
+            return textColorForBackgroundColor(backgroundColor).hex();
+        }
+
+        if (VALID_HEX_REGEX.test(buttonColor)) {
+            return buttonColor;
+        }
+
+        return accentColor; // default to accent color
+    }
+
+    // white/black for dark/light button colors
+    // outline buttons use button color as text color but that's handled in styles
+    #getButtonTextColor(newsletter, accentColor) {
+        const buttonColor = this.#getButtonColor(newsletter, accentColor);
+        return textColorForBackgroundColor(buttonColor).hex();
+    }
+
     /**
      * @private
      */
     async getTemplateData({post, newsletter, html, addPaywall, segment}) {
         const labs = this.getLabs();
 
-        let accentColor = this.#settingsCache.get('accent_color') || '#15212A';
+        let accentColor = this.#settingsCache.get('accent_color') || DEFAULT_ACCENT_COLOR;
+        if (!VALID_HEX_REGEX.test(accentColor)) {
+            accentColor = DEFAULT_ACCENT_COLOR;
+        }
+
         let adjustedAccentColor;
         let adjustedAccentContrastColor;
         try {
@@ -1061,7 +1114,7 @@ class EmailRenderer {
             adjustedAccentContrastColor = accentColor && textColorForBackgroundColor(adjustedAccentColor).hex();
         } catch (e) {
             logging.error(e);
-            accentColor = '#15212A';
+            adjustedAccentColor = accentColor;
         }
 
         const hasAnyEmailCustomization = labs.isSet('emailCustomization') || labs.isSet('emailCustomizationAlpha');
@@ -1073,10 +1126,12 @@ class EmailRenderer {
         const titleStrongWeight = this.#getTitleStrongWeight(titleWeight);
         const textColor = textColorForBackgroundColor(backgroundColor).hex();
         const secondaryTextColor = textColorForBackgroundColor(backgroundColor).alpha(0.5).toString();
-        const linkColor = backgroundIsDark ? '#ffffff' : accentColor;
+        const linkColor = hasAnyEmailCustomization ? this.#getLinkColor(newsletter, accentColor) : backgroundIsDark ? '#ffffff' : accentColor;
         const hasRoundedImageCorners = hasAnyEmailCustomization ? this.#getImageCorners(newsletter) : false;
         const sectionTitleColor = hasAnyEmailCustomization ? this.#getSectionTitleColor(newsletter, accentColor) : null;
         const dividerColor = this.#getDividerColor(newsletter);
+        const buttonColor = this.#getButtonColor(newsletter, adjustedAccentColor);
+        const buttonTextColor = this.#getButtonTextColor(newsletter, adjustedAccentColor);
 
         let buttonBorderRadius = '6px';
         if (hasAnyEmailCustomization) {
@@ -1240,6 +1295,8 @@ class EmailRenderer {
             headerImageWidth,
             showHeaderIcon: newsletter.get('show_header_icon') && this.#settingsCache.get('icon'),
             dividerColor,
+            buttonColor,
+            buttonTextColor,
 
             // TODO: consider moving these to newsletter property
             showHeaderTitle: newsletter.get('show_header_title'),

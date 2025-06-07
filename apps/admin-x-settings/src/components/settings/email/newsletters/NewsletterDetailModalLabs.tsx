@@ -1,7 +1,6 @@
 import NewsletterPreview from './NewsletterPreview';
 import NiceModal from '@ebay/nice-modal-react';
 import React, {useCallback, useEffect, useState} from 'react';
-import useFeatureFlag from '../../../../hooks/useFeatureFlag';
 import useSettingGroup from '../../../../hooks/useSettingGroup';
 import validator from 'validator';
 import {Button, ButtonGroup, ColorPickerField, ConfirmationModal, Form, Heading, Hint, HtmlField, Icon, ImageUpload, LimitModal, PreviewModalContent, Select, SelectOption, Separator, Tab, TabView, TextArea, TextField, Toggle, ToggleGroup, showToast} from '@tryghost/admin-x-design-system';
@@ -67,13 +66,13 @@ const Sidebar: React.FC<{
     errors: ErrorMessages;
     clearError: (field: string) => void;
 }> = ({newsletter, onlyOne, updateNewsletter, validate, errors, clearError}) => {
-    const hasEmailCustomizationAlpha = useFeatureFlag('emailCustomizationAlpha');
+    // const hasEmailCustomizationAlpha = useFeatureFlag('emailCustomizationAlpha');
 
     const {updateRoute} = useRouting();
     const {mutateAsync: editNewsletter} = useEditNewsletter();
     const limiter = useLimiter();
     const {settings, config, siteData} = useGlobalData();
-    const [defaultEmailAddress] = getSettingValues<string>(settings, ['default_email_address']);
+    const [icon, defaultEmailAddress] = getSettingValues<string>(settings, ['icon', 'default_email_address']);
     const {mutateAsync: uploadImage} = useUploadImage();
     const [selectedTab, setSelectedTab] = useState('generalSettings');
     const {localSettings} = useSettingGroup();
@@ -274,10 +273,16 @@ const Sidebar: React.FC<{
                             >
                                 <Icon colorClass='text-grey-700 dark:text-grey-300' name='picture' />
                             </ImageUpload>
-                            <Hint>1200x600, optional</Hint>
+                            <Hint>1200×600 recommended. Use a transparent PNG for best results on any background.</Hint>
                         </div>
                     </div>
                     <ToggleGroup>
+                        {icon && <Toggle
+                            checked={newsletter.show_header_icon}
+                            direction="rtl"
+                            label='Publication icon'
+                            onChange={e => updateNewsletter({show_header_icon: e.target.checked})}
+                        />}
                         <Toggle
                             checked={newsletter.show_header_title}
                             direction="rtl"
@@ -517,7 +522,7 @@ const Sidebar: React.FC<{
                             onChange={color => updateNewsletter({section_title_color: color})}
                         />
                     </div>
-                    {/* <div className='mb-1'>
+                    <div className='mb-1'>
                         <ColorPickerField
                             direction='rtl'
                             eyedropper={true}
@@ -537,7 +542,7 @@ const Sidebar: React.FC<{
                             value={newsletter.button_color}
                             onChange={color => updateNewsletter({button_color: color})}
                         />
-                    </div> */}
+                    </div>
                     <div className='flex w-full justify-between'>
                         <div>Button style</div>
                         <ButtonGroup activeKey={newsletter.button_style || 'fill'} buttons={[
@@ -603,7 +608,7 @@ const Sidebar: React.FC<{
                             }
                         ]} clearBg={false} />
                     </div>
-                    {/* <div className='mb-1'>
+                    <div className='mb-1'>
                         <ColorPickerField
                             direction='rtl'
                             eyedropper={true}
@@ -623,7 +628,7 @@ const Sidebar: React.FC<{
                             value={newsletter.link_color}
                             onChange={color => updateNewsletter({link_color: color})}
                         />
-                    </div> */}
+                    </div>
                     <div className='flex w-full justify-between'>
                         <div>Link style</div>
                         <ButtonGroup activeKey={newsletter.link_style || 'underline'} buttons={[
@@ -689,29 +694,27 @@ const Sidebar: React.FC<{
                             }
                         ]} clearBg={false} />
                     </div>
-                    {hasEmailCustomizationAlpha &&
-                        <div className='mb-1'>
-                            <ColorPickerField
-                                direction='rtl'
-                                eyedropper={true}
-                                swatches={[
-                                    {
-                                        value: 'light',
-                                        title: 'Light',
-                                        hex: '#e0e7eb'
-                                    },
-                                    {
-                                        value: 'accent',
-                                        title: 'Accent',
-                                        hex: siteData.accent_color
-                                    }
-                                ]}
-                                title='Divider color'
-                                value={newsletter.divider_color || 'light'}
-                                onChange={color => updateNewsletter({divider_color: color})}
-                            />
-                        </div>
-                    }
+                    <div className='mb-1'>
+                        <ColorPickerField
+                            direction='rtl'
+                            eyedropper={true}
+                            swatches={[
+                                {
+                                    value: 'light',
+                                    title: 'Light',
+                                    hex: '#e0e7eb'
+                                },
+                                {
+                                    value: 'accent',
+                                    title: 'Accent',
+                                    hex: siteData.accent_color
+                                }
+                            ]}
+                            title='Divider color'
+                            value={newsletter.divider_color || 'light'}
+                            onChange={color => updateNewsletter({divider_color: color})}
+                        />
+                    </div>
                 </Form>
             </>
         }

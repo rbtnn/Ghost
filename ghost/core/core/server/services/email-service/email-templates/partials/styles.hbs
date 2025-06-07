@@ -88,6 +88,20 @@ hr {
     border: 0;
     border-top: 1px solid {{dividerColor}};
 }
+.kg-hr-card td,
+.kg-paywall-hr td {
+    margin: 0;
+    padding-top: 1.5em; /* account for elements above having bottom padding, we want 3em total */
+    padding-bottom: 3em;
+    font-size: 17px;
+}
+.kg-hr td {
+    margin: 0;
+    padding: 0;
+    border-top: 1px solid {{dividerColor}};
+    font-size: 0;
+    line-height: 0;
+}
 
 p,
 ul,
@@ -264,6 +278,51 @@ h6 {
     line-height: 1.3em;
 }
 
+/*
+  Adjust margins and padding when hr cards surround headings to simulate the
+  margin collapsing that we no longer have when using table+padding for hr cards.
+  Goal is to always have 3em spacing between heading and divider line.
+*/
+h1:has(+ .kg-hr-card),
+h2:has(+ .kg-hr-card),
+h3:has(+ .kg-hr-card),
+h4:has(+ .kg-hr-card),
+h5:has(+ .kg-hr-card),
+h6:has(+ .kg-hr-card),
+h1:has(+ .kg-paywall),
+h2:has(+ .kg-paywall),
+h3:has(+ .kg-paywall),
+h4:has(+ .kg-paywall),
+h5:has(+ .kg-paywall),
+h6:has(+ .kg-paywall) {
+    margin-bottom: 0;
+}
+
+h1 + .kg-hr-card td,
+h2 + .kg-hr-card td,
+h3 + .kg-hr-card td,
+h4 + .kg-hr-card td,
+h5 + .kg-hr-card td,
+h6 + .kg-hr-card td,
+h1 + .kg-paywall .kg-paywall-hr td,
+h2 + .kg-paywall .kg-paywall-hr td,
+h3 + .kg-paywall .kg-paywall-hr td,
+h4 + .kg-paywall .kg-paywall-hr td,
+h5 + .kg-paywall .kg-paywall-hr td,
+h6 + .kg-paywall .kg-paywall-hr td {
+    padding-top: 3em;
+}
+
+.kg-hr-card + h1,
+.kg-hr-card + h2,
+.kg-hr-card + h3,
+.kg-hr-card + h4,
+.kg-hr-card + h5,
+.kg-hr-card + h6,
+.kg-paywall-hr + h3 {
+    margin-top: 0;
+}
+
 /* Post content headings */
 .post-content-row h1,
 .post-content-row h2,
@@ -275,6 +334,25 @@ h6 {
     color: {{sectionTitleColor}};
     {{/if}}
 }
+
+{{#hasFeature "emailCustomization" "emailCustomizationAlpha"}}
+/* Links in captions */
+.feature-image-caption a,
+figcaption a {
+    color: {{linkColor}};
+}
+
+.kg-toggle-card:not(.kg-cta-card) a {
+    color: {{linkColor}};
+}
+.kg-callout-card:not(.kg-callout-card-accent) a {
+    color: {{linkColor}};
+}
+
+.subscription-box .manage-subscription a {
+    color: {{linkColor}} !important;
+}
+{{/hasFeature}}
 
 h1 strong,
 h2 strong,
@@ -684,11 +762,27 @@ h3.latest-posts-header {
 .manage-subscription {
     white-space: nowrap;
     font-size: 15px;
-    font-weight: 600;
+    font-weight: 400;
     text-align: right;
     line-height: 1.45em;
     vertical-align: bottom;
+}
+
+.manage-subscription a {
+    {{#hasFeature "emailCustomization" "emailCustomizationAlpha"}}
+    color: {{linkColor}};
+    {{#if (eq linkStyle "regular")}}
+    text-decoration: none;
+    {{else if (eq linkStyle "bold")}}
+    text-decoration: none;
+    font-weight: 700;
+    {{else}}
+    text-decoration: underline;
+    {{/if}}
+    {{else}}
     color: {{accentColor}};
+    text-decoration: underline;
+    {{/hasFeature}}
 }
 
 /* -------------------------------------
@@ -720,7 +814,11 @@ h3.latest-posts-header {
 
 .post-content a,
 .post-content-sans-serif a {
+    {{#hasFeature "emailCustomization" "emailCustomizationAlpha"}}
+    color: {{linkColor}};
+    {{else}}
     color: {{accentColor}};
+    {{/hasFeature}}
     {{#if (eq linkStyle "regular")}}
     text-decoration: none;
     {{else if (eq linkStyle "bold")}}
@@ -1858,6 +1956,23 @@ img.kg-cta-image {
 }
 {{/hasFeature}}
 
+{{#hasFeature "emailCustomizationAlpha"}}
+.kg-paywall {
+    text-align: center;
+}
+
+.kg-paywall h3 {
+    text-wrap: pretty;
+}
+
+.kg-paywall p {
+    max-width: 440px;
+    margin: 0 auto 1.5em auto;
+    text-wrap: pretty;
+}
+{{/hasFeature}}
+
+
 /* -------------------------------------
     HEADER, FOOTER, MAIN
 ------------------------------------- */
@@ -1904,18 +2019,27 @@ table.btn {
     box-sizing: border-box;
     width: auto;
 }
+
 table.btn td {
     padding: 8px 20px 9px;
-    background-color: #ffffff;
+    {{#if hasOutlineButtons}}
+    border: 1px solid {{buttonColor}};
+    background-color: transparent;
+    {{else}}
+    background-color: {{buttonColor}};
+    {{/if}}
     border-radius: {{buttonBorderRadius}};
     text-align: center;
     font-family: -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif;
 }
 
 table.btn a {
-    border-radius: {{buttonBorderRadius}};
     box-sizing: border-box;
-    color: #15212A;
+    {{#if hasOutlineButtons}}
+    color: {{buttonColor}};
+    {{else}}
+    color: {{buttonTextColor}};
+    {{/if}}
     cursor: pointer;
     display: inline-block;
     font-size: 15px;
@@ -1927,6 +2051,7 @@ table.btn a {
 table.btn-accent td {
     {{#if hasOutlineButtons}}
     border: 1px solid {{adjustedAccentColor}};
+    background-color: transparent;
     {{else}}
     background-color: {{adjustedAccentColor}};
     {{/if}}
