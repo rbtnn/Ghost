@@ -507,7 +507,7 @@ class PaymentsService {
         if (offer.type === 'percent') {
             couponData.percent_off = offer.amount;
         } else {
-            couponData.amount_off = offer.currency === 'JPY' ? (offer.amount / 100) : offer.amount;
+            couponData.amount_off = offer.amount;
             couponData.currency = offer.currency;
         }
 

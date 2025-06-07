@@ -60,7 +60,7 @@ function getMembersHelper(data, frontendKey, excludeList) {
     let membersHelper = '';
     if (!excludeList.has('portal')) {
         const {scriptUrl} = getFrontendAppConfig('portal');
-
+        const scriptUrlAdditional = -1 !== scriptUrl.indexOf('?v=') ? '' : '?v=' + Math.floor(Math.random() * (99999 - 10000) + 10000);
         const colorString = (_.has(data, 'site._preview') && data.site.accent_color) ? data.site.accent_color : '';
         const attributes = {
             i18n: labs.isSet('i18n'),
@@ -73,7 +73,7 @@ function getMembersHelper(data, frontendKey, excludeList) {
             attributes['accent-color'] = colorString;
         }
         const dataAttributes = getDataAttributes(attributes);
-        membersHelper += `<script defer src="${scriptUrl}" ${dataAttributes} crossorigin="anonymous"></script>`;
+        membersHelper += `<script defer src="${scriptUrl}${scriptUrlAdditional}" ${dataAttributes} crossorigin="anonymous"></script>`;
     }
     if (!excludeList.has('cta_styles')) {
         membersHelper += (`<style id="gh-members-styles">${templateStyles}</style>`);
