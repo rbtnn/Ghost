@@ -20,6 +20,7 @@
     "**/node_modules/**"
   ],
   "scripts": {
+    "i": "git submodule update --init --recursive && yarn install --prefer-offline --frozen-lockfile",
     "archive": "nx run ghost:archive",
     "build": "nx run-many -t build",
     "build:clean": "nx reset && rimraf -g 'ghost/*/build' && rimraf -g 'ghost/*/tsconfig.tsbuildinfo'",
