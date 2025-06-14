@@ -4,6 +4,14 @@ const moment = require('moment');
 const glob = require('glob');
 const EmailAddressParser = require('../email-address/EmailAddressParser');
 
+const IsJPYCurrency = (currency) => {
+    if (currency !== null && typeof currency.toUpperCase === 'function') {
+        return currency.toUpperCase() === 'JPY';
+    } else {
+        return true;
+    }
+};
+
 class StaffServiceEmails {
     constructor({logging, models, mailer, settingsHelpers, settingsCache, blogIcon, urlUtils, labs}) {
         this.logging = logging;
@@ -270,7 +278,7 @@ class StaffServiceEmails {
     async notifyDonationReceived({donationPaymentEvent}) {
         const emailPromises = [];
         const users = await this.models.User.getEmailAlertUsers('donation');
-        const formattedAmount = this.getFormattedAmount({currency: donationPaymentEvent.currency, amount: donationPaymentEvent.amount / (donationPaymentEvent.currency.toUpperCase() === 'JPY' ? 1 : 100)});
+        const formattedAmount = this.getFormattedAmount({currency: donationPaymentEvent.currency, amount: donationPaymentEvent.amount / (IsJPYCurrency(donationPaymentEvent.currency) ? 1 : 100)});
 
         const subject = `💰 One-time payment received: ${formattedAmount} from ${donationPaymentEvent.name ?? donationPaymentEvent.email}`;
         const memberData = donationPaymentEvent.memberId ? this.getMemberData({
@@ -358,7 +366,7 @@ class StaffServiceEmails {
             return amount > 0 ? Intl.NumberFormat('en', {maximumFractionDigits}).format(amount) : '';
         }
 
-        if (currency.toUpperCase() === 'JPY') {
+        if (IsJPYCurrency(currency)) {
             return Intl.NumberFormat('en', {
                 style: 'currency',
                 currency,
@@ -382,7 +390,7 @@ class StaffServiceEmails {
             return 0;
         }
 
-        return amount / (currency.toUpperCase() === 'JPY' ? 1 : 100);
+        return amount / (IsJPYCurrency(currency) ? 1 : 100);
     }
 
     /** @private */

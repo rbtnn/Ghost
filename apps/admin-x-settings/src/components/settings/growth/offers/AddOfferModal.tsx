@@ -73,17 +73,20 @@ type formStateTypes = {
     percentAmount?: number;
 };
 
+const IsJPYCurrency = (currency: string): boolean => {
+    if (currency !== null && typeof currency.toUpperCase === 'function') {
+        return currency.toUpperCase() === 'JPY';
+    } else {
+        return true;
+    }
+};
+
 const calculateAmount = (formState: formStateTypes): number => {
     const {currency = 'JPY', fixedAmount = 0, percentAmount = 0, trialAmount = 0, amount = 0} = formState;
 
     switch (formState.type) {
     case 'fixed':
-        if (currency === 'JPY') {
-            return fixedAmount;
-        }
-        else {
-            return fixedAmount * 100;
-        }
+        return IsJPYCurrency(currency) ? fixedAmount : fixedAmount * 100;
     case 'percent':
         return percentAmount;
     case 'trial':

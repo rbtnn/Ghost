@@ -17,6 +17,14 @@ import {useState} from 'react';
 
 export type OfferType = 'percent' | 'fixed' | 'trial';
 
+const IsJPYCurrency = (currency: string): boolean => {
+    if (currency !== null && typeof currency.toUpperCase === 'function') {
+        return currency.toUpperCase() === 'JPY';
+    } else {
+        return true;
+    }
+};
+
 export const createRedemptionFilterUrl = (id: string): string => {
     const baseHref = '/ghost/#/members';
     const filterValue = `offer_redemptions:[${id}]`;
@@ -37,7 +45,7 @@ export const getOfferDiscount = (type: string, amount: number, cadence: string, 
     const originalPrice = cadence === 'month' ? tier?.monthly_price ?? 0 : tier?.yearly_price ?? 0;
     let updatedPrice = originalPrice;
 
-    const formatToTwoDecimals = (num: number): number => (currency === 'JPY' ? num : parseFloat(num.toFixed(2)));
+    const formatToTwoDecimals = (num: number): number => (IsJPYCurrency(currency) ? num : parseFloat(num.toFixed(2)));
 
     let originalPriceWithCurrency = getSymbol(currency) + numberWithCommas(formatToTwoDecimals(currencyToDecimal(originalPrice, currency)));
 

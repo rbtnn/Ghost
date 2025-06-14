@@ -5,6 +5,14 @@ type CurrencyOption = {
     name: string;
 };
 
+const IsJPYCurrency = (currency: string): boolean => {
+    if (currency !== null && typeof currency.toUpperCase === 'function') {
+        return currency.toUpperCase() === 'JPY';
+    } else {
+        return true;
+    }
+};
+
 export const currencies: CurrencyOption[] = [
     {isoCode: 'USD', name: 'United States dollar'},
     {isoCode: 'JPY', name: 'Japanese Yen'}
@@ -28,10 +36,6 @@ export function currencySelectGroups({showName = false} = {}): SelectOptionGroup
     }));
 }
 
-const nonDecCurrencies = [
-    'JPY'
-];
-
 export function getSymbol(currency: string): string {
     if (!currency) {
         return '';
@@ -39,24 +43,12 @@ export function getSymbol(currency: string): string {
     return Intl.NumberFormat('en', {currency, style: 'currency'}).format(0).replace(/[\d\s.]/g, '');
 }
 
-export function isNonCurrencies(currency: string) {
-    return (-1 !== nonDecCurrencies.indexOf(currency.toUpperCase()));
-}
-
 export function currencyToDecimal(integerAmount: number, currency: string): number {
-    if (isNonCurrencies(currency)) {
-        return integerAmount;
-    } else {
-        return integerAmount / 100;
-    }
+    return IsJPYCurrency(currency) ? integerAmount : integerAmount / 100;
 }
 
 export function currencyFromDecimal(decimalAmount: number, currency: string): number {
-    if (isNonCurrencies(currency)) {
-        return decimalAmount;
-    } else {
-        return decimalAmount * 100;
-    }
+    return IsJPYCurrency(currency) ? decimalAmount : decimalAmount * 100;
 }
 
 /*
@@ -117,11 +109,11 @@ export function validateCurrencyAmount(
         return `Amount must be at least ${symbol}${minAmount}.`;
     }
 
-    if (cents !== 0 && cents < (minAmount * ((currency || '') === 'JPY' ? 1 : 100))) {
+    if (cents !== 0 && cents < (minAmount * (IsJPYCurrency(currency || '') ? 1 : 100))) {
         return `Non-zero amount must be at least ${symbol}${minAmount}.`;
     }
 
-    if (maxAmount && cents !== 0 && cents > (maxAmount * ((currency || '') === 'JPY' ? 1 : 100))) {
+    if (maxAmount && cents !== 0 && cents > (maxAmount * (IsJPYCurrency(currency || '') ? 1 : 100))) {
         return `Suggested amount cannot be more than ${symbol}${maxAmount}.`;
     }
 }

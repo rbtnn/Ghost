@@ -5,6 +5,14 @@ import {ReactComponent as LoaderIcon} from '../../../../images/icons/loader.svg'
 import {ReactComponent as OfferTagIcon} from '../../../../images/icons/offer-tag.svg';
 import {useContext} from 'react';
 
+const IsJPYCurrency = (currency) => {
+    if (currency !== null && typeof currency.toUpperCase === 'function') {
+        return currency.toUpperCase() === 'JPY';
+    } else {
+        return true;
+    }
+};
+
 const PaidAccountActions = () => {
     const {member, site, onAction, t} = useContext(AppContext);
 
@@ -31,7 +39,7 @@ const PaidAccountActions = () => {
         let label = '';
         if (price) {
             const {amount = 0, currency, interval} = price;
-            label = `${Intl.NumberFormat('en', {currency, style: 'currency'}).format(currency === 'JPY' ? amount : (amount / 100))}/${t(interval)}`;
+            label = `${Intl.NumberFormat('en', {currency, style: 'currency'}).format(IsJPYCurrency(currency) ? amount : (amount / 100))}/${t(interval)}`;
         }
         let offerLabelStr = getOfferLabel({price, offer, subscriptionStartDate: startDate, t});
         const compExpiry = getCompExpiry({member});

@@ -150,6 +150,14 @@ html[dir="rtl"] .gh-portal-offer-title h4 {
     `;
 };
 
+const IsJPYCurrency = (currency) => {
+    if (currency !== null && typeof currency.toUpperCase === 'function') {
+        return currency.toUpperCase() === 'JPY';
+    } else {
+        return true;
+    }
+};
+
 export default class OfferPage extends React.Component {
     static contextType = AppContext;
 
@@ -443,7 +451,7 @@ export default class OfferPage extends React.Component {
         if (offer.type === 'fixed') {
             return (
                 <h5 className="gh-portal-discount-label">{t('{amount} off', {
-                    amount: `${getCurrencySymbol(offer.currency)}${offer.amount / (offer.currency === 'JPY' ? 1 : 100)}`
+                    amount: `${getCurrencySymbol(offer.currency)}${offer.amount / (IsJPYCurrency(offer.currency) ? 1 : 100)}`
                 })}</h5>
             );
         }
@@ -481,7 +489,7 @@ export default class OfferPage extends React.Component {
 
     getOriginalPrice({offer, product}) {
         const price = offer.cadence === 'month' ? product.monthlyPrice : product.yearlyPrice;
-        const originalAmount = this.renderRoundedPrice(price.currency === 'JPY' ? price.amount : (price.amount / 100), price.currency);
+        const originalAmount = this.renderRoundedPrice(IsJPYCurrency(price.currency) ? price.amount : (price.amount / 100), price.currency);
         return `${getCurrencySymbol(price.currency)}${originalAmount}/${offer.cadence}`;
     }
 
@@ -489,7 +497,7 @@ export default class OfferPage extends React.Component {
         const price = offer.cadence === 'month' ? product.monthlyPrice : product.yearlyPrice;
         const originalAmount = price.amount;
         let updatedAmount;
-        if (price.currency === 'JPY') {
+        if (IsJPYCurrency(price.currency)) {
             if (offer.type === 'fixed' && isSameCurrency(offer.currency, price.currency)) {
                 updatedAmount = originalAmount - offer.amount;
                 return updatedAmount > 0 ? updatedAmount : 0;
@@ -513,18 +521,18 @@ export default class OfferPage extends React.Component {
     renderRoundedPrice(price, currency) {
         if (price % 1 !== 0) {
             const roundedPrice = Math.round(price * 100) / 100;
-            return Number(roundedPrice).toFixed(currency === 'JPY' ? 0 : 2);
+            return Number(roundedPrice).toFixed(IsJPYCurrency(currency) ? 0 : 2);
         }
         return price;
     }
 
     getOffAmount({offer}) {
         if (offer.type === 'fixed') {
-            return `${getCurrencySymbol(offer.currency)}${offer.amount / (offer.currency === 'JPY' ? 1 : 100)}`;
+            return `${getCurrencySymbol(offer.currency)}${offer.amount / (IsJPYCurrency(offer.currency) ? 1 : 100)}`;
         } else if (offer.type === 'percent') {
             return `${offer.amount}%`;
         } else if (offer.type === 'trial') {
-            return offer.amount / (offer.currency === 'JPY' ? 1 : 100);
+            return offer.amount / (IsJPYCurrency(offer.currency) ? 1 : 100);
         }
         return '';
     }
@@ -617,7 +625,7 @@ export default class OfferPage extends React.Component {
             return null;
         }
         return (
-            <div className="gh-portal-offer-oldprice">{getCurrencySymbol(price.currency)} {formatNumber(price.currency === 'JPY' ? price.amount : (price.amount / 100))}</div>
+            <div className="gh-portal-offer-oldprice">{getCurrencySymbol(price.currency)} {formatNumber(IsJPYCurrency(price.currency) ? price.amount : (price.amount / 100))}</div>
         );
     }
 

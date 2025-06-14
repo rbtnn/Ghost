@@ -3,9 +3,13 @@ export const currencies = [
     {isoCode: 'JPY', name: 'Japanese Yen'}
 ];
 
-const nonDecCurrencies = [
-    'JPY'
-];
+const IsJPYCurrency = (currency) => {
+    if (currency !== null && typeof currency.toUpperCase === 'function') {
+        return currency.toUpperCase() === 'JPY';
+    } else {
+        return true;
+    }
+};
 
 export function getSymbol(currency) {
     if (!currency) {
@@ -14,12 +18,8 @@ export function getSymbol(currency) {
     return Intl.NumberFormat('en', {currency, style: 'currency'}).format(0).replace(/[\d\s.]/g, '');
 }
 
-export function isNonCurrencies(currency) {
-    return (-1 !== nonDecCurrencies.indexOf(currency?.toUpperCase()));
-}
-
 export function getNonDecimal(amount, currency) {
-    if (isNonCurrencies(currency)) {
+    if (IsJPYCurrency(currency)) {
         return amount;
     } else {
         return amount / 100;

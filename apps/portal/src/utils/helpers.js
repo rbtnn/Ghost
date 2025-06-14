@@ -1,5 +1,13 @@
 import {getDateString} from './date-time';
 
+const IsJPYCurrency = (currency) => {
+    if (currency !== null && typeof currency.toUpperCase === 'function') {
+        return currency.toUpperCase() === 'JPY';
+    } else {
+        return true;
+    }
+};
+
 export function removePortalLinkFromUrl() {
     const [path] = window.location.hash.substr(1).split('?');
     const linkRegex = /^\/portal\/?(?:\/(\w+(?:\/\w+)*))?\/?$/;
@@ -126,7 +134,7 @@ export function getPriceFromSubscription({subscription}) {
             ...subscription.price,
             stripe_price_id: subscription.price.id,
             id: subscription.price.price_id,
-            price: subscription.price.currency === 'JPY' ? subscription.price.amount : (subscription.price.amount / 100),
+            price: IsJPYCurrency(subscription.price.currency) ? subscription.price.amount : (subscription.price.amount / 100),
             name: subscription.price.nickname,
             tierId: subscription.tier?.id,
             cadence: subscription.price?.interval === 'month' ? 'month' : 'year',
@@ -594,7 +602,7 @@ export function getAvailablePrices({site, products = null}) {
         return {
             ...d,
             price_id: d.id,
-            price: d.currency === 'JPY' ? d.amount : (d.amount / 100),
+            price: IsJPYCurrency(d.currency) ? d.amount : (d.amount / 100),
             name: d.nickname,
             currency_symbol: getCurrencySymbol(d.currency)
         };
@@ -740,7 +748,7 @@ export const getStripeAmount = (amount, currency) => {
     if (isNaN(amount)) {
         return 0;
     }
-    return currency === 'JPY' ? amount : (amount / 100);
+    return IsJPYCurrency(currency) ? amount : (amount / 100);
 };
 
 export const getPriceString = (price = {}) => {
@@ -794,7 +802,7 @@ export function getPriceIdFromPageQuery({site, pageQuery}) {
 
 export const getOfferOffAmount = ({offer}) => {
     if (offer.type === 'fixed') {
-        return `${getCurrencySymbol(offer.currency)}${offer.currency === 'JPY' ? offer.amount : (offer.amount / 100)}`;
+        return `${getCurrencySymbol(offer.currency)}${IsJPYCurrency(offer.currency) ? offer.amount : (offer.amount / 100)}`;
     } else if (offer.type === 'percent') {
         return `${offer.amount}%`;
     }
@@ -805,12 +813,12 @@ export const getUpdatedOfferPrice = ({offer, price, useFormatted = false}) => {
     const originalAmount = price.amount;
     let updatedAmount;
     if (offer.type === 'fixed' && isSameCurrency(offer.currency, price.currency)) {
-        updatedAmount = ((originalAmount - offer.amount)) / (offer.currency === 'JPY' ? 1 : 100);
+        updatedAmount = ((originalAmount - offer.amount)) / (IsJPYCurrency(offer.currency) ? 1 : 100);
         updatedAmount = updatedAmount > 0 ? updatedAmount : 0;
     } else if (offer.type === 'percent') {
         updatedAmount = (originalAmount - ((originalAmount * offer.amount) / 100)) / 100;
     } else {
-        updatedAmount = offer.currency === 'JPY' ? originalAmount : (originalAmount / 100);
+        updatedAmount = IsJPYCurrency(offer.currency) ? originalAmount : (originalAmount / 100);
     }
     if (useFormatted) {
         return Intl.NumberFormat('en', {currency: price?.currency, style: 'currency'}).format(updatedAmount);
