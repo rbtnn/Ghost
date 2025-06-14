@@ -1,7 +1,6 @@
 import NewsletterPreview from './NewsletterPreview';
 import NiceModal from '@ebay/nice-modal-react';
 import React, {useCallback, useEffect, useState} from 'react';
-import useFeatureFlag from '../../../../hooks/useFeatureFlag';
 import useSettingGroup from '../../../../hooks/useSettingGroup';
 import validator from 'validator';
 import {Button, ButtonGroup, ColorPickerField, ConfirmationModal, Form, Heading, Hint, HtmlField, Icon, ImageUpload, LimitModal, PreviewModalContent, Select, SelectOption, Separator, Tab, TabView, TextArea, TextField, Toggle, ToggleGroup, showToast} from '@tryghost/admin-x-design-system';
@@ -67,8 +66,6 @@ const Sidebar: React.FC<{
     errors: ErrorMessages;
     clearError: (field: string) => void;
 }> = ({newsletter, onlyOne, updateNewsletter, validate, errors, clearError}) => {
-    const hasEmailCustomizationAlpha = useFeatureFlag('emailCustomizationAlpha');
-
     const {updateRoute} = useRouting();
     const {mutateAsync: editNewsletter} = useEditNewsletter();
     const limiter = useLimiter();
@@ -103,9 +100,6 @@ const Sidebar: React.FC<{
     ];
 
     const backgroundColorIsDark = () => {
-        if (newsletter.background_color === 'dark') {
-            return true;
-        }
         if (newsletter.background_color === 'light') {
             return false;
         }
@@ -387,7 +381,6 @@ const Sidebar: React.FC<{
             <>
                 <Form className='mt-6' gap='xs' margins='lg' title='Global'>
                     <div className='mb-1'>
-                        {hasEmailCustomizationAlpha &&
                         <ColorPickerField
                             direction='rtl'
                             eyedropper={true}
@@ -402,13 +395,11 @@ const Sidebar: React.FC<{
                             value={newsletter.background_color || 'light'}
                             onChange={color => updateNewsletter({background_color: color!})}
                         />
-                        }
                     </div>
                     <div className='flex w-full items-center justify-between gap-2'>
                         <div className='shrink-0'>Heading font</div>
                         <Select
                             containerClassName='max-w-[200px]'
-                            disabled={!newsletter.show_post_title_section}
                             options={fontOptions}
                             selectedOption={fontOptions.find(option => option.value === newsletter.title_font_category)}
                             onSelect={option => updateNewsletter({title_font_category: option?.value})}
@@ -435,7 +426,7 @@ const Sidebar: React.FC<{
                     </div>
                 </Form>
                 <Form className='mt-6' gap='xs' margins='lg' title='Header'>
-                    {/* <div className='mb-1'>
+                    <div className='mb-1'>
                         <ColorPickerField
                             direction='rtl'
                             eyedropper={true}
@@ -450,7 +441,7 @@ const Sidebar: React.FC<{
                             value={newsletter.header_background_color || 'transparent'}
                             onChange={color => updateNewsletter({header_background_color: color!})}
                         />
-                    </div> */}
+                    </div>
                     <div className='mb-1'>
                         <ColorPickerField
                             direction='rtl'
