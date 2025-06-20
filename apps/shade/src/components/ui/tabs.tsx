@@ -92,7 +92,7 @@ const tabsTriggerVariants = cva(
                 'button-sm': 'font-regular h-6 gap-1.5 rounded-md p-2 text-xs text-gray-800 hover:bg-muted data-[state=active]:bg-muted-foreground/15 data-[state=active]:font-medium data-[state=active]:text-foreground',
                 underline: 'relative h-[36px] px-0 text-md font-semibold text-gray-700 after:absolute after:inset-x-0 after:bottom-[-1px] after:h-0.5 after:bg-foreground after:opacity-0 after:content-[""] hover:after:opacity-10 data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:after:!opacity-100',
                 navbar: 'relative h-[52px] px-px text-md font-semibold text-muted-foreground after:absolute after:inset-x-0 after:-bottom-px after:h-0.5 after:bg-foreground after:opacity-0 after:content-[""] hover:text-foreground data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:after:!opacity-100',
-                pill: 'relative h-[30px] rounded-full px-3 text-md font-medium text-gray-800 hover:text-foreground data-[state=active]:bg-muted-foreground/15 data-[state=active]:font-semibold data-[state=active]:text-foreground dark:text-gray-500 dark:data-[state=active]:text-foreground',
+                pill: 'relative h-[30px] rounded-md px-3 text-md font-medium text-gray-800 hover:text-foreground data-[state=active]:bg-muted-foreground/15 data-[state=active]:font-semibold data-[state=active]:text-foreground dark:text-gray-500 dark:data-[state=active]:text-foreground',
                 kpis: 'relative rounded-none border-border bg-transparent px-6 py-5 text-foreground ring-0 transition-all after:absolute after:inset-x-0 after:-bottom-px after:h-0.5 after:bg-foreground after:opacity-0 after:content-[""] first:rounded-tl-md last:rounded-tr-md hover:bg-accent/50 data-[state=active]:bg-transparent data-[state=active]:after:opacity-100 [&:not(:last-child)]:border-r [&[data-state=active]_[data-type="value"]]:text-foreground'
             }
         },
@@ -199,10 +199,10 @@ const KpiTabValue: React.FC<KpiTabValueProps> = ({
     const IconComponent = iconName ? LucideIcons[iconName] as LucideIcon : null;
 
     const diffContainerClassName = cn(
-        'hidden xl:!flex xl:!visible items-center gap-1 text-xs -mb-1 h-[18px]',
-        diffDirection === 'up' && 'text-green-600',
-        diffDirection === 'down' && 'text-red-600',
-        diffDirection === 'same' && 'text-gray-700'
+        'hidden xl:!flex xl:!visible items-center gap-1 text-xs h-[22px] px-1.5 rounded-sm group/diff cursor-default mt-0.5',
+        diffDirection === 'up' && 'text-green-600 bg-green/10',
+        diffDirection === 'down' && 'text-red-600 bg-red/10',
+        diffDirection === 'same' && 'text-gray-700 bg-muted'
     );
     return (
         <div className={cn('group flex w-full flex-col items-start gap-2', className)}>
@@ -211,20 +211,20 @@ const KpiTabValue: React.FC<KpiTabValueProps> = ({
                 {IconComponent && <IconComponent size={16} strokeWidth={1.5} />}
                 {label}
             </div>
-            <div className='flex flex-col items-start gap-1'>
+            <div className='flex items-start gap-3'>
                 <div className='text-[2.3rem] font-semibold leading-none tracking-tight xl:text-[2.6rem] xl:tracking-[-0.04em]'>
                     {value}
                 </div>
                 {diffDirection && diffDirection !== 'hidden' &&
                     <>
                         <div className={diffContainerClassName}>
+                            <span className='font-medium leading-none'>{diffValue}</span>
                             {diffDirection === 'up' &&
                                 <TrendingUp className='!size-[12px]' size={14} strokeWidth={2} />
                             }
                             {diffDirection === 'down' &&
                                 <TrendingDown className='!size-[12px]' size={14} strokeWidth={2} />
                             }
-                            <span className='font-medium leading-none'>{diffValue}</span>
                         </div>
                     </>
                 }
