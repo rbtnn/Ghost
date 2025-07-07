@@ -44,6 +44,11 @@ module.exports = function apiRoutes() {
     // ## Recommendations
     router.get('/recommendations', mw.authenticatePublic, http(api.recommendationsPublic.browse));
 
+    // ## Search index
+    router.get('/search-index/posts', mw.authenticatePublic, http(api.searchIndexPublic.fetchPosts));
+    router.get('/search-index/authors', mw.authenticatePublic, http(api.searchIndexPublic.fetchAuthors));
+    router.get('/search-index/tags', mw.authenticatePublic, http(api.searchIndexPublic.fetchTags));
+
     // ## bsm_podcast
     router.get('/bsm_podcast/:uuid', mw.bsmPodcast, http(api.bsmPodcast.browse));
 

@@ -162,6 +162,8 @@ function getTinybirdTrackerScript(dataRoot) {
 
     const src = getAssetUrl('public/ghost-stats.min.js', false);
 
+    const env = config.get('env');
+
     const statsConfig = config.get('tinybird:tracker');
     const localConfig = config.get('tinybird:tracker:local');
     const localEnabled = localConfig?.enabled ?? false;
@@ -178,7 +180,7 @@ function getTinybirdTrackerScript(dataRoot) {
         member_status: dataRoot.member?.status
     }, (value, key) => `tb_${key}="${value}"`).join(' ');
 
-    return `<script defer src="${src}" data-stringify-payload="false" ${datasource ? `data-datasource="${datasource}"` : ''} data-storage="localStorage" data-host="${endpoint}" data-token="${token}" ${tbParams}></script>`;
+    return `<script defer src="${src}" data-stringify-payload="false" ${datasource ? `data-datasource="${datasource}"` : ''} data-storage="localStorage" data-host="${endpoint}" ${token && env !== 'production' ? `data-token="${token}"` : ''} ${tbParams}></script>`;
 }
 
 /**
@@ -364,7 +366,7 @@ module.exports = async function ghost_head(options) { // eslint-disable-line cam
             if (!_.isEmpty(tagCodeInjection)) {
                 head.push(tagCodeInjection);
             }
-            const isTbTrackingEnabled = labs.isSet('trafficAnalytics') || labs.isSet('trafficAnalyticsTracking');
+            const isTbTrackingEnabled = labs.isSet('trafficAnalytics');
             const hasTbConfig = config.get('tinybird') && config.get('tinybird:tracker');
             if (isTbTrackingEnabled && hasTbConfig) {
                 head.push(getTinybirdTrackerScript(dataRoot));

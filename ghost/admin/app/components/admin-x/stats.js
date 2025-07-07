@@ -3,11 +3,13 @@ import {inject as service} from '@ember/service';
 
 export default class Stats extends AdminXComponent {
     @service upgradeStatus;
+    @service onboarding;
 
     additionalProps = () => {
         return {
             appSettings: {
                 paidMembersEnabled: this.settings.paidMembersEnabled,
+                newslettersEnabled: this.settings.editorDefaultEmailRecipients !== 'disabled',
                 analytics: {
                     emailTrackOpens: this.settings.emailTrackOpens,
                     emailTrackClicks: this.settings.emailTrackClicks,
