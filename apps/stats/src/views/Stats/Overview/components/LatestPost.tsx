@@ -104,8 +104,7 @@ const LatestPost: React.FC<LatestPostProps> = ({
                                 <div className='mt-0.5 text-sm text-muted-foreground'>
                                     {latestPostStats.authors && latestPostStats.authors.length > 0 && (
                                         <div>
-                                            By {latestPostStats.authors.map(author => author.name).join(', ')} &ndash;
-                                            {formatDisplayDate(latestPostStats.published_at)}
+                                            By {latestPostStats.authors.map(author => author.name).join(', ')} &ndash; {formatDisplayDate(latestPostStats.published_at)}
                                         </div>
                                     )}
                                     <div className='mt-0.5'>
@@ -170,7 +169,9 @@ const LatestPost: React.FC<LatestPostProps> = ({
                                     <div className={
                                         cn(
                                             metricClassName,
-                                            (!metricsToShow.showWebMetrics || !appSettings?.analytics.webAnalytics) && 'row-[2/3] col-[1/2]'
+
+                                            // Member metric is moved to the 2nd row in the grid if the post is email only or if web analytics is turned off, otherwise leave as is
+                                            (metricsToShow.showEmailMetrics && (!metricsToShow.showWebMetrics || !appSettings?.analytics.webAnalytics)) && 'row-[2/3] col-[1/2]'
                                         )
                                     } onClick={() => {
                                         navigate(`/posts/analytics/${latestPostStats.id}/growth`, {crossApp: true});
