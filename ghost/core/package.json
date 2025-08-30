@@ -1,6 +1,6 @@
 {
   "name": "ghost",
-  "version": "6.0.5",
+  "version": "6.0.6",
   "description": "The professional publishing platform",
   "author": "Ghost Foundation",
   "homepage": "https://ghost.org",
@@ -232,7 +232,7 @@
     "@types/bookshelf": "1.2.9",
     "@types/common-tags": "1.8.4",
     "@types/jsonwebtoken": "9.0.10",
-    "@types/node": "22.17.2",
+    "@types/node": "22.18.0",
     "@types/node-jose": "1.1.13",
     "@types/nodemailer": "6.4.19",
     "@types/sinon": "17.0.4",
@@ -258,13 +258,13 @@
     "parse-prometheus-text-format": "1.1.1",
     "postcss": "8.5.6",
     "postcss-cli": "11.0.1",
-    "rewire": "6.0.0",
+    "rewire": "8.0.0",
     "should": "13.2.3",
     "sinon": "18.0.1",
     "supertest": "6.3.4",
     "tmp": "0.2.3",
     "toml": "3.0.0",
-    "tsx": "4.20.4",
+    "tsx": "4.20.5",
     "typescript": "5.8.3"
   },
   "resolutions": {
