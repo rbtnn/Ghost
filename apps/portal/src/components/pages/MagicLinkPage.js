@@ -3,8 +3,7 @@ import ActionButton from '../common/ActionButton';
 import CloseButton from '../common/CloseButton';
 import AppContext from '../../AppContext';
 import {ReactComponent as EnvelopeIcon} from '../../images/icons/envelope.svg';
-
-import InputField from '../common/InputField';
+import {t} from '../../utils/i18n';
 
 export const MagicLinkStyles = `
     .gh-portal-icon-envelope {
@@ -21,7 +20,56 @@ export const MagicLinkStyles = `
     .gh-portal-inbox-notification p {
         max-width: 420px;
         text-align: center;
-        margin-bottom: 30px;
+        margin-bottom: 20px;
+    }
+
+    .gh-portal-inbox-notification .gh-portal-header {
+        padding-bottom: 12px;
+    }
+
+    .gh-portal-otp {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        margin-bottom: 12px;
+    }
+
+    .gh-portal-otp-container {
+        border: 1px solid var(--grey12);
+        border-radius: 8px;
+        width: 100%;
+        transition: border-color 0.25s ease;
+    }
+
+    .gh-portal-otp-container.focused {
+        border-color: var(--grey8);
+    }
+
+    .gh-portal-otp-container.error {
+        border-color: var(--red);
+        box-shadow: 0 0 0 3px rgba(255, 0, 0, 0.1);
+    }
+
+    .gh-portal-otp .gh-portal-input {
+        margin: 0 auto;
+        font-size: 2rem !important;
+        font-weight: 300;
+        border: none;
+        /*text-align: center;*/
+        padding-left: 2ch;
+        padding-right: 1ch;
+        letter-spacing: 1ch;
+        font-family: Consolas, Liberation Mono, Menlo, Courier, monospace;
+        width: 15ch;
+    }
+
+    .gh-portal-otp-error {
+        margin-top: 8px;
+        color: var(--red);
+        font-size: 1.3rem;
+        letter-spacing: 0.35px;
+        line-height: 1.6em;
+        margin-bottom: 0;
     }
 `;
 
@@ -34,7 +82,8 @@ export default class MagicLinkPage extends React.Component {
         super(props);
         this.state = {
             [OTC_FIELD_NAME]: '',
-            errors: {}
+            errors: {},
+            isFocused: false
         };
     }
 
@@ -44,7 +93,6 @@ export default class MagicLinkPage extends React.Component {
      * @returns {Object} Configuration object with message templates for signin/signup scenarios
      */
     getDescriptionConfig(submittedEmailOrInbox) {
-        const {t} = this.context;
         return {
             signin: {
                 withOTC: t('An email has been sent to {submittedEmailOrInbox}. Click the link inside or enter your code below.', {submittedEmailOrInbox}),
@@ -74,7 +122,7 @@ export default class MagicLinkPage extends React.Component {
     }
 
     renderFormHeader() {
-        const {t, otcRef, pageData, lastPage} = this.context;
+        const {otcRef, pageData, lastPage} = this.context;
         const submittedEmailOrInbox = pageData?.email ? pageData.email : t('your inbox');
 
         const popupTitle = t(`Now check your email!`);
@@ -96,8 +144,6 @@ export default class MagicLinkPage extends React.Component {
     }
 
     renderLoginMessage() {
-        const {t} = this.context;
-
         return (
             <>
                 <div
@@ -115,8 +161,6 @@ export default class MagicLinkPage extends React.Component {
     }
 
     renderCloseButton() {
-        const {t} = this.context;
-
         const label = t('Close');
         return (
             <ActionButton
@@ -139,12 +183,13 @@ export default class MagicLinkPage extends React.Component {
     }
 
     doVerifyOTC() {
+        const missingCodeError = t('Enter code above');
+
         this.setState((state) => {
-            const {t} = this.context;
             const code = (state.otc || '').trim();
             return {
                 errors: {
-                    [OTC_FIELD_NAME]: code ? '' : t('Enter code below')
+                    [OTC_FIELD_NAME]: code ? '' : missingCodeError
                 }
             };
         }, () => {
@@ -161,40 +206,65 @@ export default class MagicLinkPage extends React.Component {
 
     handleInputChange(e, field) {
         const fieldName = field.name;
-        this.setState({
-            [fieldName]: e.target.value
-        });
+        const value = e.target.value;
+
+        // For OTC field, only allow numeric input
+        if (fieldName === OTC_FIELD_NAME) {
+            const numericValue = value.replace(/[^0-9]/g, '');
+            this.setState({
+                [fieldName]: numericValue
+            });
+        } else {
+            this.setState({
+                [fieldName]: value
+            });
+        }
     }
 
     renderOTCForm() {
-        const {t, action, labs, otcRef} = this.context;
+        const {action, actionErrorMessage, otcRef} = this.context;
         const errors = this.state.errors || {};
 
-        if (!labs?.membersSigninOTC || !otcRef) {
+        if (!otcRef) {
             return null;
         }
 
-        // @TODO: action implementation TBD
         const isRunning = (action === 'verifyOTC:running');
         const isError = (action === 'verifyOTC:failed');
 
+        const error = (isError && actionErrorMessage) ? actionErrorMessage : errors.otc;
+
         return (
             <form onSubmit={e => this.handleSubmit(e)}>
-                <section className='gh-portal-section'>
-                    {/* @TODO: create different input component with updated design */}
-                    <InputField
-                        id={`input-${OTC_FIELD_NAME}`}
-                        name={OTC_FIELD_NAME}
-                        type="text"
-                        value={this.state.otc}
-                        placeholder="• • • • • •"
-                        label={t('Code')}
-                        errorMessage={errors.otc || ''}
-                        autoFocus={false}
-                        maxLength={6}
-                        onChange={e => this.handleInputChange(e, {name: OTC_FIELD_NAME})}
-                    />
+                <section className='gh-portal-section gh-portal-otp'>
+                    <div className={`gh-portal-otp-container ${this.state.isFocused && 'focused'} ${error && 'error'}`}>
+                        <input
+                            id={`input-${OTC_FIELD_NAME}`}
+                            className={`gh-portal-input ${this.state.otc && 'entry'} ${error && 'error'}`}
+                            placeholder='––––––'
+                            name={OTC_FIELD_NAME}
+                            type="text"
+                            value={this.state.otc}
+                            inputMode="numeric"
+                            maxLength={6}
+                            pattern="[0-9]*"
+                            autoComplete="one-time-code"
+                            autoCorrect="off"
+                            autoCapitalize="off"
+                            autoFocus={true}
+                            aria-label={t('Code')}
+                            onChange={e => this.handleInputChange(e, {name: OTC_FIELD_NAME})}
+                            onFocus={() => this.setState({isFocused: true})}
+                            onBlur={() => this.setState({isFocused: false})}
+                        />
+                    </div>
+                    {error &&
+                        <div className="gh-portal-otp-error">
+                            {error}
+                        </div>
+                    }
                 </section>
+
                 <footer className='gh-portal-signin-footer'>
                     <ActionButton
                         style={{width: '100%'}}
@@ -211,8 +281,8 @@ export default class MagicLinkPage extends React.Component {
     }
 
     render() {
-        const {labs, otcRef} = this.context;
-        const showOTCForm = labs?.membersSigninOTC && otcRef;
+        const {otcRef} = this.context;
+        const showOTCForm = !!otcRef;
 
         return (
             <div className='gh-portal-content'>

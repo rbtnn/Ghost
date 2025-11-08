@@ -15,9 +15,6 @@ From the repository root:
 # Install dependencies
 yarn
 
-# Build Docker images
-yarn docker:build
-
 # Run the e2e tests
 yarn test:e2e
 ```
@@ -187,6 +184,9 @@ From the e2e directory:
 ```bash
 # Run all tests
 yarn test
+
+# Debug failed tests (keeps containers)
+PRESERVE_ENV=true yarn test
 
 # Run TypeScript type checking
 yarn test:types

@@ -1,6 +1,7 @@
 import React from 'react';
 import * as Sentry from '@sentry/react';
-import i18n from './utils/i18n';
+import i18n, {t} from './utils/i18n';
+import {chooseBestErrorMessage} from './utils/errors';
 import TriggerButton from './components/TriggerButton';
 import Notification from './components/Notification';
 import PopupModal from './components/PopupModal';
@@ -53,6 +54,7 @@ export default class App extends React.Component {
             page: 'loading',
             showPopup: false,
             action: 'init:running',
+            actionErrorMessage: null,
             initStatus: 'running',
             lastPage: null,
             customSiteUrl: props.customSiteUrl,
@@ -208,7 +210,6 @@ export default class App extends React.Component {
                 showPopup,
                 pageData,
                 popupNotification,
-                t: i18n.t,
                 dir: i18n.dir() || 'ltr',
                 action: 'init:success',
                 initStatus: 'success',
@@ -648,11 +649,11 @@ export default class App extends React.Component {
         siteDomain = siteDomain?.replace(/^(\S*\.)?(\S*\.\S*)$/i, '.$2');
 
         if (firstPromoterId && siteDomain) {
-            const t = document.createElement('script');
-            t.type = 'text/javascript';
-            t.async = !0;
-            t.src = 'https://cdn.firstpromoter.com/fprom.js';
-            t.onload = t.onreadystatechange = function () {
+            const fpScript = document.createElement('script');
+            fpScript.type = 'text/javascript';
+            fpScript.async = !0;
+            fpScript.src = 'https://cdn.firstpromoter.com/fprom.js';
+            fpScript.onload = fpScript.onreadystatechange = function () {
                 let _t = this.readyState;
                 if (!_t || 'complete' === _t || 'loaded' === _t) {
                     try {
@@ -675,8 +676,8 @@ export default class App extends React.Component {
                     }
                 }
             };
-            const e = document.getElementsByTagName('script')[0];
-            e.parentNode.insertBefore(t, e);
+            const firstScript = document.getElementsByTagName('script')[0];
+            firstScript.parentNode.insertBefore(fpScript, firstScript);
         }
     }
 
@@ -684,7 +685,8 @@ export default class App extends React.Component {
     async dispatchAction(action, data) {
         clearTimeout(this.timeoutId);
         this.setState({
-            action: `${action}:running`
+            action: `${action}:running`,
+            actionErrorMessage: null
         });
         try {
             const updatedState = await ActionHandler({action, data, state: this.state, api: this.GhostApi});
@@ -715,6 +717,7 @@ export default class App extends React.Component {
             });
             this.setState({
                 action: `${action}:failed`,
+                actionErrorMessage: chooseBestErrorMessage(error, t('An unexpected error occured. Please try again or <a>contact support</a> if the error persists.')),
                 popupNotification
             });
         }
@@ -961,13 +964,14 @@ export default class App extends React.Component {
 
     /**Get final App level context from App state*/
     getContextFromState() {
-        const {site, member, action, page, lastPage, showPopup, pageQuery, pageData, popupNotification, customSiteUrl, t, dir, scrollbarWidth, labs, otcRef} = this.state;
+        const {site, member, action, actionErrorMessage, page, lastPage, showPopup, pageQuery, pageData, popupNotification, customSiteUrl, dir, scrollbarWidth, labs, otcRef} = this.state;
         const contextPage = this.getContextPage({site, page, member});
         const contextMember = this.getContextMember({page: contextPage, member, customSiteUrl});
         return {
             api: this.GhostApi,
             site,
             action,
+            actionErrorMessage,
             brandColor: this.getAccentColor(),
             page: contextPage,
             pageQuery,
@@ -977,7 +981,6 @@ export default class App extends React.Component {
             showPopup,
             popupNotification,
             customSiteUrl,
-            t,
             dir,
             scrollbarWidth,
             labs,

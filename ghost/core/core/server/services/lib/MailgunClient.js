@@ -68,7 +68,8 @@ module.exports = class MailgunClient {
                 html: messageContent.html,
                 text: messageContent.plaintext,
                 'recipient-variables': JSON.stringify(recipientData),
-                'h:Sender': message.from
+                'h:Sender': message.from,
+                'h:Auto-Submitted': 'auto-generated'
             };
 
             // Do we have a custom List-Unsubscribe header set?
@@ -212,7 +213,10 @@ module.exports = class MailgunClient {
             const totalDuration = overallEndTime - overallStartTime;
             const averageBatchTime = batchCount > 0 ? totalBatchTime / batchCount : 0;
 
-            logging.info(`[MailgunClient fetchEvents]: Processed ${batchCount} batches in ${(totalDuration / 1000).toFixed(2)}s. Average batch time: ${(averageBatchTime / 1000).toFixed(2)}s`);
+            // Only log if we actually processed batches
+            if (batchCount > 0) {
+                logging.info(`[MailgunClient fetchEvents]: Processed ${batchCount} batches in ${(totalDuration / 1000).toFixed(2)}s. Average batch time: ${(averageBatchTime / 1000).toFixed(2)}s`);
+            }
         } catch (error) {
             logging.error(error);
             throw error;
