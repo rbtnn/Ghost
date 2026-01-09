@@ -104,6 +104,17 @@ module.exports = {
             }
         },
         {
+            // These folders use kebab-case filenames
+            files: ['core/frontend/**/*.{js,ts}', 'core/server/services/**/*.{js,ts}', 'core/server/*.{js,ts}'],
+            rules: {
+                'ghost/filenames/match-exported-class': 'off',
+                'ghost/filenames/match-regex': ['error', '^[a-z0-9.-]+$', false]
+            }
+        },
+        {
+            // Helper filenames use underscores because they map directly to Handlebars helper names
+            // e.g., ghost_head.js → {{ghost_head}}. Renaming would break all themes.
+            // See: core/frontend/services/helpers/registry.js:26
             files: ['core/frontend/helpers/**', 'core/frontend/apps/*/lib/helpers/**'],
             rules: {
                 'ghost/filenames/match-regex': ['off', '^[a-z0-9-.]$', null, true]
