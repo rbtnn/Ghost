@@ -48,15 +48,16 @@ const PRIVATE_FEATURES = [
     'contentVisibilityAlpha',
     'emailCustomization',
     'tagsX',
-    'utmTracking',
     'emailUniqueid',
     'welcomeEmails',
     'adminForward',
-    'domainWarmup',
     'themeTranslation',
     'commentModeration',
     'commentPermalinks',
-    'indexnow'
+    'indexnow',
+    'featurebaseFeedback',
+    'transistor',
+    'disableMemberCommenting'
 ];
 
 module.exports.GA_KEYS = [...GA_FEATURES];

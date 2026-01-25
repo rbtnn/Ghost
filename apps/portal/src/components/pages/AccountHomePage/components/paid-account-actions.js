@@ -1,5 +1,5 @@
 import AppContext from '../../../../app-context';
-import {allowCompMemberUpgrade, getCompExpiry, getMemberSubscription, getMemberTierName, getUpdatedOfferPrice, hasMultipleProductsFeature, hasOnlyFreePlan, isComplimentaryMember, isPaidMember, isInThePast, subscriptionHasFreeTrial} from '../../../../utils/helpers';
+import {getCompExpiry, getMemberSubscription, getMemberTierName, getUpdatedOfferPrice, hasMultipleProductsFeature, hasOnlyFreePlan, isComplimentaryMember, isPaidMember, isInThePast, subscriptionHasFreeTrial} from '../../../../utils/helpers';
 import {getDateString} from '../../../../utils/date-time';
 import {ReactComponent as LoaderIcon} from '../../../../images/icons/loader.svg';
 import {ReactComponent as OfferTagIcon} from '../../../../images/icons/offer-tag.svg';
@@ -17,9 +17,9 @@ const IsJPYCurrency = (currency) => {
 const PaidAccountActions = () => {
     const {member, site, doAction} = useContext(AppContext);
 
-    const onEditBilling = () => {
+    const onManageBilling = () => {
         const subscription = getMemberSubscription({member});
-        doAction('editBilling', {subscriptionId: subscription.id});
+        doAction('manageBilling', {subscriptionId: subscription.id});
     };
 
     const openUpdatePlan = () => {
@@ -92,9 +92,8 @@ const PaidAccountActions = () => {
         );
     };
 
-    const PlanUpdateButton = ({isComplimentary, isPaid}) => {
-        const hideUpgrade = allowCompMemberUpgrade({member}) ? false : isComplimentary;
-        if (hideUpgrade || (hasOnlyFreePlan({site}) && !isPaid)) {
+    const PlanUpdateButton = ({isPaid}) => {
+        if (hasOnlyFreePlan({site}) && !isPaid) {
             return null;
         }
         return (
@@ -121,9 +120,9 @@ const PaidAccountActions = () => {
 
     const BillingSection = ({defaultCardLast4, isComplimentary}) => {
         const {action} = useContext(AppContext);
-        const label = action === 'editBilling:running' ? (
+        const label = action === 'manageBilling:running' ? (
             <LoaderIcon className='gh-portal-billing-button-loader' />
-        ) : t('Update');
+        ) : t('Manage');
         if (isComplimentary) {
             return null;
         }
@@ -131,13 +130,13 @@ const PaidAccountActions = () => {
         return (
             <section>
                 <div className='gh-portal-list-detail'>
-                    <h3>{t('Billing info')}</h3>
+                    <h3>{t('Billing info & receipts')}</h3>
                     <CardLabel defaultCardLast4={defaultCardLast4} />
                 </div>
                 <button
                     className='gh-portal-btn gh-portal-btn-list'
-                    onClick={e => onEditBilling(e)}
-                    data-test-button='update-billing'
+                    onClick={e => onManageBilling(e)}
+                    data-test-button='manage-billing'
                 >
                     {label}
                 </button>
@@ -148,7 +147,6 @@ const PaidAccountActions = () => {
     const subscription = getMemberSubscription({member});
     const isComplimentary = isComplimentaryMember({member});
     const isPaid = isPaidMember({member});
-    const isCancelled = subscription?.cancel_at_period_end;
     if (subscription || isComplimentary) {
         const {
             price,
@@ -171,7 +169,7 @@ const PaidAccountActions = () => {
                         <h3>{planLabel}</h3>
                         <PlanLabel price={price} isComplimentary={isComplimentary} subscription={subscription} />
                     </div>
-                    <PlanUpdateButton isComplimentary={isComplimentary} isPaid={isPaid} isCancelled={isCancelled} />
+                    <PlanUpdateButton isPaid={isPaid} />
                 </section>
                 <BillingSection isComplimentary={isComplimentary} defaultCardLast4={defaultCardLast4} />
             </>

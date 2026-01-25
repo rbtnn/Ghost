@@ -32,10 +32,6 @@ const features: Feature[] = [{
     description: 'Enables the new Tags UI',
     flag: 'tagsX'
 }, {
-    title: 'UTM tracking',
-    description: 'Enables UTM tracking for web traffic and member attribution',
-    flag: 'utmTracking'
-}, {
     title: 'Email Unique ID',
     description: 'Enables {uniqueid} variable in emails for unique image URLs to bypass ESP image caching',
     flag: 'emailUniqueid'
@@ -48,10 +44,6 @@ const features: Feature[] = [{
     description: 'Preview the next version of the admin interface',
     flag: 'adminForward'
 }, {
-    title: 'Domain Warmup',
-    description: 'Enable custom sending domain warmup for gradual email volume increases',
-    flag: 'domainWarmup'
-},{
     title: 'Updated theme translation (beta)',
     description: 'Enable theme translation using i18next instead of the old translation package.',
     flag: 'themeTranslation'
@@ -67,6 +59,18 @@ const features: Feature[] = [{
     title: 'IndexNow',
     description: 'Automatically notify search engines when content is published or updated for faster indexing.',
     flag: 'indexnow'
+}, {
+    title: 'Featurebase Feedback',
+    description: 'Display a Feedback menu item in the admin sidebar. Requires the new admin experience.',
+    flag: 'featurebaseFeedback'
+}, {
+    title: 'Transistor',
+    description: 'Enable Transistor podcast integration',
+    flag: 'transistor'
+}, {
+    title: 'Disable Member Commenting',
+    description: 'Allow staff to disable commenting for individual members',
+    flag: 'disableMemberCommenting'
 }];
 
 const AlphaFeatures: React.FC = () => {
