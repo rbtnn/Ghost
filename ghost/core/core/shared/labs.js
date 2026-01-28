@@ -26,7 +26,6 @@ const GA_FEATURES = [
     'themeErrorsNotification',
     'announcementBar',
     'customFonts',
-    'contentVisibility',
     'explore'
 ];
 
@@ -45,19 +44,18 @@ const PRIVATE_FEATURES = [
     'importMemberTier',
     'urlCache',
     'lexicalIndicators',
-    'contentVisibilityAlpha',
     'emailCustomization',
     'tagsX',
     'emailUniqueid',
     'welcomeEmails',
-    'adminForward',
     'themeTranslation',
     'commentModeration',
     'commentPermalinks',
     'indexnow',
     'featurebaseFeedback',
     'transistor',
-    'disableMemberCommenting'
+    'disableMemberCommenting',
+    'sniperlinks'
 ];
 
 module.exports.GA_KEYS = [...GA_FEATURES];
