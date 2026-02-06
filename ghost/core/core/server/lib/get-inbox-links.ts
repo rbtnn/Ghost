@@ -34,7 +34,10 @@ import logging from '@tryghost/logging';
 
 type GetLinkFn = (options: Readonly<{recipient: string; sender: string}>) => string;
 
+type ProviderName = 'gmail' | 'yahoo' | 'outlook' | 'proton' | 'icloud' | 'hey' | 'aol' | 'mailru';
+
 type Provider = {
+    name: ProviderName;
     domains: ReadonlyArray<string>;
     getDesktopLink: GetLinkFn;
     getAndroidLink: GetLinkFn;
@@ -60,6 +63,7 @@ const buildUrl = (baseHref: string, key: string, value: string): string => {
 
 const PROVIDERS: ReadonlyArray<Provider> = [
     {
+        name: 'gmail',
         domains: ['gmail.com', 'googlemail.com', 'google.com'],
         getDesktopLink: ({recipient, sender}) => (
             `https://mail.google.com/mail/u/${encodeURIComponent(
@@ -71,36 +75,43 @@ const PROVIDERS: ReadonlyArray<Provider> = [
         getAndroidLink: () => getAndroidIntentUrl('com.google.android.gm', 'https://mail.google.com/')
     },
     {
+        name: 'yahoo',
         domains: ['yahoo.com', 'myyahoo.com', 'yahoo.co.uk', 'yahoo.fr', 'yahoo.it', 'ymail.com', 'rocketmail.com'],
         getDesktopLink: ({sender}) => `https://mail.yahoo.com/d/search/keyword=from:${encodeURIComponent(sender)}`,
         getAndroidLink: () => getAndroidIntentUrl('com.yahoo.mobile.client.android.mail', 'https://mail.yahoo.com/')
     },
     {
+        name: 'outlook',
         domains: ['outlook.com', 'live.com', 'live.de', 'hotmail.com', 'hotmail.co.uk', 'hotmail.de', 'msn.com', 'passport.com', 'passport.net'],
         getDesktopLink: ({recipient}) => buildUrl('https://outlook.live.com/mail/', 'login_hint', recipient),
         getAndroidLink: () => getAndroidIntentUrl('com.microsoft.office.outlook', 'https://outlook.live.com/')
     },
     {
+        name: 'proton',
         domains: ['proton.me', 'pm.me', 'protonmail.com', 'protonmail.ch'],
         getDesktopLink: ({sender}) => `https://mail.proton.me/u/0/all-mail#from=${encodeURIComponent(sender)}`,
         getAndroidLink: () => getAndroidIntentUrl('ch.protonmail.android', 'https://mail.proton.me/')
     },
     {
+        name: 'icloud',
         domains: ['icloud.com', 'me.com', 'mac.com'],
         getDesktopLink: () => 'https://www.icloud.com/mail',
         getAndroidLink: () => 'https://www.icloud.com/mail'
     },
     {
+        name: 'hey',
         domains: ['hey.com'],
         getDesktopLink: () => 'https://app.hey.com/topics/everything',
         getAndroidLink: () => getAndroidIntentUrl('com.basecamp.hey', 'https://app.hey.com/')
     },
     {
+        name: 'aol',
         domains: ['aol.com'],
         getDesktopLink: ({sender}) => `https://mail.aol.com/d/search/keyword=from:${encodeURIComponent(sender)}`,
         getAndroidLink: () => getAndroidIntentUrl('com.aol.mobile.aolapp', 'https://mail.aol.com/')
     },
     {
+        name: 'mailru',
         domains: ['mail.ru'],
         getDesktopLink: ({sender}) => buildUrl('https://e.mail.ru/search/', 'q_from', sender),
         getAndroidLink: () => getAndroidIntentUrl('ru.mail.mailapp', 'https://e.mail.ru/')
@@ -124,7 +135,7 @@ const getErrorCode = (err: unknown): undefined | string => (
  * Grab the MX records for a domain.
  *
  * If there are any errors at all, return the empty array. We don't want to
- * break sniper links if a DNS lookup fails—worst case, the user won't get a
+ * break inbox links if a DNS lookup fails—worst case, the user won't get a
  * "open in your email app" link.
  */
 const getMxRecords = async (
@@ -216,18 +227,18 @@ const getProvider = async (
 };
 
 /**
- * Given an email address, return "sniper links" to open the email app/inbox.
+ * Given an email address, return "inbox links" to open the email app/inbox.
  *
  * For example, if `newsletter@sender.example` emails `test@gmail.com`, we want
  * a link to open Gmail.
  */
-export const getSniperLinks = async (
+export const getInboxLinks = async (
     options: Readonly<{
         recipient: string;
         sender: string;
         dnsResolver: Pick<dns.Resolver, 'resolveMx'>
     }>
-): Promise<undefined | {android: string; desktop: string}> => {
+): Promise<undefined | {android: string; desktop: string; provider: ProviderName}> => {
     const {recipient, dnsResolver} = options;
 
     const domain = parseEmailAddress(recipient)?.domain;
@@ -242,6 +253,7 @@ export const getSniperLinks = async (
 
     return {
         android: provider.getAndroidLink(options),
-        desktop: provider.getDesktopLink(options)
+        desktop: provider.getDesktopLink(options),
+        provider: provider.name
     };
 };

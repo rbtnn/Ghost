@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict';
 import * as dns from 'node:dns/promises';
 import {shuffle} from 'lodash-es';
-import {getSniperLinks} from '../../../../core/server/lib/get-sniper-links';
+import {getInboxLinks} from '../../../../core/server/lib/get-inbox-links';
 
-describe('getSniperLinks', function () {
+describe('getInboxLinks', function () {
     const resolverThatShouldNeverBeUsed = {
         resolveMx: () => {
             assert.fail('This DNS test resolver should never be used');
@@ -18,7 +18,7 @@ describe('getSniperLinks', function () {
         ];
         for (const email of emails) {
             assert.equal(
-                await getSniperLinks({
+                await getInboxLinks({
                     recipient: email,
                     sender: 'ignored@example.com',
                     dnsResolver: resolverThatShouldNeverBeUsed
@@ -35,11 +35,12 @@ describe('getSniperLinks', function () {
             'example@google.com'
         ];
         await Promise.all(emails.map(async (recipient) => {
-            const result = await getSniperLinks({
+            const result = await getInboxLinks({
                 recipient,
                 sender: 'sender@example.com',
                 dnsResolver: resolverThatShouldNeverBeUsed
             });
+            assert.equal(result?.provider, 'gmail');
             assert(result?.desktop.startsWith('https://mail.google.com/'));
             assert(result?.desktop.includes(encodeURIComponent(recipient)));
             assert(result?.desktop.includes(encodeURIComponent('sender@example.com')));
@@ -60,11 +61,12 @@ describe('getSniperLinks', function () {
             'example@rocketmail.com'
         ];
         await Promise.all(emails.map(async (recipient) => {
-            const result = await getSniperLinks({
+            const result = await getInboxLinks({
                 recipient,
                 sender: 'sender@example.com',
                 dnsResolver: resolverThatShouldNeverBeUsed
             });
+            assert.equal(result?.provider, 'yahoo');
             assert(result?.desktop.startsWith('https://mail.yahoo.com/d/search/keyword=from:'));
             assert(result?.desktop.includes(encodeURIComponent('sender@example.com')));
             assert(result?.android.startsWith('intent:'));
@@ -84,11 +86,12 @@ describe('getSniperLinks', function () {
             'example@msn.com'
         ];
         await Promise.all(emails.map(async (recipient) => {
-            const result = await getSniperLinks({
+            const result = await getInboxLinks({
                 recipient,
                 sender: 'sender@example.com',
                 dnsResolver: resolverThatShouldNeverBeUsed
             });
+            assert.equal(result?.provider, 'outlook');
             assert.equal(result?.desktop, `https://outlook.live.com/mail/?login_hint=${encodeURIComponent(recipient)}`);
             assert(result?.android.startsWith('intent:'));
             assert(result?.android.includes('com.microsoft.office.outlook'));
@@ -103,11 +106,12 @@ describe('getSniperLinks', function () {
             'example@protonmail.com'
         ];
         await Promise.all(emails.map(async (recipient) => {
-            const result = await getSniperLinks({
+            const result = await getInboxLinks({
                 recipient,
                 sender: 'sender@example.com',
                 dnsResolver: resolverThatShouldNeverBeUsed
             });
+            assert.equal(result?.provider, 'proton');
             assert(result?.desktop.startsWith('https://mail.proton.me/'));
             assert(result?.desktop.includes(encodeURIComponent('sender@example.com')));
             assert(result?.android.startsWith('intent:'));
@@ -123,22 +127,24 @@ describe('getSniperLinks', function () {
             'example@mac.com'
         ];
         await Promise.all(emails.map(async (recipient) => {
-            const result = await getSniperLinks({
+            const result = await getInboxLinks({
                 recipient,
                 sender: 'sender@example.com',
                 dnsResolver: resolverThatShouldNeverBeUsed
             });
+            assert.equal(result?.provider, 'icloud');
             assert.equal(result?.desktop, 'https://www.icloud.com/mail');
             assert.equal(result?.android, 'https://www.icloud.com/mail');
         }));
     });
 
     it('handles Hey emails', async function () {
-        const result = await getSniperLinks({
+        const result = await getInboxLinks({
             recipient: 'example@hey.com',
             sender: 'sender@example.com',
             dnsResolver: resolverThatShouldNeverBeUsed
         });
+        assert.equal(result?.provider, 'hey');
         assert.equal(result?.desktop, 'https://app.hey.com/topics/everything');
         assert(result?.android.startsWith('intent:'));
         assert(result?.android.includes('com.basecamp.hey'));
@@ -146,11 +152,12 @@ describe('getSniperLinks', function () {
     });
 
     it('handles AOL emails', async function () {
-        const result = await getSniperLinks({
+        const result = await getInboxLinks({
             recipient: 'example@aol.com',
             sender: 'sender@example.com',
             dnsResolver: resolverThatShouldNeverBeUsed
         });
+        assert.equal(result?.provider, 'aol');
         assert(result?.desktop.startsWith('https://mail.aol.com/'));
         assert(result?.desktop.includes(encodeURIComponent('sender@example.com')));
         assert(result?.android.startsWith('intent:'));
@@ -159,11 +166,12 @@ describe('getSniperLinks', function () {
     });
 
     it('handles Mail.ru emails', async function () {
-        const result = await getSniperLinks({
+        const result = await getInboxLinks({
             recipient: 'example@mail.ru',
             sender: 'sender@example.com',
             dnsResolver: resolverThatShouldNeverBeUsed
         });
+        assert.equal(result?.provider, 'mailru');
         assert(result?.desktop.startsWith('https://e.mail.ru/search/'));
         assert(result?.desktop.includes(encodeURIComponent('sender@example.com')));
         assert(result?.android.startsWith('intent:'));
@@ -182,7 +190,7 @@ describe('getSniperLinks', function () {
                 const resolver = {
                     resolveMx: () => Promise.reject(error)
                 };
-                const result = await getSniperLinks({
+                const result = await getInboxLinks({
                     recipient: 'recipient@example.com',
                     sender: 'sender@example.com',
                     dnsResolver: resolver
@@ -197,7 +205,7 @@ describe('getSniperLinks', function () {
                     {priority: 0, exchange: ''}
                 ]
             };
-            const result = await getSniperLinks({
+            const result = await getInboxLinks({
                 recipient: 'recipient@example.com',
                 sender: 'sender@example.com',
                 dnsResolver: resolver
@@ -214,7 +222,7 @@ describe('getSniperLinks', function () {
                     {priority: 4, exchange: 'google.com.example'}
                 ])
             };
-            const result = await getSniperLinks({
+            const result = await getInboxLinks({
                 recipient: 'recipient@example.com',
                 sender: 'sender@example.com',
                 dnsResolver: resolver
@@ -230,7 +238,7 @@ describe('getSniperLinks', function () {
                     {priority: 2, exchange: 'unknown.example'}
                 ])
             };
-            const result = await getSniperLinks({
+            const result = await getInboxLinks({
                 recipient: 'recipient@example.com',
                 sender: 'sender@example.com',
                 dnsResolver: resolver
@@ -246,7 +254,7 @@ describe('getSniperLinks', function () {
                     {priority: 2, exchange: 'protonmail.ch'}
                 ])
             };
-            const result = await getSniperLinks({
+            const result = await getInboxLinks({
                 recipient: 'recipient@example.com',
                 sender: 'sender@example.com',
                 dnsResolver: resolver
@@ -262,7 +270,7 @@ describe('getSniperLinks', function () {
                     {priority: 3, exchange: 'yahoo.com'}
                 ])
             };
-            const result = await getSniperLinks({
+            const result = await getInboxLinks({
                 recipient: 'recipient@example.com',
                 sender: 'sender@example.com',
                 dnsResolver: resolver
@@ -278,7 +286,7 @@ describe('getSniperLinks', function () {
                     {priority: 3, exchange: 'mail.protonmail.ch'}
                 ])
             };
-            const result = await getSniperLinks({
+            const result = await getInboxLinks({
                 recipient: 'recipient@example.com',
                 sender: 'sender@example.com',
                 dnsResolver: resolver
@@ -295,7 +303,7 @@ describe('getSniperLinks', function () {
                     {priority: 3, exchange: 'mail.protonmail.ch'}
                 ])
             };
-            const result = await getSniperLinks({
+            const result = await getInboxLinks({
                 recipient: 'recipient@example.com',
                 sender: 'sender@example.com',
                 dnsResolver: resolver

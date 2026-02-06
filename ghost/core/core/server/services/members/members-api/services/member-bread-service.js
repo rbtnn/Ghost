@@ -41,7 +41,7 @@ module.exports = class MemberBREADService {
      * @param {import('@tryghost/settings-helpers')} deps.settingsHelpers
      * @param {import('./next-payment-calculator')} deps.nextPaymentCalculator
      */
-    constructor({memberRepository, labsService, emailService, stripeService, offersAPI, memberAttributionService, emailSuppressionList, settingsHelpers, nextPaymentCalculator}) {
+    constructor({memberRepository, labsService, emailService, stripeService, offersAPI, memberAttributionService, emailSuppressionList, settingsHelpers, nextPaymentCalculator, commentsService}) {
         this.offersAPI = offersAPI;
         /** @private */
         this.memberRepository = memberRepository;
@@ -59,6 +59,8 @@ module.exports = class MemberBREADService {
         this.settingsHelpers = settingsHelpers;
         /** @private */
         this.nextPaymentCalculator = nextPaymentCalculator;
+        /** @private */
+        this.commentsService = commentsService;
     }
 
     /**
@@ -303,9 +305,14 @@ module.exports = class MemberBREADService {
             throw error;
         }
 
-        const sharedOptions = options.transacting ? {
-            transacting: options.transacting
-        } : {};
+        // Only pass specific options to downstream calls, filtering out options like
+        // `withRelated` that could cause errors in repositories that don't support them.
+        // - transacting: needed for database transaction consistency
+        // - context: needed to determine source (admin/api/member/import) for staff notifications
+        const sharedOptions = {
+            ...(options.transacting && {transacting: options.transacting}),
+            ...(options.context && {context: options.context})
+        };
 
         try {
             if (data.stripe_customer_id) {
@@ -378,7 +385,7 @@ module.exports = class MemberBREADService {
                         transacting: options.transacting
                     });
                 } else if (!(data.comped) && hasCompedSubscription) {
-                    await this.memberRepository.cancelComplimentarySubscription(model, {
+                    await this.memberRepository.removeComplimentarySubscription(model, {
                         context: options.context,
                         transacting: options.transacting
                     });
@@ -393,10 +400,11 @@ module.exports = class MemberBREADService {
      * @param {string} memberId
      * @param {string} reason
      * @param {Date|null} until
+     * @param {boolean} hideComments
      * @param {Object} context
      * @returns {Promise<Object>}
      */
-    async disableCommenting(memberId, reason, until, context) {
+    async disableCommenting(memberId, reason, until, hideComments, context) {
         const model = await this.memberRepository.get({id: memberId});
 
         if (!model) {
@@ -414,6 +422,10 @@ module.exports = class MemberBREADService {
             'commenting_disabled',
             context
         );
+
+        if (hideComments) {
+            await this.commentsService.api.bulkUpdateStatus(`member_id:'${memberId}'+status:published`, 'hidden');
+        }
 
         return this.read({id: memberId});
     }
