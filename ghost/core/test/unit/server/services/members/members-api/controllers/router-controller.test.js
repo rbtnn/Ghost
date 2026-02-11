@@ -16,8 +16,14 @@ describe('RouterController', function () {
     let getDonationLinkSpy;
     let settingsCache;
     let settingsHelpers;
+    let emailAddressService;
 
     beforeEach(async function () {
+        // Mock emailAddressService for inbox links sender address transformation
+        emailAddressService = {
+            getMembersSupportAddress: sinon.stub().returns('noreply@example.com')
+        };
+
         getPaymentLinkSpy = sinon.spy();
         getDonationLinkSpy = sinon.spy();
         tiersService = {
@@ -90,7 +96,8 @@ describe('RouterController', function () {
                 stripeAPIService,
                 labsService,
                 settingsCache,
-                settingsHelpers
+                settingsHelpers,
+                emailAddressService
             });
 
             await routerController.createCheckoutSession({
@@ -126,7 +133,8 @@ describe('RouterController', function () {
                 labsService,
                 settingsCache,
                 settingsHelpers,
-                newslettersService: newslettersServiceStub
+                newslettersService: newslettersServiceStub,
+                emailAddressService
             });
             const newsletters = [
                 {id: 'abc123', name: 'Newsletter 1'},
@@ -155,6 +163,122 @@ describe('RouterController', function () {
             assert.equal(getPaymentLinkSpy.calledWith(sinon.match({
                 metadata: {
                     newsletters: expectedNewsletters
+                }
+            })), true);
+        });
+
+        it('sets ghostSignupContext to has_precheckout_magic_link when checkout creates a signup magic link', async function () {
+            const magicLinkService = {
+                getMagicLink: sinon.stub().resolves('https://example.com/members/?token=abc123&action=signup')
+            };
+            const memberRepository = {
+                get: sinon.stub().resolves(null)
+            };
+            const routerController = new RouterController({
+                tiersService,
+                paymentsService,
+                offersAPI,
+                stripeAPIService,
+                labsService,
+                settingsCache,
+                settingsHelpers,
+                magicLinkService,
+                memberRepository
+            });
+
+            await routerController.createCheckoutSession({
+                body: {
+                    tierId: 'tier_123',
+                    cadence: 'month',
+                    customerEmail: 'new-member@example.com',
+                    successUrl: 'https://example.com/paid-success',
+                    cancelUrl: 'https://example.com/cancel',
+                    metadata: {}
+                }
+            }, {
+                writeHead: () => {},
+                end: () => {}
+            });
+
+            assert.equal(magicLinkService.getMagicLink.calledOnce, true);
+            assert.equal(getPaymentLinkSpy.calledWith(sinon.match({
+                successUrl: 'https://example.com/members/?token=abc123&action=signup',
+                metadata: {
+                    ghostSignupContext: 'has_precheckout_magic_link'
+                }
+            })), true);
+        });
+
+        it('sets ghostSignupContext to already_authenticated for authenticated members', async function () {
+            const member = {
+                get: sinon.stub().withArgs('status').returns('free')
+            };
+            const tokenService = {
+                decodeToken: sinon.stub().resolves({sub: 'member@example.com'})
+            };
+            const memberRepository = {
+                get: sinon.stub().resolves(member)
+            };
+            const routerController = new RouterController({
+                tiersService,
+                paymentsService,
+                offersAPI,
+                stripeAPIService,
+                labsService,
+                settingsCache,
+                settingsHelpers,
+                tokenService,
+                memberRepository
+            });
+
+            await routerController.createCheckoutSession({
+                body: {
+                    tierId: 'tier_123',
+                    cadence: 'month',
+                    identity: 'identity-token',
+                    successUrl: 'https://example.com/paid-success',
+                    cancelUrl: 'https://example.com/cancel',
+                    metadata: {}
+                }
+            }, {
+                writeHead: () => {},
+                end: () => {}
+            });
+
+            assert.equal(getPaymentLinkSpy.calledWith(sinon.match({
+                metadata: {
+                    ghostSignupContext: 'already_authenticated'
+                }
+            })), true);
+        });
+
+        it('sets ghostSignupContext to needs_magic_link_email when there is no member context or customer email', async function () {
+            const routerController = new RouterController({
+                tiersService,
+                paymentsService,
+                offersAPI,
+                stripeAPIService,
+                labsService,
+                settingsCache,
+                settingsHelpers
+            });
+
+            await routerController.createCheckoutSession({
+                body: {
+                    tierId: 'tier_123',
+                    cadence: 'month',
+                    successUrl: 'https://example.com/paid-success',
+                    cancelUrl: 'https://example.com/cancel',
+                    metadata: {}
+                }
+            }, {
+                writeHead: () => {},
+                end: () => {}
+            });
+
+            assert.equal(getPaymentLinkSpy.calledWith(sinon.match({
+                metadata: {
+                    ghostSignupContext: 'needs_magic_link_email'
                 }
             })), true);
         });
@@ -693,6 +817,7 @@ describe('RouterController', function () {
                     sendEmailWithMagicLink: sendEmailWithMagicLinkStub,
                     settingsCache,
                     settingsHelpers,
+                    emailAddressService,
                     ...deps
                 });
             };
@@ -848,6 +973,7 @@ describe('RouterController', function () {
                     sendEmailWithMagicLink: sendEmailWithMagicLinkStub,
                     settingsCache,
                     settingsHelpers,
+                    emailAddressService,
                     ...deps
                 });
             };
@@ -923,7 +1049,8 @@ describe('RouterController', function () {
                     settingsHelpers,
                     newslettersService: {},
                     sentry: {},
-                    urlUtils: {}
+                    urlUtils: {},
+                    emailAddressService
                 });
 
                 routerController._handleSignin = handleSigninStub;
@@ -1035,7 +1162,8 @@ describe('RouterController', function () {
                 stripeAPIService,
                 labsService,
                 settingsCache,
-                newslettersService: newslettersServiceStub
+                newslettersService: newslettersServiceStub,
+                emailAddressService
             });
         });
 
