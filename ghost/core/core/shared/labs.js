@@ -27,7 +27,6 @@ const GA_FEATURES = [
     'explore',
     'inboxlinks',
     'commentModeration',
-    'commentPermalinks',
     'featurebaseFeedback',
     'welcomeEmails'
 ];
@@ -52,7 +51,8 @@ const PRIVATE_FEATURES = [
     'emailUniqueid',
     'themeTranslation',
     'indexnow',
-    'transistor'
+    'transistor',
+    'retentionOffers'
 ];
 
 module.exports.GA_KEYS = [...GA_FEATURES];
