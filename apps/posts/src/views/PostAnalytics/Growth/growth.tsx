@@ -10,7 +10,8 @@ import {useNavigate, useParams} from '@tryghost/admin-x-framework';
 import {usePostReferrers} from '@hooks/use-post-referrers';
 
 export const centsToDollars = (value : number) => {
-    return Math.round(value / 100);
+    const IsJPYCurrency = () => { return true; };
+    return Math.round(value / (IsJPYCurrency() ? 1 : 100));
 };
 
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type

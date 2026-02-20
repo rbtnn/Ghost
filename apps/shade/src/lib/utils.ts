@@ -344,7 +344,8 @@ export const formatPercentage = (value: number) => {
 
 // Format cents to Dollars
 export const centsToDollars = (value: number) => {
-    return Math.round(value / 100);
+    const IsJPYCurrency = () => { return true; };
+    return Math.round(value / (IsJPYCurrency() ? 1 : 100));
 };
 
 /* Chart formatters

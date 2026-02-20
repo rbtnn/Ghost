@@ -38,7 +38,8 @@ const SourcesTable: React.FC<SourcesTableProps> = ({headerStyle = 'table', child
                 </TableHeader>
                 <TableBody>
                     {data?.map((row) => {
-                        const centsToDollars = (value: number) => Math.round(value / 100);
+                        const IsJPYCurrency = () => { return true; };
+                        const centsToDollars = (value: number) => Math.round(value / (IsJPYCurrency() ? 1 : 100));
 
                         return (
                             <TableRow key={row.source} className='last:border-none'>
