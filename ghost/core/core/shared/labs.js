@@ -21,11 +21,9 @@ const messages = {
 
 // flags in this list always return `true`, allows quick global enable prior to full flag removal
 const GA_FEATURES = [
-    'audienceFeedback',
     'announcementBar',
     'customFonts',
     'explore',
-    'inboxlinks',
     'commentModeration',
     'featurebaseFeedback',
     'welcomeEmails'
@@ -42,7 +40,6 @@ const PUBLIC_BETA_FEATURES = [
 // Which is only visible if the developer experiments flag is enabled
 const PRIVATE_FEATURES = [
     'stripeAutomaticTax',
-    'webmentions',
     'importMemberTier',
     'urlCache',
     'lexicalIndicators',
@@ -52,7 +49,9 @@ const PRIVATE_FEATURES = [
     'themeTranslation',
     'indexnow',
     'transistor',
-    'retentionOffers'
+    'retentionOffers',
+    'welcomeEmailEditor',
+    'membersForward'
 ];
 
 module.exports.GA_KEYS = [...GA_FEATURES];

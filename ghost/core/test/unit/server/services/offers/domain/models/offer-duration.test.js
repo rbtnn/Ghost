@@ -1,5 +1,4 @@
 const assert = require('node:assert/strict');
-const should = require('should');
 
 const OfferDuration = require('../../../../../../../core/server/services/offers/domain/models/offer-duration');
 
@@ -16,60 +15,42 @@ describe('OfferDuration', function () {
                 OfferDuration.create();
                 assert.fail();
             } catch (err) {
-                should.ok(
-                    err instanceof OfferDuration.InvalidOfferDuration,
-                    'expected an InvalidOfferDuration error'
-                );
+                assert(err instanceof OfferDuration.InvalidOfferDuration, 'expected an InvalidOfferDuration error');
             }
 
             try {
                 OfferDuration.create('other');
                 assert.fail();
             } catch (err) {
-                should.ok(
-                    err instanceof OfferDuration.InvalidOfferDuration,
-                    'expected an InvalidOfferDuration error'
-                );
+                assert(err instanceof OfferDuration.InvalidOfferDuration, 'expected an InvalidOfferDuration error');
             }
 
             try {
                 OfferDuration.create('repeating');
                 assert.fail();
             } catch (err) {
-                should.ok(
-                    err instanceof OfferDuration.InvalidOfferDuration,
-                    'expected an InvalidOfferDuration error'
-                );
+                assert(err instanceof OfferDuration.InvalidOfferDuration, 'expected an InvalidOfferDuration error');
             }
 
             try {
                 OfferDuration.create('repeating', 1.5);
                 assert.fail();
             } catch (err) {
-                should.ok(
-                    err instanceof OfferDuration.InvalidOfferDuration,
-                    'expected an InvalidOfferDuration error'
-                );
+                assert(err instanceof OfferDuration.InvalidOfferDuration, 'expected an InvalidOfferDuration error');
             }
 
             try {
                 OfferDuration.create('repeating', -12);
                 assert.fail();
             } catch (err) {
-                should.ok(
-                    err instanceof OfferDuration.InvalidOfferDuration,
-                    'expected an InvalidOfferDuration error'
-                );
+                assert(err instanceof OfferDuration.InvalidOfferDuration, 'expected an InvalidOfferDuration error');
             }
 
             try {
                 OfferDuration.create('repeating', '2');
                 assert.fail();
             } catch (err) {
-                should.ok(
-                    err instanceof OfferDuration.InvalidOfferDuration,
-                    'expected an InvalidOfferDuration error'
-                );
+                assert(err instanceof OfferDuration.InvalidOfferDuration, 'expected an InvalidOfferDuration error');
             }
         });
     });

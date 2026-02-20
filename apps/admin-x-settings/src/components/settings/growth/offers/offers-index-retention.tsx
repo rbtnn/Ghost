@@ -41,7 +41,7 @@ export const getOfferDiscount = (type: string, amount: number, cadence: string, 
 
     const formatToTwoDecimals = (num: number): number => parseFloat(num.toFixed(2));
 
-    let originalPriceWithCurrency = getSymbol(currency) + numberWithCommas(formatToTwoDecimals(currencyToDecimal(originalPrice)));
+    let originalPriceWithCurrency = getSymbol(currency) + numberWithCommas(formatToTwoDecimals(currencyToDecimal(originalPrice, currency)));
 
     switch (type) {
     case 'percent':
@@ -51,7 +51,7 @@ export const getOfferDiscount = (type: string, amount: number, cadence: string, 
         break;
     case 'fixed':
         discountColor = 'text-blue';
-        discountOffer = numberWithCommas(formatToTwoDecimals(currencyToDecimal(amount))) + ' ' + currency + ' off';
+        discountOffer = numberWithCommas(formatToTwoDecimals(currencyToDecimal(amount, currency))) + ' ' + currency + ' off';
         updatedPrice = originalPrice - amount;
         break;
     case 'trial':
@@ -67,7 +67,7 @@ export const getOfferDiscount = (type: string, amount: number, cadence: string, 
         updatedPrice = 0;
     }
 
-    const updatedPriceWithCurrency = getSymbol(currency) + numberWithCommas(formatToTwoDecimals(currencyToDecimal(updatedPrice)));
+    const updatedPriceWithCurrency = getSymbol(currency) + numberWithCommas(formatToTwoDecimals(currencyToDecimal(updatedPrice, currency)));
 
     return {
         discountColor,

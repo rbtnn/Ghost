@@ -1,6 +1,5 @@
-require('should');
 const EmailRenderer = require('../../../../../core/server/services/email-service/email-renderer');
-const assert = require('assert/strict');
+const assert = require('node:assert/strict');
 const {assertExists} = require('../../../../utils/assertions');
 const cheerio = require('cheerio');
 const {createModel, createModelClass} = require('./utils');
@@ -1399,20 +1398,11 @@ describe('Email renderer', function () {
             // Unsubscribe button included
             assert(response.plaintext.includes('Unsubscribe [%%{unsubscribe_url}%%]'));
             assert(response.html.includes('Unsubscribe'));
-            assert.equal(response.replacements.length, 4);
-            response.replacements.should.match([
-                {
-                    id: 'uuid'
-                },
-                {
-                    id: 'key'
-                },
-                {
-                    id: 'unsubscribe_url'
-                },
-                {
-                    id: 'list_unsubscribe'
-                }
+            assert.deepEqual(response.replacements.map(r => r.id), [
+                'uuid',
+                'key',
+                'unsubscribe_url',
+                'list_unsubscribe'
             ]);
 
             assert(response.plaintext.includes('http://example.com'));
@@ -1765,11 +1755,11 @@ describe('Email renderer', function () {
             // Check uuid in replacements
             assert.equal(response.replacements.length, 4);
             assert.equal(response.replacements[0].id, 'uuid');
-            response.replacements[0].token.should.eql(/%%\{uuid\}%%/g);
+            assert.deepEqual(response.replacements[0].token, /%%\{uuid\}%%/g);
             assert.equal(response.replacements[1].id, 'key');
-            response.replacements[1].token.should.eql(/%%\{key\}%%/g);
+            assert.deepEqual(response.replacements[1].token, /%%\{key\}%%/g);
             assert.equal(response.replacements[2].id, 'unsubscribe_url');
-            response.replacements[2].token.should.eql(/%%\{unsubscribe_url\}%%/g);
+            assert.deepEqual(response.replacements[2].token, /%%\{unsubscribe_url\}%%/g);
             assert.equal(response.replacements[3].id, 'list_unsubscribe');
         });
 
@@ -1875,11 +1865,11 @@ describe('Email renderer', function () {
             // Check uuid in replacements
             assert.equal(response.replacements.length, 4);
             assert.equal(response.replacements[0].id, 'uuid');
-            response.replacements[0].token.should.eql(/%%\{uuid\}%%/g);
+            assert.deepEqual(response.replacements[0].token, /%%\{uuid\}%%/g);
             assert.equal(response.replacements[1].id, 'key');
-            response.replacements[1].token.should.eql(/%%\{key\}%%/g);
+            assert.deepEqual(response.replacements[1].token, /%%\{key\}%%/g);
             assert.equal(response.replacements[2].id, 'unsubscribe_url');
-            response.replacements[2].token.should.eql(/%%\{unsubscribe_url\}%%/g);
+            assert.deepEqual(response.replacements[2].token, /%%\{unsubscribe_url\}%%/g);
             assert.equal(response.replacements[3].id, 'list_unsubscribe');
         });
 
@@ -2007,20 +1997,11 @@ describe('Email renderer', function () {
 
             assert(response.html.includes('Unsubscribe'));
             assert(response.html.includes('http://example.com'));
-            assert.equal(response.replacements.length, 4);
-            response.replacements.should.match([
-                {
-                    id: 'uuid'
-                },
-                {
-                    id: 'key'
-                },
-                {
-                    id: 'unsubscribe_url'
-                },
-                {
-                    id: 'list_unsubscribe'
-                }
+            assert.deepEqual(response.replacements.map(r => r.id), [
+                'uuid',
+                'key',
+                'unsubscribe_url',
+                'list_unsubscribe'
             ]);
             assert(!response.html.includes('members only section'));
             assert(response.html.includes('some text for both'));
