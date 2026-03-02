@@ -1,7 +1,9 @@
-import React, {useCallback} from 'react';
+import React, {useCallback, useMemo} from 'react';
 import useFeatureFlag from '../../../../hooks/use-feature-flag';
 import {KoenigEditorBase, type KoenigInstance, LoadingIndicator} from '@tryghost/admin-x-design-system';
 import {cn} from '@tryghost/shade';
+import {koenigFileUploadTypes, useKoenigFileUpload} from '@tryghost/admin-x-framework/hooks';
+import {useFramework} from '@tryghost/admin-x-framework';
 
 export interface MemberEmailsEditorProps {
     value?: string;
@@ -11,6 +13,11 @@ export interface MemberEmailsEditorProps {
     onChange?: (value: string) => void;
 }
 
+const fileUploader = {
+    useFileUpload: useKoenigFileUpload,
+    fileTypes: koenigFileUploadTypes
+};
+
 const MemberEmailsEditor: React.FC<MemberEmailsEditorProps> = ({
     value,
     placeholder,
@@ -19,6 +26,10 @@ const MemberEmailsEditor: React.FC<MemberEmailsEditorProps> = ({
     onChange
 }) => {
     const welcomeEmailEditorEnabled = useFeatureFlag('welcomeEmailEditor');
+    const {unsplashConfig} = useFramework();
+
+    const cardConfig = useMemo(() => ({unsplash: unsplashConfig}), [unsplashConfig]);
+
     const baseEditorStyles = cn(
         // Base typography
         'text-[1.6rem] leading-[1.6] tracking-[-0.01em]',
@@ -35,7 +46,15 @@ const MemberEmailsEditor: React.FC<MemberEmailsEditorProps> = ({
         // Horizontal ruler
         '[&_:is(hr)]:pt-0',
         // Paragraph spacing & bold
-        '[&_p]:mb-4 [&_strong]:font-semibold'
+        '[&_p]:mb-4 [&_strong]:font-semibold',
+        // Nested-editor (callout, etc.) fixes: align placeholder with text
+        // 1. Override placeholder font/size/line-height to match the <p> styles
+        '[&_.not-kg-prose>div]:!font-inter [&_.not-kg-prose>div]:!tracking-tight [&_.not-kg-prose>div]:!text-xl [&_.not-kg-prose>div]:!leading-[1.6]',
+        // 2. Remove paragraph bottom-margin inside nested editors so the
+        //    placeholder translate-y lines up with the cursor
+        '[&_.kg-inherit-styles_p]:!mb-0',
+        // 3. Nudge nested editor text down to vertically align with the emoji
+        '[&_.kg-inherit-styles]:!pt-[3px]'
     );
 
     // Koenig's onChange passes the Lexical state as a plain object,
@@ -59,13 +78,15 @@ const MemberEmailsEditor: React.FC<MemberEmailsEditorProps> = ({
     return (
         <div onKeyDown={handleKeyDown}>
             <KoenigEditorBase
+                cardConfig={cardConfig}
                 className={cn(baseEditorStyles, className)}
                 emojiPicker={true}
+                fileUploader={fileUploader}
                 inheritFontStyles={false}
                 initialEditorState={value}
                 loadingFallback={<LoadingIndicator delay={200} size="lg" />}
                 nodes={welcomeEmailEditorEnabled ? 'EMAIL_EDITOR_NODES' : 'EMAIL_NODES'}
-                placeholder={placeholder}   
+                placeholder={placeholder}
                 singleParagraph={singleParagraph}
                 onChange={handleChange}
             >
@@ -84,12 +105,8 @@ const MemberEmailsEditor: React.FC<MemberEmailsEditorProps> = ({
                                 <koenig.CardMenuPlugin />
                                 <koenig.EmailCtaPlugin />
                                 <koenig.HtmlPlugin />
+                                <koenig.ImagePlugin />
                                 <koenig.KoenigSelectorPlugin />
-                                {/* TODO: we need to wire up card config to enable snippets */}
-                                {/* <koenig.KoenigSnippetPlugin /> */}
-                                {/* TODO: we need to wire up a fileUploader prop + fileUploadHook to enable files+images */}
-                                {/* <koenig.FilePlugin /> */}
-                                {/* <koenig.ImagePlugin /> */}
                             </>
                         )}
 
