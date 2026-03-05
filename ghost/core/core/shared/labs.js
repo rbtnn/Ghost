@@ -21,7 +21,6 @@ const messages = {
 
 // flags in this list always return `true`, allows quick global enable prior to full flag removal
 const GA_FEATURES = [
-    'announcementBar',
     'customFonts',
     'explore',
     'commentModeration',
@@ -50,7 +49,8 @@ const PRIVATE_FEATURES = [
     'transistor',
     'retentionOffers',
     'welcomeEmailEditor',
-    'membersForward'
+    'membersForward',
+    'welcomeEmailsDesignCustomization'
 ];
 
 module.exports.GA_KEYS = [...GA_FEATURES];
