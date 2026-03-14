@@ -21,6 +21,12 @@ env:
     ~/.cache/ms-playwright/
   NX_REJECT_UNKNOWN_LOCAL_CACHE: 0
   NODE_VERSION: 22.18.0
+  # Disable v8-compile-cache to prevent intermittent V8 deserializer crashes
+  # when multiple parallel Nx workers race to read/write shared bytecode cache
+  # files. The cache lives in /tmp and is discarded after each run anyway,
+  # so disabling it has no meaningful performance impact in CI.
+  # See: https://github.com/nodejs/node/issues/51555
+  DISABLE_V8_COMPILE_CACHE: 1
 
 concurrency:
   group: ${{ github.head_ref || github.run_id }}
@@ -934,7 +940,14 @@ jobs:
           DEPENDENCY_CACHE_KEY: ${{ needs.job_setup.outputs.dependency_cache_key }}
 
       - name: Build server and admin assets
-        run: yarn build:production
+        run: |
+          PKG_VERSION=$(node -p "require('./ghost/core/package.json').version")
+          SHORT_SHA="${GITHUB_SHA:0:7}"
+          if [ "${{ github.ref_type }}" != "tag" ]; then
+            export GHOST_BUILD_VERSION="${PKG_VERSION}+${SHORT_SHA}"
+            echo "GHOST_BUILD_VERSION=${GHOST_BUILD_VERSION}" >> $GITHUB_ENV
+          fi
+          yarn build:production
 
       - name: Pack standalone distribution
         run: yarn workspace ghost pack:standalone
@@ -1032,7 +1045,9 @@ jobs:
           context: /tmp/ghost-production
           file: Dockerfile.production
           target: core
-          build-args: NODE_VERSION=${{ env.NODE_VERSION }}
+          build-args: |
+            NODE_VERSION=${{ env.NODE_VERSION }}
+            GHOST_BUILD_VERSION=${{ env.GHOST_BUILD_VERSION }}
           push: ${{ steps.strategy.outputs.should-push }}
           load: ${{ steps.strategy.outputs.should-push == 'false' }}
           tags: ${{ steps.meta-core.outputs.tags }}
@@ -1046,7 +1061,9 @@ jobs:
           context: /tmp/ghost-production
           file: Dockerfile.production
           target: full
-          build-args: NODE_VERSION=${{ env.NODE_VERSION }}
+          build-args: |
+            NODE_VERSION=${{ env.NODE_VERSION }}
+            GHOST_BUILD_VERSION=${{ env.GHOST_BUILD_VERSION }}
           push: ${{ steps.strategy.outputs.should-push }}
           load: true
           tags: ${{ steps.meta-full.outputs.tags }}
@@ -1135,19 +1152,20 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
-        # TODO: Build tb-cli in a separate workflow and pull from GHCR instead of building here
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Build Tinybird CLI Image
-        uses: docker/build-push-action@v6
-        id: build
-        with:
-          context: .
-          file: docker/tb-cli/Dockerfile
-          push: false
-          load: true
-          tags: ghost-tb-cli
+      - name: Pull or build Tinybird CLI Image
+        run: |
+          COMPOSE_IMAGE="${COMPOSE_PROJECT_NAME:-ghost-dev}-tb-cli"
+          # Try pulling pre-built image from GHCR first (fast path)
+          if docker pull ghcr.io/tryghost/tb-cli:latest 2>/dev/null; then
+            echo "Pulled tb-cli from GHCR"
+            docker tag ghcr.io/tryghost/tb-cli:latest "$COMPOSE_IMAGE"
+          else
+            echo "GHCR image not available, building from source"
+            docker buildx build --load -t "$COMPOSE_IMAGE" -f docker/tb-cli/Dockerfile .
+          fi
 
       - name: Load Image
         uses: ./.github/actions/load-docker-image
