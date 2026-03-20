@@ -17,14 +17,6 @@ import {useRouting} from '@tryghost/admin-x-framework/routing';
 
 export type OfferType = 'percent' | 'fixed' | 'trial';
 
-const IsJPYCurrency = (currency: string): boolean => {
-    if (currency !== null && typeof currency.toUpperCase === 'function') {
-        return currency.toUpperCase() === 'JPY';
-    } else {
-        return true;
-    }
-};
-
 export const getOfferCadence = (cadence: string): string => {
     return cadence === 'month' ? 'monthly' : 'yearly';
 };
@@ -39,7 +31,7 @@ export const getOfferDiscount = (type: string, amount: number, cadence: string, 
     const originalPrice = cadence === 'month' ? tier?.monthly_price ?? 0 : tier?.yearly_price ?? 0;
     let updatedPrice = originalPrice;
 
-    const formatToTwoDecimals = (num: number): number => (IsJPYCurrency(currency) ? num : parseFloat(num.toFixed(2)));
+    const formatToTwoDecimals = (num: number): number => parseFloat(num.toFixed(2));
 
     let originalPriceWithCurrency = getSymbol(currency) + numberWithCommas(formatToTwoDecimals(currencyToDecimal(originalPrice, currency)));
 
