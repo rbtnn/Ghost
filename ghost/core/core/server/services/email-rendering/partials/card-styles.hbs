@@ -1,5 +1,3 @@
-/* Welcome-email Koenig card styles (minimal subset) */
-
 td.kg-card-spacing {
     padding: 0 0 1.5em 0;
 }
@@ -13,29 +11,16 @@ td.kg-card-spacing {
     margin-top: 3em !important;
 }
 
-figure {
-    margin: 0 0 1.5em;
-    padding: 0;
+.kg-bookmark-card {
+    width: 100%;
 }
 
-figcaption {
-    text-align: center;
-    font-family: -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif;
-    font-size: 13px;
-    padding-top: 10px;
-    padding-bottom: 10px;
-    line-height: 1.5em;
-    {{#if backgroundIsDark}}
-        color: #ffffff;
-        color: rgba(255, 255, 255, .6);
-    {{else}}
-        color: #15212a;
-        color: rgba(0, 0, 0, 0.6);
-    {{/if}}
+.kg-bookmark-card a {
+    text-decoration: none;
 }
 
-figcaption a {
-    text-decoration: none!important;
+.kg-card + .kg-bookmark-card {
+    margin-top: 0;
 }
 
 .kg-image-card img {
@@ -51,18 +36,6 @@ figcaption a {
 
 .kg-image-card span {
     text-align: center;
-}
-
-.kg-bookmark-card {
-    width: 100%;
-}
-
-.kg-bookmark-card a {
-    text-decoration: none;
-}
-
-.kg-card + .kg-bookmark-card {
-    margin-top: 0;
 }
 
 .kg-bookmark-container {
@@ -603,68 +576,6 @@ img.kg-cta-image {
     width: 100%;
 }
 
-/* -------------------------------------
-    BUTTONS
-------------------------------------- */
-
-.kg-button-card {
-    width: 100%;
-}
-
-table.btn {
-    box-sizing: border-box;
-    width: auto;
-}
-
-table.btn td {
-    padding: 8px 20px 9px;
-    {{#if hasOutlineButtons}}
-    color: {{buttonColor}};
-    border: 1px solid {{buttonColor}};
-    border-color: currentColor;
-    background-color: transparent;
-    {{else}}
-    background-color: {{buttonColor}};
-    {{/if}}
-    border-radius: {{buttonBorderRadius}};
-    text-align: center;
-    font-family: -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif;
-}
-
-table.btn a {
-    box-sizing: border-box;
-    {{#if hasOutlineButtons}}
-    color: {{buttonColor}};
-    {{else}}
-    color: {{buttonTextColor}};
-    {{/if}}
-    cursor: pointer;
-    display: inline-block;
-    font-size: 15px;
-    font-weight: 600;
-    margin: 0;
-    text-decoration: none;
-}
-
-table.btn-accent td {
-    {{#if hasOutlineButtons}}
-    color: {{accentColor}};
-    border: 1px solid {{accentColor}};
-    border-color: currentColor;
-    background-color: transparent;
-    {{else}}
-    background-color: {{accentColor}};
-    {{/if}}
-}
-
-table.btn-accent a {
-    {{#if hasOutlineButtons}}
-    color: {{accentColor}};
-    {{else}}
-    color: {{accentContrastColor}};
-    {{/if}}
-}
-
 .kg-product-card {
     margin: 0 0 1.5em;
     {{#if hasRoundedImageCorners}}
@@ -761,6 +672,72 @@ table.btn-accent a {
     width: 100%;
 }
 
+
+/* -------------------------------------
+    BUTTONS
+------------------------------------- */
+
+.kg-button-card {
+    width: 100%;
+}
+
+table.btn {
+    box-sizing: border-box;
+    width: auto;
+}
+
+table.btn td {
+    padding: 8px 20px 9px;
+    {{#if hasOutlineButtons}}
+    color: {{buttonColor}};
+    border: 1px solid {{buttonColor}};
+    border-color: currentColor;
+    background-color: transparent;
+    {{else}}
+    background-color: {{buttonColor}};
+    {{/if}}
+    border-radius: {{buttonBorderRadius}};
+    text-align: center;
+    font-family: -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif;
+}
+
+table.btn a {
+    box-sizing: border-box;
+    {{#if hasOutlineButtons}}
+    color: {{buttonColor}};
+    {{else}}
+    color: {{buttonTextColor}};
+    {{/if}}
+    cursor: pointer;
+    display: inline-block;
+    font-size: 15px;
+    font-weight: 600;
+    margin: 0;
+    text-decoration: none;
+}
+
+table.btn-accent td {
+    {{#if hasOutlineButtons}}
+    color: {{accentColor}};
+    border: 1px solid {{accentColor}};
+    border-color: currentColor;
+    background-color: transparent;
+    {{else}}
+    background-color: {{accentColor}};
+    {{/if}}
+}
+
+table.btn-accent a {
+    {{#if hasOutlineButtons}}
+    color: {{accentColor}};
+    {{else}}
+    color: {{accentContrastColor}};
+    {{/if}}
+}
+
+/* -------------------------------------
+    RESPONSIVE AND MOBILE FRIENDLY STYLES
+------------------------------------- */
 @media only screen and (max-width: 620px) {
     table.body .kg-bookmark-card {
         width: 90vw;
@@ -772,6 +749,10 @@ table.btn-accent a {
 
     table.body .kg-bookmark-metadata span {
         font-size: 13px !important;
+    }
+
+    table.body .kg-embed-card {
+        max-width: 90vw !important;
     }
 
     table.body .kg-cta-card {
@@ -828,8 +809,38 @@ table.btn-accent a {
         width: 52px !important;
         height: 52px !important;
     }
+}
 
-    table.body .kg-embed-card {
-        max-width: 90vw !important;
+/* -------------------------------------
+    PRESERVE THESE STYLES IN THE HEAD
+------------------------------------- */
+@media all {
+    .ExternalClass {
+        width: 100%;
+    }
+    .ExternalClass,
+    .ExternalClass p,
+    .ExternalClass span,
+    .ExternalClass font,
+    .ExternalClass td,
+    .ExternalClass div {
+        line-height: 100%;
+    }
+    .recipient-link a {
+        color: inherit !important;
+        font-family: inherit !important;
+        font-size: inherit !important;
+        font-weight: inherit !important;
+        line-height: inherit !important;
+        text-decoration: none !important;
+    }
+
+    #MessageViewBody a {
+        color: inherit;
+        text-decoration: none;
+        font-size: inherit;
+        font-family: inherit;
+        font-weight: inherit;
+        line-height: inherit;
     }
 }

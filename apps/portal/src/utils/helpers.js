@@ -768,6 +768,23 @@ export const formatNumber = (amount) => {
     return amount.toLocaleString();
 };
 
+export const formatPrice = (amount, locale) => {
+    if (amount === undefined || amount === null) {
+        return '';
+    }
+
+    const normalizedAmount = Number(amount);
+    if (Number.isNaN(normalizedAmount)) {
+        return '';
+    }
+
+    const options = Number.isInteger(normalizedAmount)
+        ? undefined
+        : {minimumFractionDigits: 2, maximumFractionDigits: 2};
+
+    return normalizedAmount.toLocaleString(locale, options);
+};
+
 export const createPopupNotification = ({type, status, autoHide, duration = 2600, closeable, state, message, meta = {}}) => {
     let count = 0;
     if (state && state.popupNotification) {
@@ -986,4 +1003,14 @@ export function isRecentMember({member}) {
     const diffHours = Math.round(diff / (1000 * 60 * 60));
 
     return diffHours < 24;
+}
+
+// Translate cadence to human readable string
+export function translateCadence(cadence) {
+    if (cadence === 'month') {
+        return t('month');
+    } else if (cadence === 'year') {
+        return t('year');
+    }
+    return cadence;
 }

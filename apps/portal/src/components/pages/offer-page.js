@@ -10,6 +10,7 @@ import {interceptAnchorClicks} from '../../utils/links';
 import {sanitizeHtml} from '../../utils/sanitize-html';
 import NewsletterSelectionPage from './newsletter-selection-page';
 import {t} from '../../utils/i18n';
+import {translateCadence} from '../../utils/helpers';
 
 export const OfferPageStyles = () => {
     return `
@@ -492,7 +493,7 @@ export default class OfferPage extends React.Component {
     getOriginalPrice({offer, product}) {
         const price = offer.cadence === 'month' ? product.monthlyPrice : product.yearlyPrice;
         const originalAmount = this.renderRoundedPrice(IsJPYCurrency(price.currency) ? price.amount : (price.amount / 100), price.currency);
-        return `${getCurrencySymbol(price.currency)}${originalAmount}/${offer.cadence}`;
+        return `${getCurrencySymbol(price.currency)}${originalAmount}/${translateCadence(offer.cadence)}`;
     }
 
     renderRoundedPrice(price, currency) {
@@ -521,7 +522,7 @@ export default class OfferPage extends React.Component {
             }),
             firstPeriod: t(`{amount} off for first {period}.`, {
                 amount: this.getOffAmount({offer}),
-                period: offer.cadence
+                period: translateCadence(offer.cadence)
             }),
             firstNMonths: t(`{amount} off for first {number} months.`, {
                 amount: this.getOffAmount({offer}),
