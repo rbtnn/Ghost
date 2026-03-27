@@ -4,6 +4,8 @@ import {WebhookClient} from './webhook-client';
 import {
     buildCheckoutSessionCompletedEvent,
     buildCustomer,
+    buildDiscount,
+    buildDonationCheckoutCompletedEvent,
     buildInvoicePaymentSucceededEvent,
     buildPaymentMethod,
     buildPrice,
@@ -14,7 +16,9 @@ import {
 } from './builders';
 import type {
     RecordedStripeCheckoutSession,
+    StripeCoupon,
     StripeCustomer,
+    StripeDiscount,
     StripePaymentMethod,
     StripePrice,
     StripeProduct,
@@ -47,8 +51,16 @@ export class StripeTestService {
         return this.server.getPrices();
     }
 
+    getCoupons(): StripeCoupon[] {
+        return this.server.getCoupons();
+    }
+
     getCustomers(): StripeCustomer[] {
         return this.server.getCustomers();
+    }
+
+    getSubscriptions(): StripeSubscription[] {
+        return this.server.getSubscriptions();
     }
 
     getCheckoutSessions(): RecordedStripeCheckoutSession[] {
@@ -65,6 +77,28 @@ export class StripeTestService {
         return await this.completeSubscriptionCheckout({
             sessionId: session.response.id,
             name: opts.name
+        });
+    }
+
+    async completeLatestDonationCheckout(opts: {
+        amount?: number;
+        donationMessage?: string;
+        email?: string;
+        name?: string;
+    } = {}): Promise<void> {
+        const session = this.getCheckoutSessions()
+            .filter((item) => {
+                return item.response.mode === 'payment' && item.response.metadata.ghost_donation === 'true';
+            })
+            .at(-1);
+
+        if (!session) {
+            throw new Error('No recorded Stripe checkout session found');
+        }
+
+        await this.completeDonationCheckout({
+            sessionId: session.response.id,
+            ...opts
         });
     }
 
@@ -164,10 +198,14 @@ export class StripeTestService {
 
         const customer = this.resolveCheckoutCustomer(session, opts.name);
         const paymentMethod = buildPaymentMethod({name: opts.name ?? customer.name});
+        const discount = this.resolveCheckoutDiscount(session);
+        const trialDays = session.request.subscription_data?.trial_period_days;
         const subscription = buildSubscription({
             customerId: customer.id,
+            discount,
             price,
-            paymentMethod
+            paymentMethod,
+            trialDays
         });
 
         customer.subscriptions.data.push(subscription);
@@ -182,6 +220,62 @@ export class StripeTestService {
         await this.sendSubscriptionCreatedWebhook(subscription);
 
         return {customer, subscription, price, paymentMethod};
+    }
+
+    private async completeDonationCheckout(opts: {
+        amount?: number;
+        donationMessage?: string;
+        email?: string;
+        name?: string;
+        sessionId: string;
+    }): Promise<void> {
+        const session = this.getCheckoutSessions().find(item => item.response.id === opts.sessionId);
+
+        if (!session) {
+            throw new Error(`No recorded Stripe checkout session found for ${opts.sessionId}`);
+        }
+
+        const priceId = session.request.line_items?.[0]?.price;
+        if (!priceId) {
+            throw new Error(`Checkout session ${opts.sessionId} does not include a one-time price`);
+        }
+
+        const price = this.getPrices().find(item => item.id === priceId);
+        if (!price) {
+            throw new Error(`No recorded Stripe price found for ${priceId}`);
+        }
+
+        const customer = session.response.customer
+            ? this.getCustomers().find(item => item.id === session.response.customer) ?? null
+            : null;
+        const email = opts.email ?? session.response.customer_email ?? customer?.email;
+        const name = opts.name ?? customer?.name ?? 'Test User';
+
+        if (!email) {
+            throw new Error(`Checkout session ${opts.sessionId} does not include a customer email`);
+        }
+
+        const resolvedAmount = opts.amount ?? price.custom_unit_amount?.preset ?? price.unit_amount;
+
+        if (typeof resolvedAmount !== 'number' || !Number.isFinite(resolvedAmount) || resolvedAmount <= 0) {
+            throw new Error(`Checkout session ${opts.sessionId} does not include a valid donation amount`);
+        }
+
+        const donationEvent = buildDonationCheckoutCompletedEvent({
+            amount: resolvedAmount,
+            currency: price.currency,
+            customerId: session.response.customer,
+            customerEmail: email,
+            donationMessage: opts.donationMessage ?? null,
+            metadata: session.response.metadata,
+            name
+        });
+        const donationResponse = await this.webhookClient.sendWebhook(donationEvent);
+        debug('checkout.session.completed donation webhook response: %d', donationResponse.status);
+        if (!donationResponse.ok) {
+            const body = await donationResponse.text();
+            throw new Error(`checkout.session.completed donation webhook failed (${donationResponse.status}): ${body}`);
+        }
     }
 
     private resolveCheckoutCustomer(session: RecordedStripeCheckoutSession, name?: string): StripeCustomer {
@@ -227,5 +321,23 @@ export class StripeTestService {
             const body = await subscriptionResponse.text();
             throw new Error(`customer.subscription.created webhook failed (${subscriptionResponse.status}): ${body}`);
         }
+    }
+
+    private resolveCheckoutDiscount(session: RecordedStripeCheckoutSession): StripeDiscount | null {
+        const couponId = session.request.discounts?.[0]?.coupon;
+
+        if (!couponId) {
+            return null;
+        }
+
+        const coupon = this.getCoupons().find(item => item.id === couponId);
+
+        if (!coupon) {
+            throw new Error(`No recorded Stripe coupon found for ${couponId}`);
+        }
+
+        return buildDiscount({
+            coupon
+        });
     }
 }

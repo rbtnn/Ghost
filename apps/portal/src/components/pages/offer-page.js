@@ -453,7 +453,7 @@ export default class OfferPage extends React.Component {
 
         if (offer.type === 'fixed') {
             return (
-                <h5 className="gh-portal-discount-label">{t('{amount} off', {
+                <h5 className="gh-portal-discount-label" data-testid="offer-discount-label">{t('{amount} off', {
                     amount: `${getCurrencySymbol(offer.currency)}${offer.amount / (IsJPYCurrency(offer.currency) ? 1 : 100)}`
                 })}</h5>
             );
@@ -461,12 +461,12 @@ export default class OfferPage extends React.Component {
 
         if (offer.type === 'trial') {
             return (
-                <h5 className="gh-portal-discount-label">{t('{amount} days free', {amount: offer.amount})}</h5>
+                <h5 className="gh-portal-discount-label" data-testid="offer-discount-label">{t('{amount} days free', {amount: offer.amount})}</h5>
             );
         }
 
         return (
-            <h5 className="gh-portal-discount-label">{t('{amount} off', {amount: offer.amount + '%'})}</h5>
+            <h5 className="gh-portal-discount-label" data-testid="offer-discount-label">{t('{amount} off', {amount: offer.amount + '%'})}</h5>
         );
     }
 
@@ -552,7 +552,7 @@ export default class OfferPage extends React.Component {
         }
         if (discountDuration === 'trial') {
             return (
-                <p className="footnote">{t('Try free for {amount} days, then {originalPrice}.', {
+                <p className="footnote" data-testid="offer-message">{t('Try free for {amount} days, then {originalPrice}.', {
                     amount: offer.amount,
                     originalPrice: originalPrice,
                     interpolation: {escapeValue: false}
@@ -560,7 +560,7 @@ export default class OfferPage extends React.Component {
             );
         }
         return (
-            <p className="footnote">{offerLabel} {useRenewsLabel ? renewsLabel : ''}</p>
+            <p className="footnote" data-testid="offer-message">{offerLabel} {useRenewsLabel ? renewsLabel : ''}</p>
         );
     }
 
@@ -581,7 +581,7 @@ export default class OfferPage extends React.Component {
         if (offer.type === 'trial') {
             return (
                 <div className="gh-portal-product-card-pricecontainer offer-type-trial">
-                    <div className="gh-portal-product-price">
+                    <div className="gh-portal-product-price" data-testid="offer-updated-price">
                         <span className={'currency-sign ' + currencyClass}>{getCurrencySymbol(price.currency)}</span>
                         <span className="amount">{formatNumber(this.renderRoundedPrice(updatedPrice, price.currency))}</span>
                     </div>
@@ -590,7 +590,7 @@ export default class OfferPage extends React.Component {
         }
         return (
             <div className="gh-portal-product-card-pricecontainer">
-                <div className="gh-portal-product-price rbtnn_modified_005">
+                <div className="gh-portal-product-price" data-testid="offer-updated-price">
                     <span className={'currency-sign ' + currencyClass}>{getCurrencySymbol(price.currency)}</span>
                     <span className="amount updatedPrice">{formatNumber(this.renderRoundedPrice(updatedPrice, price.currency))}</span>
                 </div>
@@ -665,7 +665,7 @@ export default class OfferPage extends React.Component {
 
                     <div className="gh-portal-offer-bar">
                         <div className="gh-portal-offer-title">
-                            {(offer.display_title ? <h4>{offer.display_title}</h4> : <h4 className='placeholder'>{t('Black Friday')}</h4>)}
+                            {(offer.display_title ? <h4 data-testid="offer-title">{offer.display_title}</h4> : <h4 className='placeholder' data-testid="offer-title">{t('Black Friday')}</h4>)}
                             {this.renderOfferTag()}
                         </div>
                         {(offer.display_description ? <p>{offer.display_description}</p> : '')}

@@ -10,6 +10,7 @@ export {
     buildPaymentMethod,
     buildCheckoutSession,
     buildCheckoutSessionCompletedEvent,
+    buildDonationCheckoutCompletedEvent,
     buildSubscriptionCreatedEvent,
     buildSubscriptionUpdatedEvent,
     buildSubscriptionDeletedEvent,
@@ -17,8 +18,10 @@ export {
 } from './builders';
 export type {
     RecordedStripeCheckoutSession,
+    StripeCoupon,
     StripeProduct,
     StripeCustomer,
+    StripeDiscount,
     StripeSubscription,
     StripePrice,
     StripePaymentMethod,

@@ -12,13 +12,36 @@ function generateId(prefix: string): string {
 
 type StripeList<T> = Pick<Stripe.ApiList<T>, 'data' | 'object'>;
 type StripePriceInterval = NonNullable<Stripe.Price['recurring']>['interval'];
+type StripeCustomUnitAmount = {
+    enabled: boolean;
+    preset: number | null;
+};
+
+function addMonthsToTimestamp(start: number, months: number): number {
+    const date = new Date(start * 1000);
+    date.setUTCMonth(date.getUTCMonth() + months);
+    return Math.floor(date.getTime() / 1000);
+}
 
 export type StripeProduct = Pick<Stripe.Product, 'active' | 'id' | 'name' | 'object'>;
 
-export type StripePrice = Omit<Pick<Stripe.Price, 'active' | 'currency' | 'id' | 'nickname' | 'object' | 'product' | 'recurring' | 'type' | 'unit_amount'>, 'product' | 'recurring' | 'unit_amount'> & {
+export type StripePrice = Omit<Pick<Stripe.Price, 'active' | 'currency' | 'id' | 'nickname' | 'object' | 'product' | 'recurring' | 'type' | 'unit_amount'>, 'product' | 'recurring'> & {
+    custom_unit_amount: StripeCustomUnitAmount | null;
     product: string;
     recurring: {interval: StripePriceInterval} | null;
-    unit_amount: NonNullable<Stripe.Price['unit_amount']>;
+};
+
+export type StripeCoupon = Omit<Pick<Stripe.Coupon, 'amount_off' | 'currency' | 'duration' | 'duration_in_months' | 'id' | 'name' | 'object' | 'percent_off'>, 'amount_off' | 'currency' | 'duration_in_months' | 'name' | 'percent_off'> & {
+    amount_off: number | null;
+    currency: string | null;
+    duration_in_months: number | null;
+    name: string | null;
+    percent_off: number | null;
+};
+
+export type StripeDiscount = Omit<Pick<Stripe.Discount, 'coupon' | 'end' | 'id' | 'object' | 'start'>, 'coupon' | 'end'> & {
+    coupon: StripeCoupon;
+    end: number | null;
 };
 
 export type StripePaymentMethod = Omit<Pick<Stripe.PaymentMethod, 'billing_details' | 'card' | 'id' | 'object' | 'type'>, 'billing_details' | 'card' | 'type'> & {
@@ -28,13 +51,17 @@ export type StripePaymentMethod = Omit<Pick<Stripe.PaymentMethod, 'billing_detai
 };
 
 type StripeSubscriptionItem = Omit<Pick<Stripe.SubscriptionItem, 'price'>, 'price'> & {
+    id: string;
+    object: 'subscription_item';
     price: StripePrice;
 };
 
-export type StripeSubscription = Omit<Pick<Stripe.Subscription, 'cancel_at_period_end' | 'canceled_at' | 'current_period_end' | 'customer' | 'default_payment_method' | 'id' | 'items' | 'object' | 'start_date' | 'status'>, 'customer' | 'default_payment_method' | 'items'> & {
+export type StripeSubscription = Omit<Pick<Stripe.Subscription, 'cancel_at_period_end' | 'canceled_at' | 'current_period_end' | 'customer' | 'default_payment_method' | 'discount' | 'id' | 'items' | 'metadata' | 'object' | 'start_date' | 'status' | 'trial_end' | 'trial_start'>, 'customer' | 'default_payment_method' | 'discount' | 'items' | 'metadata'> & {
     customer: string;
     default_payment_method: string | null;
+    discount: StripeDiscount | null;
     items: StripeList<StripeSubscriptionItem>;
+    metadata: Stripe.Metadata;
 };
 
 export type StripeCustomer = Omit<Pick<Stripe.Customer, 'email' | 'id' | 'name' | 'object'>, 'email' | 'name'> & {
@@ -58,6 +85,7 @@ export type StripeCheckoutSessionResponse = Omit<Pick<Stripe.Checkout.Session, '
 };
 
 export interface StripeCheckoutSessionRequest {
+    discounts?: Array<{coupon: string}>;
     line_items?: Array<{price: string; quantity: number}>;
     subscription_data?: {
         items: Array<{plan: string}>;
@@ -65,6 +93,20 @@ export interface StripeCheckoutSessionRequest {
         trial_from_plan?: boolean;
         trial_period_days?: number;
     };
+    custom_fields?: Array<{
+        key: string;
+        label?: {custom: string};
+        optional?: boolean;
+        text?: {value: string};
+        type: 'text';
+    }>;
+    invoice_creation?: {
+        enabled: boolean;
+        invoice_data?: {
+            metadata: Record<string, string>;
+        };
+    };
+    submit_type?: 'auto' | 'book' | 'donate' | 'pay' | 'send';
 }
 
 export interface RecordedStripeCheckoutSession {
@@ -93,12 +135,47 @@ export function buildPrice(overrides: Partial<StripePrice> = {}): StripePrice {
         object: 'price',
         unit_amount: 500,
         currency: 'usd',
+        custom_unit_amount: null,
         recurring: {interval: 'month'},
         product: generateId('prod'),
         type: 'recurring',
         active: true,
         nickname: null,
         ...overrides
+    };
+}
+
+export function buildCoupon(overrides: Partial<StripeCoupon> = {}): StripeCoupon {
+    return {
+        id: generateId('coupon'),
+        object: 'coupon',
+        amount_off: null,
+        currency: null,
+        duration: 'once',
+        duration_in_months: null,
+        name: 'Test Coupon',
+        percent_off: 10,
+        ...overrides
+    };
+}
+
+export function buildDiscount(opts: {
+    coupon: StripeCoupon;
+    start?: number;
+}): StripeDiscount {
+    const start = opts.start ?? Math.floor(Date.now() / 1000);
+    let end: number | null = null;
+
+    if (opts.coupon.duration === 'repeating' && typeof opts.coupon.duration_in_months === 'number' && opts.coupon.duration_in_months > 0) {
+        end = addMonthsToTimestamp(start, opts.coupon.duration_in_months);
+    }
+
+    return {
+        id: generateId('di'),
+        object: 'discount',
+        coupon: opts.coupon,
+        start,
+        end
     };
 }
 
@@ -136,29 +213,47 @@ export function buildCustomer(opts: {id?: string; email: string; name: string}):
 export function buildSubscription(opts: {
     id?: string;
     customerId: string;
+    discount?: StripeDiscount | null;
+    itemId?: string;
     paymentMethod?: StripePaymentMethod | null;
     price?: StripePrice;
     priceId?: string;
     productId?: string;
     status?: Stripe.Subscription.Status;
+    trialDays?: number;
 }): StripeSubscription {
     const price = opts.price ?? buildPrice({
         id: opts.priceId,
         product: opts.productId ?? generateId('prod')
     });
+    const startDate = Math.floor(Date.now() / 1000);
+    const trialDays = typeof opts.trialDays === 'number' && opts.trialDays > 0 ? opts.trialDays : null;
+    const status = opts.status ?? (trialDays ? 'trialing' : 'active');
+    const trialEnd = trialDays ? startDate + (60 * 60 * 24 * trialDays) : null;
+    const currentPeriodEnd = trialDays && status === 'trialing' && trialEnd
+        ? trialEnd
+        : startDate + (60 * 60 * 24 * 31);
 
     return {
         id: opts.id ?? generateId('sub'),
         object: 'subscription',
-        status: opts.status ?? 'active',
+        status,
         cancel_at_period_end: false,
         canceled_at: null,
-        current_period_end: Math.floor(Date.now() / 1000) + (60 * 60 * 24 * 31),
-        start_date: Math.floor(Date.now() / 1000),
+        current_period_end: currentPeriodEnd,
+        start_date: startDate,
+        trial_start: trialDays ? startDate : null,
+        trial_end: trialEnd,
+        discount: opts.discount ?? null,
+        metadata: {},
         default_payment_method: opts.paymentMethod?.id ?? null,
         items: {
             object: 'list',
-            data: [{price}]
+            data: [{
+                id: opts.itemId ?? generateId('si'),
+                object: 'subscription_item',
+                price
+            }]
         },
         customer: opts.customerId
     };
@@ -180,6 +275,45 @@ export function buildCheckoutSessionCompletedEvent(opts: {
                     checkoutType: 'signup',
                     ...(opts.metadata ?? {})
                 }
+            }
+        }
+    };
+}
+
+export function buildDonationCheckoutCompletedEvent(opts: {
+    amount: number;
+    currency: string;
+    customerEmail: string;
+    customerId?: string | null;
+    donationMessage?: string | null;
+    metadata?: Record<string, string>;
+    name: string;
+}): StripeEvent {
+    return {
+        id: generateId('evt'),
+        object: 'event',
+        type: 'checkout.session.completed',
+        data: {
+            object: {
+                object: 'checkout.session',
+                mode: 'payment',
+                amount_total: opts.amount,
+                currency: opts.currency,
+                customer: opts.customerId ?? null,
+                customer_details: {
+                    email: opts.customerEmail,
+                    name: opts.name
+                },
+                metadata: {
+                    ...(opts.metadata ?? {}),
+                    ghost_donation: 'true'
+                },
+                custom_fields: opts.donationMessage ? [{
+                    key: 'donation_message',
+                    text: {
+                        value: opts.donationMessage
+                    }
+                }] : []
             }
         }
     };

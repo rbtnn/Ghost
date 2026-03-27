@@ -1,3 +1,4 @@
+import ManageViewPopover from './manage-view-popover';
 import React, {useCallback, useMemo} from 'react';
 import {Filter, Filters, LucideIcon} from '@tryghost/shade';
 import {
@@ -8,16 +9,19 @@ import {
 } from '../use-member-filter-fields';
 import {getSettingValue, useBrowseSettings} from '@tryghost/admin-x-framework/api/settings';
 import {getSiteTimezone} from '@src/utils/get-site-timezone';
-import {useBrowseConfig} from '@tryghost/admin-x-framework/api/config';
 import {useBrowseLabels} from '@tryghost/admin-x-framework/api/labels';
 import {useBrowseNewsletters} from '@tryghost/admin-x-framework/api/newsletters';
 import {useBrowseOffers} from '@tryghost/admin-x-framework/api/offers';
 import {useBrowseTiers} from '@tryghost/admin-x-framework/api/tiers';
 import {useResourceSearch} from '../hooks/use-resource-search';
+import type {MemberView} from '../hooks/use-member-views';
 
 interface MembersFiltersProps {
     filters: Filter[];
+    nql?: string;
     onFiltersChange: (filters: Filter[]) => void;
+    savedViews?: MemberView[];
+    activeView?: MemberView | null;
 }
 
 const EMPTY_OFFERS: typeof buildOfferOptions extends (offers: infer T) => unknown ? T : never = [];
@@ -40,22 +44,23 @@ function mapOfferRedemptionFilters(
 
 const MembersFilters: React.FC<MembersFiltersProps> = ({
     filters,
-    onFiltersChange
+    nql,
+    onFiltersChange,
+    savedViews = [],
+    activeView
 }) => {
     const {data: labelsData} = useBrowseLabels({searchParams: {limit: '100'}});
     const {data: tiersData} = useBrowseTiers({searchParams: {limit: '100'}});
     const {data: offersData} = useBrowseOffers({});
     const {data: newslettersData} = useBrowseNewsletters({searchParams: {limit: '100'}});
     const {data: settingsData} = useBrowseSettings({});
-    const {data: configData} = useBrowseConfig({});
 
     const settings = settingsData?.settings || [];
     const paidMembersEnabled = getSettingValue<boolean>(settings, 'paid_members_enabled') === true;
-    const emailAnalyticsEnabled = configData?.config?.emailAnalytics === true;
+    const emailFiltersEnabled = getSettingValue<string>(settings, 'editor_default_email_recipients') !== 'disabled';
     const membersTrackSources = getSettingValue<boolean>(settings, 'members_track_sources') === true;
     const emailTrackOpens = getSettingValue<boolean>(settings, 'email_track_opens') === true;
     const emailTrackClicks = getSettingValue<boolean>(settings, 'email_track_clicks') === true;
-    const audienceFeedbackEnabled = configData?.config?.labs?.audienceFeedback === true;
     const siteTimezone = getSiteTimezone(settings);
 
     const labels = labelsData?.labels || [];
@@ -94,7 +99,7 @@ const MembersFilters: React.FC<MembersFiltersProps> = ({
         hydratedNewsletterSlugs,
         hasMultipleTiers,
         paidMembersEnabled,
-        emailAnalyticsEnabled,
+        emailFiltersEnabled,
         labelsOptions: labels.map(label => ({value: label.slug, label: label.name})),
         tiersOptions: activePaidTiers.map(tier => ({value: tier.id, label: tier.name})),
         offers,
@@ -109,27 +114,45 @@ const MembersFilters: React.FC<MembersFiltersProps> = ({
         membersTrackSources,
         emailTrackOpens,
         emailTrackClicks,
-        audienceFeedbackEnabled,
         siteTimezone
     });
 
     const hasFilters = filters.length > 0;
+    const clearAndSaveButtons = hasFilters ? (
+        <div className="flex shrink-0 items-center gap-2 sm:absolute sm:top-0 sm:right-0">
+            <button
+                className="flex items-center gap-1 text-sm font-normal text-muted-foreground hover:text-foreground"
+                type="button"
+                onClick={() => onFiltersChange([])}
+            >
+                <LucideIcon.X className="size-4" />
+                Clear
+            </button>
+            {nql && (
+                <ManageViewPopover
+                    activeView={activeView}
+                    existingViews={savedViews}
+                    filter={nql}
+                    onDeleted={() => onFiltersChange([])}
+                />
+            )}
+        </div>
+    ) : undefined;
 
     return (
         <Filters
             addButtonIcon={hasFilters ? <LucideIcon.FunnelPlus /> : <LucideIcon.Funnel />}
             addButtonText={hasFilters ? 'Add filter' : 'Filter'}
             allowMultiple={true}
-            className={`[&>button]:order-last ${hasFilters ? '[&>button]:border-none' : 'w-auto'}`}
-            clearButtonClassName="font-normal text-muted-foreground"
-            clearButtonIcon={<LucideIcon.X />}
-            clearButtonText="Clear"
+            className={`[&>button]:order-last ${hasFilters ? 'sm:!pr-40 [&>button]:border-none' : 'w-auto'}`}
+            clearButton={clearAndSaveButtons}
             fields={filterFields}
             filters={displayFilters}
             keyboardShortcut="f"
-            popoverAlign={hasFilters ? 'start' : 'end'}
+            popoverAlign={'start'}
+            popoverContentClassName='w-[280px] translate-x-[-32px] [&_[data-slot=command-list]]:max-h-[450px]'
             showClearButton={hasFilters}
-            showSearchInput={false}
+            showSearchInput={true}
             onChange={handleFiltersChange}
         />
     );
