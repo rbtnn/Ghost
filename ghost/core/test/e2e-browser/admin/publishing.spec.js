@@ -201,74 +201,7 @@ const openPublishedPostBookmark = async (page) => {
 };
 
 test.describe('Publishing', () => {
-    test.describe('Publish post', () => {
-        // Post should be available on web and sent as a newsletter
-        test('Publish and Email', async ({sharedPage}) => {
-            const postData = {
-                title: 'Publish and email post',
-                body: 'This is my post body.'
-            };
-
-            // Create a member to send and email to
-            await createMember(sharedPage, {email: 'test+recipient1@example.com', name: 'Publishing member'});
-
-            await sharedPage.goto('/ghost');
-            await createPostDraft(sharedPage, postData);
-            await publishPost(sharedPage, {type: 'publish+send'});
-            await checkPostPublished(sharedPage, postData);
-        });
-
-        // Post should only be available on web
-        test('Publish only', async ({sharedPage}) => {
-            const postData = {
-                title: 'Publish post only',
-                body: 'This is my post body.'
-            };
-
-            await sharedPage.goto('/ghost');
-            await createPostDraft(sharedPage, postData);
-            await publishPost(sharedPage);
-            await closePublishFlow(sharedPage);
-
-            await checkPostStatus(sharedPage, 'Published');
-            await checkPostPublished(sharedPage, postData);
-        });
-
-        // Post should be available on web and sent as a newsletter
-        test('Email only', async ({sharedPage}) => {
-            const postData = {
-                title: 'Email only post',
-                body: 'This is my post body.'
-            };
-
-            await createMember(sharedPage, {email: 'test+recipient2@example.com', name: 'Publishing member'});
-
-            await sharedPage.goto('/ghost');
-            await createPostDraft(sharedPage, postData);
-            await publishPost(sharedPage, {type: 'send'});
-            await checkPostNotPublished(sharedPage, postData);
-        });
-    });
-
     test.describe('Publish page', () => {
-        // A page can be published and become visible on web
-        test('Immediately', async ({sharedPage}) => {
-            const pageData = {
-                // Title should be unique to avoid slug duplicates
-                title: 'Published page test',
-                body: 'This is my scheduled page body.'
-            };
-
-            await sharedPage.goto('/ghost');
-            await createPage(sharedPage, pageData);
-            await publishPost(sharedPage, {type: null});
-            await closePublishFlow(sharedPage);
-            await checkPostStatus(sharedPage, 'Published');
-
-            // Check published
-            await checkPostPublished(sharedPage, pageData);
-        });
-
         // page should be published at the scheduled time
         test('At the scheduled time', async ({sharedPage}) => {
             const pageData = {
@@ -292,75 +225,6 @@ test.describe('Publishing', () => {
 
             // Check again, now it should have been added to the page
             await checkPostPublished(sharedPage, pageData);
-        });
-    });
-
-    test.describe('Lexical Rendering', () => {
-        test.describe.configure({retries: 1});
-
-        test('Renders Lexical editor', async ({sharedPage: adminPage}) => {
-            await adminPage.goto('/ghost');
-
-            await createPostDraft(adminPage, {title: 'Lexical editor test', body: 'This is my post body.'});
-
-            // Check if the lexical editor is present
-            expect(await adminPage.locator('[data-kg="editor"]').first()).toBeVisible();
-        });
-
-        test('Renders secondary hidden lexical editor', async ({sharedPage: adminPage}) => {
-            await adminPage.goto('/ghost');
-            await createPostDraft(adminPage, {title: 'Secondary lexical editor test', body: 'This is my post body.'});
-            const secondaryLexicalEditor = adminPage.locator('[data-secondary-instance="true"]');
-            // Check if the secondary lexical editor exists
-            await expect(secondaryLexicalEditor).toHaveCount(1);
-            // Check if it is hidden
-            await expect(secondaryLexicalEditor).toBeHidden();
-        });
-    });
-
-    test.describe('Update post', () => {
-        test.describe.configure({retries: 1});
-
-        test('Can update a published post', async ({sharedPage: adminPage}) => {
-            await adminPage.goto('/ghost');
-
-            const date = DateTime.now();
-
-            await createPostDraft(adminPage, {title: 'Testing publish update', body: 'This is the initial published text.'});
-            const editorUrl = await adminPage.url();
-            await publishPost(adminPage);
-            const frontendPage = await openPublishedPostBookmark(adminPage);
-            await closePublishFlow(adminPage);
-            const publishedBody = frontendPage.locator('main > article > section > p');
-            const publishedHeader = frontendPage.locator('main > article > header');
-
-            // check front-end post has the initial body text
-            await expect(publishedBody).toContainText('This is the initial published text.');
-            await expect(publishedHeader).toContainText(date.toFormat('LLL d, yyyy'));
-
-            // add some extra text to the post
-            await adminPage.goto(editorUrl);
-            await adminPage.locator('[data-kg="editor"]').first().click();
-            await adminPage.waitForTimeout(500);
-            await adminPage.keyboard.type(' This is some updated text.');
-
-            // change some post settings
-            await openPostSettingsMenu(adminPage);
-            await adminPage.fill('[data-test-date-time-picker-date-input]', '2022-01-07');
-            await adminPage.fill('[data-test-field="custom-excerpt"]', 'Short description and meta');
-
-            // save
-            const saveButton = await adminPage.locator('[data-test-button="publish-save"]').first();
-            await expect(saveButton).toHaveText('Update');
-            await saveButton.click();
-            await expect(saveButton).toHaveText('Updated');
-
-            // check front-end has new text after reloading
-            await frontendPage.reload();
-            await expect(publishedBody).toContainText('This is some updated text.');
-            await expect(publishedHeader).toContainText('Jan 7, 2022');
-            const metaDescription = frontendPage.locator('meta[name="description"]');
-            await expect(metaDescription).toHaveAttribute('content', 'Short description and meta');
         });
     });
 
@@ -457,43 +321,6 @@ test.describe('Publishing', () => {
 
             // Stil not published yet (email only)
             await checkPostNotPublished(sharedPage, postData);
-        });
-
-        // A previously scheduled post can be unscheduled, which resets it to a draft
-        test('A scheduled post should be able to be unscheduled', async ({sharedPage, context}) => {
-            const postData = {
-                title: 'Unschedule post test',
-                body: 'This is my unscheduled post body.'
-            };
-
-            await sharedPage.goto('/ghost');
-            await createPostDraft(sharedPage, postData);
-
-            const editorUrl = await sharedPage.url();
-
-            // Schedule far in the future
-            await publishPost(sharedPage, {date: '2050-01-01', time: '10:09'});
-            await closePublishFlow(sharedPage);
-
-            // Check status
-            await checkPostStatus(sharedPage, 'Scheduled', 'Scheduled to be published at 10:09 (UTC) on 01 Jan 2050');
-
-            // Check not published
-            const testsharedPage = await context.newPage();
-
-            // Check not published
-            await checkPostNotPublished(testsharedPage, postData);
-
-            // Now unschedule this post
-            await sharedPage.goto(editorUrl);
-            await sharedPage.locator('[data-test-button="update-flow"]').first().click();
-            await sharedPage.locator('[data-test-button="revert-to-draft"]').click();
-
-            // Check status
-            await checkPostStatus(sharedPage, 'Draft - Saved');
-
-            // Check not published
-            await checkPostNotPublished(testsharedPage, postData);
         });
     });
 });
@@ -680,38 +507,4 @@ test.describe('Updating post access', () => {
     });
 });
 
-test.describe('Deleting a post', () => {
-    test('Delete a saved post', async ({page}) => {
-        await page.goto('/ghost');
-
-        await createPostDraft(page, {title: 'Delete a post test', body: 'This is the content'});
-
-        await expect(page.locator('[data-test-editor-post-status]')).toContainText('Draft - Saved');
-
-        await openPostSettingsMenu(page);
-
-        await page.locator('[data-test-button="delete-post"]').click();
-
-        await page.locator('[data-test-button="delete-post-confirm"]').click();
-
-        await expect(
-            page.locator('[data-test-screen-title]')
-        ).toContainText('Posts');
-    });
-
-    test('Delete a post with unsaved changes', async ({page}) => {
-        await page.goto('/ghost');
-
-        await createPostDraft(page, {title: 'Delete a post test', body: 'This is the content'});
-
-        await openPostSettingsMenu(page);
-
-        await page.locator('[data-test-button="delete-post"]').click();
-
-        await page.locator('[data-test-button="delete-post-confirm"]').click();
-
-        await expect(
-            page.locator('[data-test-screen-title]')
-        ).toContainText('Posts');
-    });
-});
+// Delete post tests moved to e2e/tests/admin/posts/publishing.test.ts
