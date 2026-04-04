@@ -122,7 +122,7 @@ export const DEFAULT_I18N: FilterI18nConfig = {
     selectedCount: 'selected',
     percent: '%',
     defaultCurrency: '$',
-    defaultColor: '#000000',
+    defaultColor: 'currentColor',
     addFilterTitle: '',
 
     // Operators
@@ -221,8 +221,8 @@ const SEARCH_RESET_DELAY_MS = 200;
 const filterInputVariants = cva(
     [
         'relative flex shrink-0 items-center text-foreground outline-hidden transition',
-        'has-[[data-slot=filters-input]:focus-visible]:ring-ring/30',
-        'has-[[data-slot=filters-input]:focus-visible]:border-ring',
+        'has-[[data-slot=filters-input]:focus-visible]:ring-focus-ring/30',
+        'has-[[data-slot=filters-input]:focus-visible]:border-focus-ring',
         'has-[[data-slot=filters-input]:focus-visible]:outline-hidden',
         'has-[[data-slot=filters-input]:focus-visible]:ring-[3px]',
         'has-[[data-slot=filters-input]:focus-visible]:z-1',
@@ -241,7 +241,7 @@ const filterInputVariants = cva(
             },
             size: {
                 lg: 'h-10 px-2.5 text-sm has-[[data-slot=filters-prefix]]:ps-0 has-[[data-slot=filters-suffix]]:pe-0',
-                md: 'h-[34px] px-2 text-sm has-[[data-slot=filters-prefix]]:ps-0 has-[[data-slot=filters-suffix]]:pe-0',
+                md: 'h-(--control-height) px-2 text-sm has-[[data-slot=filters-prefix]]:ps-0 has-[[data-slot=filters-suffix]]:pe-0',
                 sm: 'h-8 px-2 text-xs has-[[data-slot=filters-prefix]]:ps-0 has-[[data-slot=filters-suffix]]:pe-0'
             },
             cursorPointer: {
@@ -261,7 +261,7 @@ const filterInputVariants = cva(
 const filterRemoveButtonVariants = cva(
     [
         'inline-flex shrink-0 items-center justify-center text-muted-foreground transition hover:text-foreground',
-        'focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-hidden'
+        'focus-visible:ring-1 focus-visible:ring-focus-ring focus-visible:outline-hidden'
     ],
     {
         variants: {
@@ -271,7 +271,7 @@ const filterRemoveButtonVariants = cva(
             },
             size: {
                 lg: 'size-10 [&_svg:not([class*=size-])]:size-4',
-                md: 'size-[34px] [&_svg:not([class*=size-])]:size-3.5',
+                md: 'size-(--control-height) [&_svg:not([class*=size-])]:size-3.5',
                 sm: 'size-8 [&_svg:not([class*=size-])]:size-3'
             },
             cursorPointer: {
@@ -296,7 +296,7 @@ const filterAddButtonVariants = cva(
     [
         'inline-flex shrink-0 items-center justify-center text-foreground transition',
         '[&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 [&_svg]:stroke-[1.5px]',
-        'focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-hidden'
+        'focus-visible:ring-1 focus-visible:ring-focus-ring focus-visible:outline-hidden'
     ],
     {
         variants: {
@@ -306,7 +306,7 @@ const filterAddButtonVariants = cva(
             },
             size: {
                 lg: 'h-10 gap-1.5 px-4 text-sm [&_svg:not([class*=size-])]:size-4',
-                md: 'h-[34px] gap-1.5 px-3 text-sm [&_svg:not([class*=size-])]:size-4',
+                md: 'h-(--control-height) gap-1.5 px-3 text-sm [&_svg:not([class*=size-])]:size-4',
                 sm: 'h-8 gap-1.5 px-2.5 text-xs [&_svg:not([class*=size-])]:size-3.5'
             },
             radius: {
@@ -329,7 +329,7 @@ const filterAddButtonVariants = cva(
 const filterOperatorVariants = cva(
     [
         'relative flex shrink-0 items-center whitespace-nowrap text-muted-foreground transition hover:text-foreground focus-visible:z-1 data-[state=open]:text-foreground',
-        'focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-hidden'
+        'focus-visible:ring-1 focus-visible:ring-focus-ring focus-visible:outline-hidden'
     ],
     {
         variants: {
@@ -339,7 +339,7 @@ const filterOperatorVariants = cva(
             },
             size: {
                 lg: 'h-10 gap-1.5 px-4 text-sm',
-                md: 'h-[34px] gap-0.5 px-3 text-sm',
+                md: 'h-(--control-height) gap-0.5 px-3 text-sm',
                 sm: 'h-8 gap-1 px-2.5 text-xs'
             },
             cursorPointer: {
@@ -368,7 +368,7 @@ const filterFieldLabelVariants = cva(
             },
             size: {
                 lg: 'h-10 gap-1.5 px-4 text-sm [&_svg:not([class*=size-])]:size-4',
-                md: 'h-[34px] gap-1.5 px-3 text-sm [&_svg:not([class*=size-])]:size-4',
+                md: 'h-(--control-height) gap-1.5 px-3 text-sm [&_svg:not([class*=size-])]:size-4',
                 sm: 'h-8 gap-0.5 px-2.5 text-xs [&_svg:not([class*=size-])]:size-3.5'
             },
             radius: {
@@ -386,7 +386,7 @@ const filterFieldLabelVariants = cva(
 const filterFieldValueVariants = cva(
     [
         'relative flex min-w-0 shrink items-center gap-1 text-foreground transition focus-visible:z-1',
-        'focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-hidden'
+        'focus-visible:ring-1 focus-visible:ring-focus-ring focus-visible:outline-hidden'
     ],
     {
         variants: {
@@ -396,7 +396,7 @@ const filterFieldValueVariants = cva(
             },
             size: {
                 lg: 'h-10 gap-1.5 px-4 text-sm [&_svg:not([class*=size-])]:size-4',
-                md: 'h-[34px] gap-1.5 px-3 text-sm [&_svg:not([class*=size-])]:size-4',
+                md: 'h-(--control-height) gap-1.5 px-3 text-sm [&_svg:not([class*=size-])]:size-4',
                 sm: 'h-8 gap-0.5 px-2.5 text-xs [&_svg:not([class*=size-])]:size-3.5'
             },
             cursorPointer: {
@@ -420,7 +420,7 @@ const filterFieldAddonVariants = cva('flex shrink-0 items-center justify-center 
         },
         size: {
             lg: 'h-10 px-4 text-sm',
-            md: 'h-[34px] px-3 text-sm',
+            md: 'h-(--control-height) px-3 text-sm',
             sm: 'h-8 px-2.5 text-xs'
         }
     },
@@ -438,7 +438,7 @@ const filterFieldBetweenVariants = cva('flex shrink-0 items-center text-muted-fo
         },
         size: {
             lg: 'h-10 px-4 text-sm',
-            md: 'h-[34px] px-3 text-sm',
+            md: 'h-(--control-height) px-3 text-sm',
             sm: 'h-8 px-2.5 text-xs'
         }
     },
@@ -605,8 +605,12 @@ function FilterInput<T = unknown>({
                 <input
                     aria-describedby={!isValid && validationMessage ? `${field?.key || 'input'}-error` : undefined}
                     aria-invalid={!isValid}
-                    className="w-full outline-hidden"
+                    autoComplete="off"
+                    className="w-full bg-transparent outline-hidden dark:!bg-transparent"
+                    data-form-type="other"
+                    data-lpignore="true"
                     data-slot="filters-input"
+                    data-1p-ignore
                     onBlur={handleBlur}
                     onChange={handleChange}
                     onKeyDown={handleKeyDown}
@@ -980,7 +984,7 @@ function FilterOperatorDropdown<T = unknown>({field, operator, values, onChange}
     // If hideOperatorSelect is true, just render the operator as plain text
     if (field.hideOperatorSelect) {
         return (
-            <div className="flex items-center self-stretch border border-r-[0px] px-3 text-sm whitespace-nowrap text-muted-foreground">
+            <div className="flex items-center self-stretch border border-r-0 px-3 text-sm whitespace-nowrap text-muted-foreground">
                 {operatorLabel}
             </div>
         );
@@ -1282,7 +1286,7 @@ function ResolvedSelectOptionsPopover<T = unknown>({
             <div className="w-full">
                 <Command shouldFilter={shouldClientFilter}>
                     <SelectOptionsSearchInput
-                        className="h-8.5 pr-8 text-sm"
+                        className="h-(--control-height) pr-8 text-sm"
                         isSearching={isSearching}
                         label={field.label}
                         searchable={field.searchable !== false}
@@ -1357,7 +1361,7 @@ function ResolvedSelectOptionsPopover<T = unknown>({
                     variant: context.variant,
                     size: context.size,
                     cursorPointer: context.cursorPointer
-                }), field.triggerClassName ?? 'max-w-[240px]')}
+                }), field.triggerClassName ?? 'max-w-60')}
             >
                 <div className="flex min-w-0 items-center gap-1.5">
                     {field.customValueRenderer ? (
@@ -1389,7 +1393,7 @@ function ResolvedSelectOptionsPopover<T = unknown>({
             >
                 <Command shouldFilter={shouldClientFilter}>
                     <SelectOptionsSearchInput
-                        className="h-[34px] pr-8 text-sm"
+                        className="h-(--control-height) pr-8 text-sm"
                         isSearching={isSearching}
                         label={field.label}
                         searchable={field.searchable !== false}
@@ -1882,7 +1886,7 @@ function FilterValueSelector<T = unknown>({field, values, onChange, operator}: F
                 <Command>
                     {field.searchable !== false && (
                         <CommandInput
-                            className="h-[34px] text-sm"
+                            className="h-(--control-height) text-sm"
                             placeholder={context.i18n.placeholders.searchField(field.label || '')}
                             value={searchInput}
                             onValueChange={setSearchInput}
@@ -2214,51 +2218,56 @@ export function Filters<T = unknown>({
         [filters, onChange]
     );
 
+    const closeFilterPopover = useCallback(() => {
+        setAddFilterOpen(false);
+        setSelectedFieldKeyForOptions(null);
+        setTempSelectedValues([]);
+    }, []);
+
     const addFilter = useCallback(
         (fieldKey: string) => {
             const field = fieldsMap[fieldKey];
-            if (field && field.key) {
-                // For select and multiselect types, show options directly
-                if (field.type === 'select' || field.type === 'multiselect') {
-                    setSelectedFieldKeyForOptions(field.key!);
-                    // For multiselect, check if there's already a filter and use its values
-                    const existingFilter = filters.find(f => f.field === fieldKey);
-                    const initialValues = field.type === 'multiselect' && existingFilter ? existingFilter.values : [];
-                    setTempSelectedValues(initialValues);
-                    return;
-                }
-
-                // For other types, add filter directly
-                const defaultOperator =
-            field.defaultOperator ||
-                (field.type === 'daterange'
-                    ? 'between'
-                    : field.type === 'numberrange'
-                        ? 'between'
-                        : field.type === 'boolean'
-                            ? 'is'
-                            : 'is');
-                let defaultValues: unknown[] = [];
-
-                if (field.defaultValue !== undefined) {
-                    defaultValues = [field.defaultValue] as unknown[];
-                } else if (['text', 'number', 'date', 'email', 'url', 'tel', 'time', 'datetime'].includes(field.type || '')) {
-                    defaultValues = [''] as unknown[];
-                } else if (field.type === 'daterange') {
-                    defaultValues = ['', ''] as unknown[];
-                } else if (field.type === 'numberrange') {
-                    defaultValues = [field.min || 0, field.max || 100] as unknown[];
-                } else if (field.type === 'boolean') {
-                    defaultValues = [false] as unknown[];
-                }
-
-                const newFilter = createFilter<T>(fieldKey, defaultOperator, defaultValues as T[]);
-                const newFilters = [...filters, newFilter];
-                onChange(newFilters);
-                setAddFilterOpen(false);
+            if (!field?.key) {
+                return;
             }
+
+            // For select and multiselect types, show the options popover
+            if (field.type === 'select' || field.type === 'multiselect') {
+                setSelectedFieldKeyForOptions(field.key);
+
+                // When editing an existing filter (single-filter mode), pre-populate with its values
+                if (!allowMultiple && field.type === 'multiselect') {
+                    const existingFilter = filters.find(f => f.field === fieldKey);
+                    setTempSelectedValues(existingFilter ? existingFilter.values : []);
+                } else {
+                    setTempSelectedValues([]);
+                }
+
+                return;
+            }
+
+            // For other types, add filter directly
+            const defaultOperator = field.defaultOperator ||
+                (field.type === 'daterange' || field.type === 'numberrange' ? 'between' : 'is');
+            let defaultValues: unknown[] = [];
+
+            if (field.defaultValue !== undefined) {
+                defaultValues = [field.defaultValue] as unknown[];
+            } else if (['text', 'number', 'date', 'email', 'url', 'tel', 'time', 'datetime'].includes(field.type || '')) {
+                defaultValues = [''] as unknown[];
+            } else if (field.type === 'daterange') {
+                defaultValues = ['', ''] as unknown[];
+            } else if (field.type === 'numberrange') {
+                defaultValues = [field.min || 0, field.max || 100] as unknown[];
+            } else if (field.type === 'boolean') {
+                defaultValues = [false] as unknown[];
+            }
+
+            const newFilter = createFilter<T>(fieldKey, defaultOperator, defaultValues as T[]);
+            onChange([...filters, newFilter]);
+            closeFilterPopover();
         },
-        [fieldsMap, filters, onChange]
+        [allowMultiple, closeFilterPopover, fieldsMap, filters, onChange]
     );
 
     const addFilterWithOption = useCallback(
@@ -2266,57 +2275,33 @@ export function Filters<T = unknown>({
             if (!field.key) {
                 return;
             }
-            // Check if this filter already exists
-            const existingFilter = filters.find(f => f.field === field.key);
-            if (existingFilter) {
-                // Update existing filter
-                const updatedFilters = filters.map(f => (
-                    f.id === existingFilter.id
-                        ? {...f, values: values as T[]}
-                        : f
-                ));
-                onChange(updatedFilters);
 
-                // Always update tempSelectedValues to keep inline multiselect in sync
-                setTempSelectedValues(values as T[]);
+            // In single-filter mode, update the existing filter for this field if one exists
+            if (!allowMultiple) {
+                const existingFilter = filters.find(f => f.field === field.key);
+                if (existingFilter) {
+                    onChange(filters.map(f => (f.id === existingFilter.id ? {...f, values: values as T[]} : f)));
+                    setTempSelectedValues(values as T[]);
 
-                if (closePopover) {
-                    setAddFilterOpen(false);
-                    setSelectedFieldKeyForOptions(null);
+                    if (closePopover) {
+                        closeFilterPopover();
+                    }
+                    return;
                 }
-                return;
             }
 
+            // Create a new filter
             const defaultOperator = field.defaultOperator || (field.type === 'multiselect' ? 'is_any_of' : 'is');
-
-            // Check if there's already a filter for this field
-            const existingFilterIndex = filters.findIndex(f => f.field === field.key);
-
-            if (existingFilterIndex >= 0) {
-                // Update existing filter
-                const updatedFilters = [...filters];
-                updatedFilters[existingFilterIndex] = {
-                    ...updatedFilters[existingFilterIndex],
-                    values: values as T[]
-                };
-                onChange(updatedFilters);
-            } else {
-                // Create new filter
-                const newFilter = createFilter<T>(field.key, defaultOperator, values as T[]);
-                const newFilters = [...filters, newFilter];
-                onChange(newFilters);
-            }
+            const newFilter = createFilter<T>(field.key, defaultOperator, values as T[]);
+            onChange([...filters, newFilter]);
 
             if (closePopover) {
-                setAddFilterOpen(false);
-                setSelectedFieldKeyForOptions(null);
-                setTempSelectedValues([]);
+                closeFilterPopover();
             } else {
-                // For multiselect, keep popover open but update temp values
                 setTempSelectedValues(values as unknown[]);
             }
         },
-        [filters, onChange]
+        [allowMultiple, closeFilterPopover, filters, onChange]
     );
 
     const selectableFields = useMemo(() => {
@@ -2449,16 +2434,12 @@ export function Filters<T = unknown>({
                                         const shouldClosePopover = selectedFieldForOptions.type === 'select';
                                         addFilterWithOption(selectedFieldForOptions, values as unknown[], shouldClosePopover);
                                     }}
-                                    onClose={() => {
-                                        setAddFilterOpen(false);
-                                        setSelectedFieldKeyForOptions(null);
-                                        setTempSelectedValues([]);
-                                    }}
+                                    onClose={closeFilterPopover}
                                 />
                             ) : (
                                 // Show field selection - needs Command wrapper for search/list
                                 <Command className='outline-hidden' tabIndex={showSearchInput ? undefined : 0}>
-                                    {showSearchInput && <CommandInput className="h-[34px]" placeholder={mergedI18n.searchFields} />}
+                                    {showSearchInput && <CommandInput className="h-(--control-height)" placeholder={mergedI18n.searchFields} />}
                                     <CommandList className="outline-hidden">
                                         <CommandEmpty>{mergedI18n.noFieldsFound}</CommandEmpty>
                                         {fields.map((item, index) => {

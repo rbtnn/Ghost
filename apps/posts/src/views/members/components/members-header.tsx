@@ -1,5 +1,5 @@
 import React from 'react';
-import {ListHeader} from '@tryghost/shade';
+import {ListHeader} from '@tryghost/shade/primitives';
 
 interface MembersHeaderProps {
     children?: React.ReactNode;
@@ -13,12 +13,16 @@ const MembersHeader: React.FC<MembersHeaderProps> = ({
     isLoading
 }) => {
     return (
-        <ListHeader className="relative pb-6! md:sticky">
+        <ListHeader
+            blurredBackground={false}
+            className="relative"
+            sticky={false}
+        >
             <ListHeader.Left>
                 <ListHeader.Title>
                     Members{' '}
                     {!isLoading && (
-                        <ListHeader.Count>
+                        <ListHeader.Count className="hidden sm:inline">
                             {totalMembers.toLocaleString()}
                         </ListHeader.Count>
                     )}
