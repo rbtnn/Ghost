@@ -11,8 +11,9 @@ const IsJPYCurrency = (currency) => {
 
 export function removePortalLinkFromUrl() {
     const [path] = window.location.hash.substr(1).split('?');
-    const linkRegex = /^\/portal\/?(?:\/(\w+(?:\/\w+)*))?\/?$/;
-    if (path && linkRegex.test(path)) {
+    const portalLinkRegex = /^\/portal\/?(?:\/(\w+(?:\/\w+)*))?\/?$/;
+    const shareLinkRegex = /^\/share\/?$/;
+    if (path && (portalLinkRegex.test(path) || shareLinkRegex.test(path))) {
         window.history.pushState('', document.title, window.location.pathname + window.location.search);
     }
 }
@@ -801,6 +802,23 @@ export const createPopupNotification = ({type, status, autoHide, duration = 2600
         closeable,
         duration,
         meta,
+        message,
+        count
+    };
+};
+
+export const createNotification = ({type, status, autoHide, duration = 2600, closeable, state, message}) => {
+    const previousCount = Number.isInteger(state?.notificationSequence)
+        ? state.notificationSequence
+        : state?.notification?.count;
+    const count = Number.isInteger(previousCount) ? previousCount + 1 : 0;
+
+    return {
+        type,
+        status,
+        autoHide,
+        closeable,
+        duration,
         message,
         count
     };

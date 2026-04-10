@@ -293,6 +293,10 @@ module.exports = {
         return apiFramework.pipeline(require('./feedback-members'), localUtils, 'members');
     },
 
+    get giftsMembers() {
+        return apiFramework.pipeline(require('./gifts-members'), localUtils, 'members');
+    },
+
     get recommendationsPublic() {
         return apiFramework.pipeline(require('./recommendations-public'), localUtils, 'content');
     },
