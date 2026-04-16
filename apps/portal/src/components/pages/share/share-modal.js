@@ -32,6 +32,12 @@ const ShareModal = () => {
             return;
         }
 
+        // Portal renders inside an iframe via createPortal, so `document` here
+        // refers to the parent page's document — not the iframe's. We must use
+        // ownerDocument of the rendered element to attach listeners in the
+        // correct document context where the click events actually fire.
+        const doc = moreMenuRef.current?.ownerDocument || document;
+
         const onDocumentMouseDown = (event) => {
             if (moreMenuRef.current && !moreMenuRef.current.contains(event.target)) {
                 setIsMoreMenuOpen(false);
@@ -44,12 +50,12 @@ const ShareModal = () => {
             }
         };
 
-        document.addEventListener('mousedown', onDocumentMouseDown);
-        document.addEventListener('keydown', onDocumentKeyDown);
+        doc.addEventListener('mousedown', onDocumentMouseDown);
+        doc.addEventListener('keydown', onDocumentKeyDown);
 
         return () => {
-            document.removeEventListener('mousedown', onDocumentMouseDown);
-            document.removeEventListener('keydown', onDocumentKeyDown);
+            doc.removeEventListener('mousedown', onDocumentMouseDown);
+            doc.removeEventListener('keydown', onDocumentKeyDown);
         };
     }, [isMoreMenuOpen]);
 
@@ -98,9 +104,12 @@ const ShareModal = () => {
                             )}
                             <div className='gh-portal-share-preview-meta'>
                                 {shareSiteName && <span className='gh-portal-share-preview-site'>{shareSiteName}</span>}
+                                {shareSiteName && shareAuthor && (
+                                    <span className='gh-portal-share-preview-separator' aria-hidden='true'>|</span>
+                                )}
                                 {shareAuthor && (
                                     <span className='gh-portal-share-preview-author'>
-                                        {shareSiteName ? `| ${shareAuthor}` : shareAuthor}
+                                        {shareAuthor}
                                     </span>
                                 )}
                             </div>

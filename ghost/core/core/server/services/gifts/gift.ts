@@ -163,4 +163,40 @@ export class Gift {
             status: 'redeemed'
         });
     }
+
+    refund(): Gift | null {
+        if (this.isRefunded()) {
+            return null;
+        }
+
+        return new Gift({
+            ...this,
+            status: 'refunded',
+            refundedAt: new Date()
+        });
+    }
+
+    consume(): Gift | null {
+        if (this.isConsumed()) {
+            return null;
+        }
+
+        return new Gift({
+            ...this,
+            status: 'consumed',
+            consumedAt: new Date()
+        });
+    }
+
+    expire(): Gift | null {
+        if (this.isExpired()) {
+            return null;
+        }
+
+        return new Gift({
+            ...this,
+            status: 'expired',
+            expiredAt: new Date()
+        });
+    }
 }

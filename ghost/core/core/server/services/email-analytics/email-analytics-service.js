@@ -30,6 +30,8 @@ const errors = require('@tryghost/errors');
  * @property {number} apiPollingTimeMs - Time spent polling the API in milliseconds
  * @property {number} processingTimeMs - Time spent processing events in milliseconds
  * @property {number} aggregationTimeMs - Time spent aggregating stats in milliseconds
+ * @property {number} emailAggregationTimeMs - Time spent aggregating email stats in milliseconds
+ * @property {number} memberAggregationTimeMs - Time spent aggregating member stats in milliseconds
  * @property {EventProcessingResult} result - The processing result with event breakdown
  */
 
@@ -46,6 +48,8 @@ function createEmptyResult() {
         apiPollingTimeMs: 0,
         processingTimeMs: 0,
         aggregationTimeMs: 0,
+        emailAggregationTimeMs: 0,
+        memberAggregationTimeMs: 0,
         result: new EventProcessingResult()
     };
 }
@@ -320,9 +324,11 @@ module.exports = class EmailAnalyticsService {
         this.queries.setJobTimestamp(fetchData.jobName, 'started', begin);
 
         // Timing metrics
-        let apiPollingTimeMs = 0;
+        const fetchStartMs = Date.now();
         let processingTimeMs = 0;
         let aggregationTimeMs = 0;
+        let emailAggregationTimeMs = 0;
+        let memberAggregationTimeMs = 0;
 
         let lastAggregation = Date.now();
         let eventCount = 0;
@@ -386,9 +392,11 @@ module.exports = class EmailAnalyticsService {
                 // Aggregate and clear the processingResult
                 // We do this here because otherwise it could take a long time before the new events are visible in the stats
                 try {
-                    const aggregationStart = Date.now();
-                    await this.aggregateStats(processingResult, includeOpenedEvents);
-                    aggregationTimeMs += (Date.now() - aggregationStart);
+                    const intermediateAggregationStart = Date.now();
+                    const aggregationTimings = await this.aggregateStats(processingResult, includeOpenedEvents);
+                    aggregationTimeMs += (Date.now() - intermediateAggregationStart);
+                    emailAggregationTimeMs += aggregationTimings.emailAggregationTimeMs;
+                    memberAggregationTimeMs += aggregationTimings.memberAggregationTimeMs;
                     lastAggregation = Date.now();
                     // Remove aggregated emailIds and memberIds from tracking sets to avoid re-aggregating at the end
                     processingResult.emailIds.forEach(id => allEmailIds.delete(id));
@@ -409,9 +417,7 @@ module.exports = class EmailAnalyticsService {
 
         try {
             for (const provider of this.providers) {
-                const apiStart = Date.now();
                 await provider.fetchLatest(processBatch, {begin, end, maxEvents, events: eventTypes});
-                apiPollingTimeMs += (Date.now() - apiStart);
             }
         } catch (err) {
             if (err.message !== 'Fetching canceled') {
@@ -436,8 +442,10 @@ module.exports = class EmailAnalyticsService {
                     emailIds: finalEmailIds,
                     memberIds: finalMemberIds
                 };
-                await this.aggregateStats(finalAggregationResult, includeOpenedEvents);
+                const aggregationTimings = await this.aggregateStats(finalAggregationResult, includeOpenedEvents);
                 aggregationTimeMs += (Date.now() - aggregationStart);
+                emailAggregationTimeMs += aggregationTimings.emailAggregationTimeMs;
+                memberAggregationTimeMs += aggregationTimings.memberAggregationTimeMs;
             } catch (err) {
                 logging.error('[EmailAnalytics] Error while aggregating stats');
                 logging.error(err);
@@ -448,20 +456,26 @@ module.exports = class EmailAnalyticsService {
             }
         }
 
-        // Small trick: if reached the end of new events, we are going to keep
-        // fetching the same events because 'begin' won't change
-        // So if we didn't have errors while fetching, and total events < maxEvents, increase lastEventTimestamp with one second
+        // When we've consumed all available events (eventCount < maxEvents), advance the cursor by 1 second
+        // to avoid re-fetching the same batch on the next cycle. When we hit the maxEvents budget mid-second,
+        // do NOT advance — the next pass needs to re-cover that second to pick up any remaining events.
         if (!error && eventCount > 0 && fetchData.lastEventTimestamp && fetchData.lastEventTimestamp.getTime() < Date.now() - 2000) {
-            // set the data on the db so we can store it for fetching after reboot
+            // Persist cursor to DB so we can resume after reboot
             await this.queries.setJobTimestamp(fetchData.jobName, 'finished', new Date(fetchData.lastEventTimestamp.getTime()));
-            // increment and store in local memory
-            fetchData.lastEventTimestamp = new Date(fetchData.lastEventTimestamp.getTime() + 1000);
+            if (eventCount < maxEvents) {
+                // Consumed everything in the window — advance to avoid re-fetching same batch
+                fetchData.lastEventTimestamp = new Date(fetchData.lastEventTimestamp.getTime() + 1000);
+            }
         } else {
-            // set job status to finished
             await this.queries.setJobStatus(fetchData.jobName, 'finished');
         }
 
         fetchData.running = false;
+
+        const totalTimeMs = Date.now() - fetchStartMs;
+        // Derived by subtraction because fetchLatest() invokes processBatch internally,
+        // so directly timing fetchLatest() would double-count processing and aggregation time.
+        const apiPollingTimeMs = totalTimeMs - processingTimeMs - aggregationTimeMs;
 
         if (error) {
             throw error;
@@ -472,6 +486,8 @@ module.exports = class EmailAnalyticsService {
             apiPollingTimeMs,
             processingTimeMs,
             aggregationTimeMs,
+            emailAggregationTimeMs,
+            memberAggregationTimeMs,
             result: cumulativeResult
         };
     }
@@ -621,17 +637,21 @@ module.exports = class EmailAnalyticsService {
     /**
      * @param {{emailIds?: string[], memberIds?: string[]}} stats
      * @param {boolean} includeOpenedEvents
+     * @returns {Promise<{emailAggregationTimeMs: number, memberAggregationTimeMs: number}>}
      */
     async aggregateStats({emailIds = [], memberIds = []}, includeOpenedEvents = true) {
         const useBatchProcessing = this.config.get('emailAnalytics:batchProcessing');
 
+        const emailAggregationStart = Date.now();
         for (const emailId of emailIds) {
             await this.aggregateEmailStats(emailId, includeOpenedEvents);
         }
+        const emailAggregationTimeMs = Date.now() - emailAggregationStart;
 
         // @ts-expect-error
         const memberMetric = this.prometheusClient?.getMetric('email_analytics_aggregate_member_stats_count');
 
+        const memberAggregationStart = Date.now();
         if (useBatchProcessing) {
             // Batched mode: process 100 members at a time
             logging.info(`[EmailAnalytics] Aggregating stats for ${memberIds.length} members using BATCHED mode (batch size: 100)`);
@@ -649,6 +669,9 @@ module.exports = class EmailAnalyticsService {
                 memberMetric?.inc();
             }
         }
+        const memberAggregationTimeMs = Date.now() - memberAggregationStart;
+
+        return {emailAggregationTimeMs, memberAggregationTimeMs};
     }
 
     /**
