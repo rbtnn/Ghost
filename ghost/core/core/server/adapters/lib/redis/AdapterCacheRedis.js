@@ -9,8 +9,6 @@ const redisStoreFactory = require('./redis-store-factory');
 const PREFIX_HASH_KEY = 'prefix_hash';
 
 class AdapterCacheRedis extends BaseCacheAdapter {
-    #prefixHashInitInFlight = null;
-
     /**
      *
      * @param {Object} config
@@ -67,9 +65,22 @@ class AdapterCacheRedis extends BaseCacheAdapter {
         this.refreshAheadFactor = config.refreshAheadFactor || 0;
         this.getTimeoutMilliseconds = config.getTimeoutMilliseconds || null;
         this.currentlyExecutingBackgroundRefreshes = new Set();
+        this.currentlyExecutingReads = new Map();
         this._keyPrefix = config.keyPrefix || '';
-        this.redisClient = this.cache.store.getClient();
+        this._prefixHashInitInFlight = null;
         this.redisClient.on('error', this.handleRedisError);
+    }
+
+    /**
+     * api-framework's pipeline _.cloneDeep's controllers (and the cache
+     * adapter alongside them). Caching the redis client as `this.redisClient`
+     * was breaking on clones because the cloned ioredis instance has the
+     * prototype but no live socket. Going through cache-manager's
+     * `store.getClient()` works because that function captures the original
+     * client via closure, so even on a clone it returns the live one.
+     */
+    get redisClient() {
+        return this.cache.store.getClient();
     }
 
     /**
@@ -88,20 +99,20 @@ class AdapterCacheRedis extends BaseCacheAdapter {
         if (currentPrefixHash) {
             return currentPrefixHash;
         }
-        return this.#initPrefixHash();
+        return this._initPrefixHash();
     }
 
     /**
      * Lazily creates the prefix_hash. Concurrent callers in this process
-     * share one in-flight init via #prefixHashInitInFlight; SET NX ensures
+     * share one in-flight init via _prefixHashInitInFlight; SET NX ensures
      * only one writer wins across processes.
      */
-    #initPrefixHash() {
-        if (this.#prefixHashInitInFlight) {
-            return this.#prefixHashInitInFlight;
+    _initPrefixHash() {
+        if (this._prefixHashInitInFlight) {
+            return this._prefixHashInitInFlight;
         }
         const value = crypto.randomBytes(12).toString('hex');
-        this.#prefixHashInitInFlight = this.redisClient
+        this._prefixHashInitInFlight = this.redisClient
             .set(this._keyPrefix + PREFIX_HASH_KEY, value, 'NX')
             .then(async (result) => {
                 if (result === 'OK') {
@@ -111,9 +122,9 @@ class AdapterCacheRedis extends BaseCacheAdapter {
                 return await this.redisClient.get(this._keyPrefix + PREFIX_HASH_KEY);
             })
             .finally(() => {
-                this.#prefixHashInitInFlight = null;
+                this._prefixHashInitInFlight = null;
             });
-        return this.#prefixHashInitInFlight;
+        return this._prefixHashInitInFlight;
     }
 
     async keyPrefix() {
@@ -169,7 +180,7 @@ class AdapterCacheRedis extends BaseCacheAdapter {
      * @param {string} key
      * @returns {Promise<{internalKey: string|null, result: any}>}
      */
-    #lookupWithTimeout(key) {
+    _lookupWithTimeout(key) {
         const lookup = (async () => {
             const internalKey = await this._buildKey(key);
             const result = await this.cache.get(internalKey);
@@ -203,7 +214,7 @@ class AdapterCacheRedis extends BaseCacheAdapter {
      */
     async get(key, fetchData) {
         try {
-            const {internalKey, result} = await this.#lookupWithTimeout(key);
+            const {internalKey, result} = await this._lookupWithTimeout(key);
             debug(`get ${key}: Cache ${result ? 'HIT' : 'MISS'}`);
             if (!fetchData) {
                 return result;
@@ -230,9 +241,30 @@ class AdapterCacheRedis extends BaseCacheAdapter {
                 }
                 return result;
             } else {
-                const data = await fetchData();
-                await this.set(key, data); // We don't use `internalKey` here because `set` handles it
-                return data;
+                if (!internalKey) {
+                    return fetchData();
+                }
+                if (this.currentlyExecutingReads.has(internalKey)) {
+                    return this.currentlyExecutingReads.get(internalKey);
+                }
+                const fetchPromise = fetchData();
+                const resultPromise = fetchPromise.catch((err) => {
+                    logging.error(err);
+                });
+                fetchPromise.then(async (data) => {
+                    try {
+                        debug('set', internalKey);
+                        await this.cache.set(internalKey, data);
+                    } catch (err) {
+                        logging.error(err);
+                    }
+                }).catch(() => {
+                    // fetchData rejection — already logged by resultPromise
+                }).finally(() => {
+                    this.currentlyExecutingReads.delete(internalKey);
+                });
+                this.currentlyExecutingReads.set(internalKey, resultPromise);
+                return resultPromise;
             }
         } catch (err) {
             logging.error(err);
