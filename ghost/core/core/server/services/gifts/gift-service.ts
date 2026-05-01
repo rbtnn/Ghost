@@ -247,23 +247,28 @@ export class GiftService {
             switch (redeemableCheck.reason) {
             case 'redeemed':
                 throw new errors.BadRequestError({
-                    message: tpl(errorMessages.giftAlreadyRedeemed)
+                    message: tpl(errorMessages.giftAlreadyRedeemed),
+                    code: 'GIFT_REDEEMED'
                 });
             case 'consumed':
                 throw new errors.BadRequestError({
-                    message: tpl(errorMessages.giftConsumed)
+                    message: tpl(errorMessages.giftConsumed),
+                    code: 'GIFT_CONSUMED'
                 });
             case 'expired':
                 throw new errors.BadRequestError({
-                    message: tpl(errorMessages.giftExpired)
+                    message: tpl(errorMessages.giftExpired),
+                    code: 'GIFT_EXPIRED'
                 });
             case 'refunded':
                 throw new errors.BadRequestError({
-                    message: tpl(errorMessages.giftRefunded)
+                    message: tpl(errorMessages.giftRefunded),
+                    code: 'GIFT_REFUNDED'
                 });
             case 'paid-member':
                 throw new errors.BadRequestError({
-                    message: tpl(errorMessages.paidMember)
+                    message: tpl(errorMessages.paidMember),
+                    code: 'GIFT_PAID_MEMBER'
                 });
             default: {
                 const exhaustiveCheck: never = redeemableCheck.reason;
@@ -366,6 +371,13 @@ export class GiftService {
             return null;
         }
         return this.deps.giftRepository.getActiveByMember(memberId, options);
+    }
+
+    async getActiveByMembers(memberIds: string[], options: {transacting?: unknown} = {}): Promise<Map<string, Gift>> {
+        if (!memberIds || memberIds.length === 0) {
+            return new Map();
+        }
+        return this.deps.giftRepository.getActiveByMembers(memberIds, options);
     }
 
     getRemainingActiveDays(gift: Gift, now: Date = new Date()): number {
