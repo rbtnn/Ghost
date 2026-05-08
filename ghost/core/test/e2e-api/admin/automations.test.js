@@ -4,7 +4,7 @@ const assert = require('node:assert/strict');
 const models = require('../../../core/server/models');
 const {getSignedAdminToken} = require('../../../core/server/adapters/scheduling/utils');
 const {agentProvider, dbUtils, fixtureManager, matchers, assertions} = require('../../utils/e2e-framework');
-const StartAutomationsPollEvent = require('../../../core/server/services/welcome-email-automations/events/start-automations-poll-event');
+const StartAutomationsPollEvent = require('../../../core/server/services/automations/events/start-automations-poll-event');
 
 const {anyContentVersion, anyEtag, anyErrorId} = matchers;
 const {cacheInvalidateHeaderNotSet} = assertions;
@@ -70,6 +70,22 @@ describe('Automations API', function () {
                 slug: second.get('slug'),
                 status: second.get('status')
             }]);
+        });
+    });
+
+    describe('read', function () {
+        it('returns a placeholder automation for the requested id', async function () {
+            const automationId = '67f3f3f3f3f3f3f3f3f3f3f3';
+
+            await agent
+                .get(`automations/${automationId}`)
+                .expectStatus(200)
+                .expect(cacheInvalidateHeaderNotSet())
+                .matchBodySnapshot()
+                .matchHeaderSnapshot({
+                    'content-version': anyContentVersion,
+                    etag: anyEtag
+                });
         });
     });
 

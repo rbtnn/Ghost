@@ -248,7 +248,10 @@ async function initExpressApps({frontend, backend, config}) {
 
     if (frontend) {
         // SITE + MEMBERS
-        const urlService = require('./server/services/url');
+        // RouterManager and migrated frontend callers expect the facade
+        // (getUrlForResource / ownsResource), not the raw eager UrlService
+        // (which only exposes the legacy id-based methods).
+        const urlService = require('./server/services/url').facade;
         const frontendApp = require('./server/web/parent/frontend')({urlService});
         parentApp.use(vhost(config.getFrontendMountPath(), frontendApp));
     }
@@ -344,7 +347,7 @@ async function initServices() {
     const statsService = require('./server/services/stats');
     const explorePingService = require('./server/services/explore-ping');
     const domainEvents = require('@tryghost/domain-events');
-    const WelcomeEmailAutomationsService = require('./server/services/welcome-email-automations');
+    const AutomationsService = require('./server/services/automations');
 
     const {
         createAdapter: createSchedulerAdapter,
@@ -397,7 +400,7 @@ async function initServices() {
             schedulerAdapter,
             schedulerIntegration
         }),
-        new WelcomeEmailAutomationsService().init({
+        new AutomationsService().init({
             domainEvents,
             apiUrl,
             schedulerAdapter,

@@ -214,7 +214,6 @@ module.exports = class EventRepository {
                 'subscriptionCreatedEvent.userAttribution',
                 'subscriptionCreatedEvent.tagAttribution',
                 'subscriptionCreatedEvent.memberCreatedEvent',
-                'subscriptionCreatedEvent.paidStatusEvent',
 
                 // This is rediculous, but we need the tier name (we'll be able to shorten this later when we switch to the subscriptions table)
                 'stripeSubscription.stripePrice.stripeProduct.product'
@@ -248,22 +247,13 @@ module.exports = class EventRepository {
             const tierName = model.related('stripeSubscription') && model.related('stripeSubscription').related('stripePrice') && model.related('stripeSubscription').related('stripePrice').related('stripeProduct') && model.related('stripeSubscription').related('stripePrice').related('stripeProduct').related('product') ? model.related('stripeSubscription').related('stripePrice').related('stripeProduct').related('product').get('name') : null;
 
             const subscriptionCreatedEvent = model.related('subscriptionCreatedEvent');
-            const paidStatusEvent = subscriptionCreatedEvent && subscriptionCreatedEvent.id
-                ? subscriptionCreatedEvent.related('paidStatusEvent')
-                : null;
-            const previousStatus = paidStatusEvent && paidStatusEvent.id ? paidStatusEvent.get('from_status') : null;
 
             // Prevent toJSON on stripeSubscription (we don't have everything loaded)
             delete model.relations.stripeSubscription;
-            // paidStatusEvent is a helper relation only used to derive previous_status above
-            if (subscriptionCreatedEvent && subscriptionCreatedEvent.id) {
-                delete subscriptionCreatedEvent.relations.paidStatusEvent;
-            }
             const d = {
                 ...model.toJSON(options),
                 attribution: model.get('type') === 'created' && subscriptionCreatedEvent && subscriptionCreatedEvent.id ? this._memberAttributionService.getEventAttribution(subscriptionCreatedEvent) : null,
                 signup: model.get('type') === 'created' && subscriptionCreatedEvent && subscriptionCreatedEvent.id && subscriptionCreatedEvent.related('memberCreatedEvent') && subscriptionCreatedEvent.related('memberCreatedEvent').id ? true : false,
-                previous_status: previousStatus,
                 tierName
             };
             delete d.stripeSubscription;
