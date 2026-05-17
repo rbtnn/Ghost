@@ -1,6 +1,6 @@
 {
   "name": "ghost",
-  "version": "6.39.0-rc.0",
+  "version": "6.39.1-rc.0",
   "description": "The professional publishing platform",
   "author": "Ghost Foundation",
   "homepage": "https://ghost.org",
@@ -104,7 +104,7 @@
     "@tryghost/helpers": "catalog:",
     "@tryghost/html-to-plaintext": "1.0.10",
     "@tryghost/i18n": "workspace:*",
-    "@tryghost/image-transform": "1.4.13",
+    "@tryghost/image-transform": "1.4.15",
     "@tryghost/job-manager": "1.0.9",
     "@tryghost/kg-card-factory": "5.2.1",
     "@tryghost/kg-clean-basic-html": "catalog:",
@@ -141,7 +141,7 @@
     "@tryghost/validator": "0.2.22",
     "@tryghost/version": "2.2.0",
     "@tryghost/zip": "3.2.0",
-    "body-parser": "1.20.4",
+    "body-parser": "1.20.5",
     "bookshelf": "1.2.0",
     "bookshelf-relations": "2.8.0",
     "brute-knex": "4.0.1",
@@ -249,7 +249,7 @@
     "sqlite3": "5.1.7"
   },
   "devDependencies": {
-    "@actions/core": "3.0.0",
+    "@actions/core": "3.0.1",
     "@prettier/sync": "0.6.1",
     "@tryghost/express-test": "2.1.0",
     "@tryghost/webhook-mock-receiver": "2.1.0",
