@@ -385,7 +385,22 @@ jobs:
       - name: Run unit tests
         # ghost/core's unit tests run on vitest (see ghost/core/vitest.config.ts);
         # other packages run their own test:unit target.
-        run: pnpm nx run-many -t test:unit -p "${{ needs.job_setup.outputs.affected_projects_str }}"
+        #
+        # Retried up to 3 attempts: ghost/core's vitest run intermittently
+        # crashes a worker on loaded CI runners — an abnormal process exit,
+        # not a reported test failure. nx caches the projects that already
+        # passed, so a retry only re-runs the crashed one. Interim stopgap
+        # until the vitest worker/teardown issue is fixed.
+        run: |
+          for attempt in 1 2 3; do
+            pnpm nx run-many -t test:unit -p "${{ needs.job_setup.outputs.affected_projects_str }}" && exit 0
+            if [ "${attempt}" -lt 3 ]; then
+              echo "::warning::Unit tests attempt ${attempt} failed — retrying"
+            else
+              echo "::error::Unit tests failed after ${attempt} attempts — no more retries"
+            fi
+          done
+          exit 1
         env:
           FORCE_COLOR: 0
           NX_SKIP_LOG_GROUPING: true
@@ -967,6 +982,7 @@ jobs:
           cache-to: ${{ steps.strategy.outputs.should-push == 'true' && format('type=registry,ref={0}:cache-{1},mode=max', steps.strategy.outputs.image-full-name, github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || 'main') || '' }}
 
       - name: Save full image as artifact
+        if: steps.strategy.outputs.use-artifact == 'true'
         run: |
           IMAGE_TAG=$(echo "${{ steps.meta-full.outputs.tags }}" | head -n1)
           echo "Saving image: $IMAGE_TAG"
@@ -975,6 +991,7 @@ jobs:
           ls -lh docker-image-production.tar.gz
 
       - name: Upload image artifact
+        if: steps.strategy.outputs.use-artifact == 'true'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: docker-image-production
@@ -1203,42 +1220,52 @@ jobs:
             projects: main
             analytics: 'false'
             shardIndex: 1
-            shardTotal: 8
+            shardTotal: 10
           - projectName: Main
             projects: main
             analytics: 'false'
             shardIndex: 2
-            shardTotal: 8
+            shardTotal: 10
           - projectName: Main
             projects: main
             analytics: 'false'
             shardIndex: 3
-            shardTotal: 8
+            shardTotal: 10
           - projectName: Main
             projects: main
             analytics: 'false'
             shardIndex: 4
-            shardTotal: 8
+            shardTotal: 10
           - projectName: Main
             projects: main
             analytics: 'false'
             shardIndex: 5
-            shardTotal: 8
+            shardTotal: 10
           - projectName: Main
             projects: main
             analytics: 'false'
             shardIndex: 6
-            shardTotal: 8
+            shardTotal: 10
           - projectName: Main
             projects: main
             analytics: 'false'
             shardIndex: 7
-            shardTotal: 8
+            shardTotal: 10
           - projectName: Main
             projects: main
             analytics: 'false'
             shardIndex: 8
-            shardTotal: 8
+            shardTotal: 10
+          - projectName: Main
+            projects: main
+            analytics: 'false'
+            shardIndex: 9
+            shardTotal: 10
+          - projectName: Main
+            projects: main
+            analytics: 'false'
+            shardIndex: 10
+            shardTotal: 10
           - projectName: Analytics
             projects: analytics
             analytics: 'true'
@@ -1341,7 +1368,7 @@ jobs:
 
   job_merge_e2e_reports:
     name: Merge Reports
-    if: always()
+    if: always() && needs.job_e2e_tests.result == 'failure'
     needs: [job_e2e_tests, job_setup]
     runs-on: ubuntu-latest
     strategy:
