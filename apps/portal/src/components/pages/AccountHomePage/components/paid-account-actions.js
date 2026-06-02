@@ -1,5 +1,5 @@
 import AppContext from '../../../../app-context';
-import {getSubscriptionExpiry, getMemberSubscription, getMemberTierName, hasMultipleProductsFeature, hasOnlyFreePlan, isArchivedTier, isComplimentaryMember, isGiftMember, isPaidMember, isStripeConfigured, subscriptionHasFreeTrial} from '../../../../utils/helpers';
+import {getSubscriptionExpiry, getMemberSubscription, getMemberTierName, hasMultipleProductsFeature, hasOnlyFreePlan, isArchivedTier, isComplimentaryMember, isGiftMember, isPaidMember, arePaidMembersEnabled, subscriptionHasFreeTrial} from '../../../../utils/helpers';
 import {getDateString} from '../../../../utils/date-time';
 import GiftIcon from '../../../../images/icons/gift.svg?react';
 import LoaderIcon from '../../../../images/icons/loader.svg?react';
@@ -24,7 +24,7 @@ const PaidAccountActions = () => {
     };
 
     const openUpdatePlan = () => {
-        if (isStripeConfigured({site})) {
+        if (arePaidMembersEnabled({site})) {
             doAction('switchPage', {
                 page: 'accountPlan',
                 lastPage: 'accountHome'
@@ -108,7 +108,7 @@ const PaidAccountActions = () => {
     const PlanUpdateButton = ({isPaid}) => {
         const hasGiftSubscription = isGiftMember({member});
 
-        if (hasGiftSubscription && !isStripeConfigured({site})) {
+        if (hasGiftSubscription && !arePaidMembersEnabled({site})) {
             return null;
         }
 
