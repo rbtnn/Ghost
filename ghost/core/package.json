@@ -1,6 +1,6 @@
 {
   "name": "ghost",
-  "version": "6.43.2-rc.0",
+  "version": "6.44.1-rc.0",
   "description": "The professional publishing platform",
   "author": "Ghost Foundation",
   "homepage": "https://ghost.org",
@@ -160,6 +160,7 @@
     "csso": "5.0.5",
     "csv-writer": "1.6.0",
     "date-fns": "2.30.0",
+    "dequal": "catalog:",
     "dompurify": "catalog:",
     "downsize": "0.0.8",
     "entities": "4.5.0",
@@ -241,9 +242,6 @@
     "xml": "1.0.1",
     "zod": "catalog:"
   },
-  "overrides": {
-    "lodash.template": "4.5.0"
-  },
   "optionalDependencies": {
     "@tryghost/html-to-mobiledoc": "3.3.2",
     "sqlite3": "5.1.7"
@@ -270,6 +268,7 @@
     "@types/nodemailer": "6.4.23",
     "@types/on-headers": "1.0.4",
     "@types/papaparse": "5.5.2",
+    "@types/sanitize-html": "catalog:",
     "@types/sinon": "17.0.4",
     "@types/supertest": "6.0.3",
     "@typescript-eslint/parser": "catalog:",

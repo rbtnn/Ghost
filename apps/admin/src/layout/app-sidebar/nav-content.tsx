@@ -3,10 +3,10 @@ import React from "react"
 import {SidebarGroup, SidebarGroupContent, SidebarMenu, SidebarMenuBadge} from "@tryghost/shade/components"
 import {formatNumber, LucideIcon} from "@tryghost/shade/utils"
 import { useCurrentUser } from "@tryghost/admin-x-framework/api/current-user";
+import { useMemberCount } from "@tryghost/admin-x-framework/api/members";
 import {getSettingValue, useBrowseSettings} from "@tryghost/admin-x-framework/api/settings";
 import { canManageMembers, canManageTags } from "@tryghost/admin-x-framework/api/users";
 import { NavMenuItem } from "./nav-menu-item";
-import { useMemberCount } from "./hooks/use-member-count";
 import { useNavigationExpanded } from "./hooks/use-navigation-preferences";
 import { NavCustomViews } from "./nav-custom-views";
 import { NavMemberViews } from "./nav-member-views";
@@ -115,35 +115,26 @@ function NavContent({ ...props }: React.ComponentProps<typeof SidebarGroup>) {
                         </NavMenuItem.CollapsibleItem>
 
                         <NavMenuItem.CollapsibleMenu>
-                            <NavMenuItem>
-                                <NavMenuItem.Link
-                                    className="pl-9"
-                                    to="posts?type=draft"
-                                    isActive={isDraftPostsRouteActive}
-                                >
-                                    <NavMenuItem.Label>Drafts</NavMenuItem.Label>
-                                </NavMenuItem.Link>
-                            </NavMenuItem>
+                            <NavMenuItem.SubmenuItem
+                                to="posts?type=draft"
+                                isActive={isDraftPostsRouteActive}
+                            >
+                                <NavMenuItem.Label>Drafts</NavMenuItem.Label>
+                            </NavMenuItem.SubmenuItem>
 
-                            <NavMenuItem>
-                                <NavMenuItem.Link
-                                    className="pl-9"
-                                    to="posts?type=scheduled"
-                                    isActive={isScheduledPostsRouteActive}
-                                >
-                                    <NavMenuItem.Label>Scheduled</NavMenuItem.Label>
-                                </NavMenuItem.Link>
-                            </NavMenuItem>
+                            <NavMenuItem.SubmenuItem
+                                to="posts?type=scheduled"
+                                isActive={isScheduledPostsRouteActive}
+                            >
+                                <NavMenuItem.Label>Scheduled</NavMenuItem.Label>
+                            </NavMenuItem.SubmenuItem>
 
-                            <NavMenuItem>
-                                <NavMenuItem.Link
-                                    className="pl-9"
-                                    to="posts?type=published"
-                                    isActive={isPublishedPostsRouteActive}
-                                >
-                                    <NavMenuItem.Label>Published</NavMenuItem.Label>
-                                </NavMenuItem.Link>
-                            </NavMenuItem>
+                            <NavMenuItem.SubmenuItem
+                                to="posts?type=published"
+                                isActive={isPublishedPostsRouteActive}
+                            >
+                                <NavMenuItem.Label>Published</NavMenuItem.Label>
+                            </NavMenuItem.SubmenuItem>
 
                             <NavCustomViews />
                         </NavMenuItem.CollapsibleMenu>
