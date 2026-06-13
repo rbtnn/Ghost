@@ -60,20 +60,22 @@ function getMembersHelper(data, frontendKey, excludeList) {
     let membersHelper = '';
     if (!excludeList.has('portal')) {
         const {scriptUrl} = getFrontendAppConfig('portal');
-        const scriptUrlAdditional = -1 !== scriptUrl.indexOf('?v=') ? '' : '?v=' + Math.floor(Math.random() * (99999 - 10000) + 10000);
-        const colorString = (_.has(data, 'site._preview') && data.site.accent_color) ? data.site.accent_color : '';
-        const attributes = {
-            i18n: true,
-            ghost: urlUtils.getSiteUrl(),
-            key: frontendKey,
-            api: urlUtils.urlFor('api', {type: 'content'}, true),
-            locale: settingsCache.get('locale') || 'en'
-        };
-        if (colorString) {
-            attributes['accent-color'] = colorString;
+
+        if (scriptUrl) {
+            const colorString = (_.has(data, 'site._preview') && data.site.accent_color) ? data.site.accent_color : '';
+            const attributes = {
+                i18n: true,
+                ghost: urlUtils.getSiteUrl(),
+                key: frontendKey,
+                api: urlUtils.urlFor('api', {type: 'content'}, true),
+                locale: settingsCache.get('locale') || 'en'
+            };
+            if (colorString) {
+                attributes['accent-color'] = colorString;
+            }
+            const dataAttributes = getDataAttributes(attributes);
+            membersHelper += `<script defer src="${scriptUrl}" ${dataAttributes} crossorigin="anonymous"></script>`;
         }
-        const dataAttributes = getDataAttributes(attributes);
-        membersHelper += `<script defer src="${scriptUrl}${scriptUrlAdditional}" ${dataAttributes} crossorigin="anonymous"></script>`;
     }
     if (!excludeList.has('cta_styles')) {
         membersHelper += (`<style id="gh-members-styles">${templateStyles}</style>`);

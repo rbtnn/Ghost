@@ -311,11 +311,6 @@ export function getRefDomain() {
     return referrerSource;
 }
 
-export function hasMultipleProductsFeature({site}) {
-    const {portal_products: portalProducts} = site || {};
-    return !!portalProducts;
-}
-
 export function hasCommentsEnabled({site}) {
     return site?.comments_enabled && site?.comments_enabled !== 'off';
 }
@@ -426,18 +421,6 @@ export function getAllProductsForSite({site}) {
             currency_symbol: getCurrencySymbol(product.yearlyPrice.currency)
         };
         return product;
-    });
-}
-
-export function hasBenefits({prices, site}) {
-    if (!hasMultipleProductsFeature({site})) {
-        return false;
-    }
-    if (!prices?.length) {
-        return false;
-    }
-    return prices.some((price) => {
-        return price?.benefits?.length;
     });
 }
 
