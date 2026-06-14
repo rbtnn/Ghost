@@ -129,7 +129,7 @@ function getAnnouncementBarHelper(data) {
         const announcementVisibility = searchParam.has('announcement_vis');
 
         if (!announcement || !announcementVisibility) {
-            return;
+            return '';
         }
         attrs.announcement = escapeExpression(announcement);
         attrs['announcement-background'] = escapeExpression(announcementBackground);
@@ -389,7 +389,7 @@ module.exports = async function ghost_head(options) { // eslint-disable-line cam
         if (options.data.site.accent_color) {
             const accentColor = escapeExpression(options.data.site.accent_color);
             const styleTag = `<style>:root {--ghost-accent-color: ${accentColor};}</style>`;
-            const existingScriptIndex = _.findLastIndex(head, str => str.match(/<\/(style|script)>/));
+            const existingScriptIndex = _.findLastIndex(head, str => typeof str === 'string' && /<\/(style|script)>/.test(str));
 
             if (existingScriptIndex !== -1) {
                 head[existingScriptIndex] = head[existingScriptIndex] + styleTag;
