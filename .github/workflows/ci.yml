@@ -111,6 +111,7 @@ jobs:
                 - '!.github/renovate-bot.cjs'
                 - '!.github/workflows/renovate.yml'
               - '.npmrc'
+              - 'nx.json'
               - 'package.json'
               - 'pnpm-lock.yaml'
               - 'pnpm-workspace.yaml'
@@ -177,6 +178,9 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile --ignore-scripts
+
+      - name: Start Nx Cloud CI run
+        run: pnpm nx start-ci-run
 
       - name: Determine Affected Projects
         id: affected
