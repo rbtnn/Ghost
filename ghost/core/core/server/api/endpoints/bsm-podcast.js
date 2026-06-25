@@ -22,6 +22,9 @@ const fetchFeed = async () => {
 module.exports = {
     docName: 'bsm_podcast',
     browse: {
+        headers: {
+            cacheInvalidate: false
+        },
         options: [
         ],
         data: [
