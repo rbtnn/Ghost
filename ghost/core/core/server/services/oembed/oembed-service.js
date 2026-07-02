@@ -304,14 +304,25 @@ class OEmbedService {
             };
         }
 
-        const pickFn = (sizes, pickDefault) => {
+        // metascraper-logo-favicon 5.50.x awaits pickFn and passes the resolved
+        // value straight to its logo sanitizer, so pickFn must return a URL
+        // string, not a size entry like the pre-5.43 API. Its bundled default
+        // picker (pickBiggerSize) also network-validates every candidate via
+        // reachable-url before returning it, which drops icons whenever probes
+        // are blocked (tests) or slow. Icon URLs here come from the page's own
+        // markup, so keep the pre-5.43 behavior and pick purely by parsed size.
+        const pickBiggest = (iconSizes) => {
+            const sorted = [...iconSizes].sort((a, b) => (b.size?.priority ?? 0) - (a.size?.priority ?? 0));
+            return (sorted.find(item => item.size?.square) || sorted[0])?.url;
+        };
+        const pickFn = (sizes) => {
             const appleTouchIcon = sizes.find(item => item.rel?.includes('apple') && item.sizes && item.size?.width >= 180);
-            // Bookmark cards render the icon inline in the post body, where the
-            // site's standard (often transparent) favicon matches surrounding
-            // chrome better than an Apple Touch icon's solid-background square.
-            // Other call sites (Recommendations Avatar via type='mention', plus
-            // the generic oembed fallback) scale the icon up into a larger
-            // tile, where Apple Touch is the better fit.
+            // Bookmark cards (including the oembed fallback, which resolves to a
+            // bookmark) render the icon inline in the post body, where the site's
+            // standard (often transparent) favicon matches surrounding chrome
+            // better than an Apple Touch icon's solid-background square. The
+            // Recommendations Avatar (type='mention') instead scales the icon up
+            // into a larger tile, where Apple Touch is the better fit.
             if (type === 'bookmark') {
                 // metascraper-logo-favicon gathers anything matching link[rel*="icon"], which
                 // includes apple-touch-icon, mask-icon (Safari pinned-tab silhouette), and
@@ -319,10 +330,10 @@ class OEmbedService {
                 // favicon, so skip them when picking what to show in a bookmark card.
                 const standardIcons = sizes.filter(item => !/apple|mask-icon|fluid-icon/.test(item.rel ?? ''));
                 const svgIcon = standardIcons.find(item => item.href?.endsWith('svg'));
-                return svgIcon || pickDefault(standardIcons) || appleTouchIcon;
+                return svgIcon?.url || pickBiggest(standardIcons) || appleTouchIcon?.url;
             }
             const svgIcon = sizes.find(item => item.href?.endsWith('svg'));
-            return appleTouchIcon || svgIcon || pickDefault(sizes);
+            return appleTouchIcon?.url || svgIcon?.url || pickBiggest(sizes);
         };
 
         const scrapers = [
@@ -588,7 +599,7 @@ class OEmbedService {
 
             // fallback to bookmark when we can't get oembed
             if (!data && !type) {
-                data = await this.fetchBookmarkData(url, body, type);
+                data = await this.fetchBookmarkData(url, body, 'bookmark');
             }
 
             // couldn't get anything, throw a validation error

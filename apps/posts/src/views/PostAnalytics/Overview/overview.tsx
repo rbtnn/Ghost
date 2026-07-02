@@ -27,12 +27,13 @@ const Overview: React.FC = () => {
     const {totals, isLoading: isTotalsLoading, currencySymbol} = usePostReferrers(postId);
     const {appSettings} = useAppContext();
     const {emailTrackClicks: emailTrackClicksEnabled, emailTrackOpens: emailTrackOpensEnabled} = appSettings?.analytics || {};
+    const webAnalyticsEnabled = appSettings?.analytics?.webAnalytics === true;
 
     // Gift link card: only for eligible posts. Read the active link (without
     // minting) to scope the usage count to the current token, matching the modal.
     const canManageGiftLink = useCanManageGiftLink(post);
-    const {token: giftToken} = useActiveGiftLink(postId, {enabled: canManageGiftLink});
-    const {usage: giftLinkUsage} = useGiftLinkUsage({postUuid: post?.uuid, token: giftToken, enabled: canManageGiftLink});
+    const {token: giftToken, isLoading: giftTokenLoading, error: giftTokenError} = useActiveGiftLink(postId, {enabled: canManageGiftLink});
+    const {usage: giftLinkUsage, loading: giftLinkUsageLoading, error: giftLinkUsageError} = useGiftLinkUsage({postUuid: post?.uuid, token: giftToken, tokenLoading: giftTokenLoading, tokenError: giftTokenError, enabled: canManageGiftLink});
     const [isGiftLinkOpen, setIsGiftLinkOpen] = useState(false);
 
     // Calculate chart range based on days between today and post publication date
@@ -68,7 +69,7 @@ const Overview: React.FC = () => {
 
     const {data: chartData, loading: chartLoading} = useTinybirdQuery({
         endpoint: 'api_kpis',
-        statsConfig: statsConfig || {id: ''},
+        statsConfig,
         params: params
     });
 
@@ -98,7 +99,7 @@ const Overview: React.FC = () => {
     // Get sources data
     const {data: sourcesData, loading: isSourcesLoading} = useTinybirdQuery({
         endpoint: 'api_top_sources',
-        statsConfig: statsConfig || {id: ''},
+        statsConfig,
         params: params
     });
 
@@ -107,16 +108,17 @@ const Overview: React.FC = () => {
 
     // Use the utility function from admin-x-framework
     const showNewsletterSection = hasBeenEmailed(post as Post) && emailTrackOpensEnabled && emailTrackClicksEnabled;
-    const showWebSection = !post?.email_only && appSettings?.analytics.webAnalytics;
+    const showWebSection = !post?.email_only && webAnalyticsEnabled;
     const showGrowthSection = appSettings?.analytics.membersTrackSources;
+    const showGiftLinkCard = Boolean(canManageGiftLink && post && appSettings?.analytics.webAnalytics);
 
     // Redirect to Growth tab if this is a published-only post with web analytics disabled
     // Only redirect if Growth section is available
     useEffect(() => {
-        if (!isPostLoading && post && isPublishedOnly(post as Post) && !appSettings?.analytics.webAnalytics && showGrowthSection) {
+        if (!isPostLoading && post && isPublishedOnly(post as Post) && !webAnalyticsEnabled && showGrowthSection) {
             navigate(`/posts/analytics/${postId}/growth`, {replace: true});
         }
-    }, [isPostLoading, post, appSettings?.analytics.webAnalytics, navigate, postId, showGrowthSection]);
+    }, [isPostLoading, post, webAnalyticsEnabled, navigate, postId, showGrowthSection]);
 
     // First we have to wait for the post to be loaded to determine what sections (web, newsletter etc.) should be displayed
     if (isPostLoading) {
@@ -147,10 +149,10 @@ const Overview: React.FC = () => {
                             post={post as Post}
                         />
                     )}
-                    {(showGrowthSection || (canManageGiftLink && post)) && (
+                    {(showGrowthSection || showGiftLinkCard) && (
                         <div className='col-span-2 flex flex-col gap-6 lg:grid lg:grid-cols-3'>
                             {showGrowthSection && (
-                                <Card className={`group overflow-hidden p-0 ${canManageGiftLink && post ? 'lg:col-span-2' : 'lg:col-span-3'}`} data-testid='growth'>
+                                <Card className={`group overflow-hidden p-0 ${showGiftLinkCard ? 'lg:col-span-2' : 'lg:col-span-3'}`} data-testid='growth'>
                                     <div className='relative flex items-center justify-between gap-6'>
                                         <CardHeader>
                                             <CardTitle className='flex items-center gap-1.5 text-lg'>
@@ -205,7 +207,7 @@ const Overview: React.FC = () => {
                             </CardContent>
                                 </Card>
                             )}
-                            {canManageGiftLink && post && (
+                            {showGiftLinkCard && (
                                 <Card className={`group/datalist overflow-hidden ${showGrowthSection ? 'lg:col-span-1' : 'lg:col-span-3'}`} data-testid='gift-link-card'>
                                     <div className='relative flex items-center justify-between gap-6'>
                                         <CardHeader>
@@ -223,13 +225,13 @@ const Overview: React.FC = () => {
                                             Share
                                         </Button>
                                     </div>
-                                    {giftLinkUsage && (
+                                    {!giftLinkUsageLoading && !giftLinkUsageError && (
                                         <CardContent className='flex flex-col gap-1'>
                                             <span className='text-sm text-muted-foreground'>
                                                 Visitors
                                             </span>
                                             <span className='text-[2.2rem] leading-none font-semibold'>
-                                                {formatNumber(giftLinkUsage.visits)}
+                                                {formatNumber(giftLinkUsage?.visits ?? 0)}
                                             </span>
                                         </CardContent>
                                     )}
@@ -237,12 +239,12 @@ const Overview: React.FC = () => {
                             )}
                         </div>
                     )}
-                    {!showWebSection && !showNewsletterSection && !showGrowthSection && !canManageGiftLink && (
+                    {!showWebSection && !showNewsletterSection && !showGrowthSection && !showGiftLinkCard && (
                         <DisabledSourcesIndicator className='col-span-2 py-20' />
                     )}
                 </div>
             </PostAnalyticsContent>
-            {canManageGiftLink && post && (
+            {showGiftLinkCard && (
                 <GiftLinkModal
                     key={postId}
                     open={isGiftLinkOpen}
