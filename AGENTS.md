@@ -23,8 +23,8 @@ Ghost is a pnpm + Nx monorepo with three workspace groups:
 Two categories of apps:
 
 **Admin Apps** (embedded in Ghost Admin):
-- `admin-x-settings`, `admin-x-activitypub` - Settings and integrations
-- `posts`, `stats` - Post analytics and site-wide analytics
+- `admin` - The consolidated React admin shell, organized by domain (`src/{analytics,members,posts,tags,comments,automations,...}`)
+- `admin-x-settings`, `activitypub` - Settings and ActivityPub integration (route-composed into `admin`)
 - Built with Vite + React + `@tanstack/react-query`
 
 **Public Apps** (served to site visitors):
@@ -41,7 +41,7 @@ Merged from the former TryGhost/Koenig repo with full git history:
 
 - **koenig-lexical** - The Lexical-based rich text editor UI. Bundled into
   Ghost Admin at build time (`ghost/admin` copies its UMD build into admin
-  assets; `apps/posts` and `apps/admin` import it directly)
+  assets; `apps/admin` imports it directly)
 - **kg-*** - Editor support packages: server-side renderers and converters
   consumed by `ghost/core` (kg-default-nodes, kg-lexical-html-renderer,
   kg-html-to-lexical, ...) plus frontend helpers (kg-unsplash-selector)
@@ -264,12 +264,12 @@ Critical build order (Nx handles automatically):
 
 ### TailwindCSS v4 Setup
 
-Ghost Admin uses **TailwindCSS v4** via the `@tailwindcss/vite` plugin. CSS processing is centralized — only `apps/admin/vite.config.ts` loads the `@tailwindcss/vite` plugin. All embedded React apps (posts, stats, activitypub, admin-x-settings, admin-x-design-system) are scanned from this single entry point.
+Ghost Admin uses **TailwindCSS v4** via the `@tailwindcss/vite` plugin. CSS processing is centralized — only `apps/admin/vite.config.ts` loads the `@tailwindcss/vite` plugin. All embedded React apps (activitypub, admin-x-settings, admin-x-design-system) are scanned from this single entry point.
 
 ### Entry Point
 
 `apps/admin/src/index.css` is the main CSS entry point. It contains:
-- `@source` directives that scan class usage in shade, posts, stats, activitypub, admin-x-settings, admin-x-design-system, and kg-unsplash-selector
+- `@source` directives that scan class usage in shade, activitypub, admin-x-settings, admin-x-design-system, and kg-unsplash-selector
 - `@import "@tryghost/shade/styles.css"` which loads the Shade design system styles
 
 ### Shade Styles
@@ -289,7 +289,7 @@ Theme tokens/variants/animations are defined in CSS (`apps/shade/tailwind.theme.
 
 ### Critical Rule: Embedded Apps Must NOT Import Shade Independently
 
-Apps consumed via `@source` (posts, stats, activitypub) must **NOT** import `@tryghost/shade/styles.css` in their own CSS. Doing so causes duplicate Tailwind utilities and cascade conflicts. All Tailwind CSS is generated once via the admin entry point.
+Apps consumed via `@source` (activitypub, admin-x-settings) must **NOT** import `@tryghost/shade/styles.css` in their own CSS. Doing so causes duplicate Tailwind utilities and cascade conflicts. All Tailwind CSS is generated once via the admin entry point.
 
 ### Public Apps
 
@@ -305,13 +305,13 @@ Public-facing apps (`comments-ui`, `signup-form`, `sodo-search`, `portal`, `anno
 When the user asks you to create a commit or draft a commit message, load and follow the `commit` skill from `.agents/skills/commit`.
 
 ### ESLint Config
-Source of truth: [eslint.shared.mjs](eslint.shared.mjs) at the repo root. Two factories cover most workspaces — `reactAppConfig` (every `apps/*` workspace) and `nodeLibConfig` (Node libs in `ghost/`). Each factory has full JSDoc with `@example`s; hover the call site in your editor.
+Source of truth: two internal config packages — [`@internal/cfg-eslint`](configs/eslint/index.mjs) (shared rule atoms + the `nodeLibConfig` factory for Node libs) and [`@internal/cfg-eslint-react`](configs/eslint-react/index.mjs) (the `reactAppConfig` factory for every `apps/*` workspace). Both factories are synchronous and have full JSDoc with `@example`s; hover the call site in your editor. Consume them by name — declare the package as a `workspace:*` devDependency.
 
 Minimal example for a new admin React app (`apps/new-feature/eslint.config.js`):
 
 ```js
-import {reactAppConfig} from '../../eslint.shared.mjs';
-export default await reactAppConfig({
+import {reactAppConfig} from '@internal/cfg-eslint-react';
+export default reactAppConfig({
     tailwindCssPath: `${import.meta.dirname}/../admin/src/index.css`,
     shadeRestricted: true
 });
@@ -320,11 +320,14 @@ export default await reactAppConfig({
 Conventions:
 - **Rules are `'error'` or `'off'` — never `'warn'`.** Warnings get ignored and pollute output. Applies to every workspace covered by the factories above + the standalones; `e2e/` has its own setup (see [e2e/CLAUDE.md](e2e/CLAUDE.md)) and currently still uses warn-level Playwright rules — a separate cleanup.
 - **Params prefixed `legacy*`** (`legacyTailwindV3ConfigPath`, `legacyJsTsSplit`) are escape hatches for migrations that haven't shipped yet. Intentional and visible — PRs to remove them are scoped.
-- **Standalone configs** (`ghost/core`, `ghost/admin`, `apps/admin`, `apps/admin-toolbar`) exist because their rule sets genuinely don't fit a factory — read the file directly. They import shared atoms (`correctnessRules`, `nodeLibRules`, `localFilenamesPlugin`, `strictLinterOptions`) where applicable.
-- **Plugin deps**: workspaces that use Tailwind must list `tailwindcss` as a (dev)Dependency themselves; other eslint plugins are root devDeps because the factory imports them dynamically.
+- **Standalone configs** (`ghost/core`, `ghost/admin`, `apps/admin`, `apps/admin-toolbar`) exist because their rule sets genuinely don't fit a factory — read the file directly. They import shared atoms (`correctnessRules`, `nodeLibRules`, `localFilenamesPlugin`, `strictLinterOptions`) from `@internal/cfg-eslint`.
+- **Plugin deps**: a workspace must declare every eslint plugin its config resolves. Two cases:
+  - *Factory consumers* only import a factory, which supplies its plugins as objects from the config package — so they need just the config package (`@internal/cfg-eslint` / `@internal/cfg-eslint-react`) as a `workspace:*` devDependency, not the individual plugins.
+  - *Hand-rolled configs* (the standalones above, plus the inline configs in `koenig/kg-*` and `e2e/`) `import` plugins directly, so each must list those plugins in its own `devDependencies` — most commonly `eslint-plugin-ghost: catalog:`. Don't rely on the root hoisting a plugin for you; there are no eslint plugins left in the root `package.json` (only `eslint` itself and `globals`, which the root config uses).
+  - Exception: Tailwind — a workspace that uses it must list `tailwindcss` as its own (dev)Dependency regardless (the settings-based resolver requires it locally), and the legacy v3 apps pin `eslint-plugin-tailwindcss` via `catalog:tailwind3`.
 
 ### When Working on Admin UI
-- **New features:** Build in React (`apps/admin-x-*` or `apps/posts`)
+- **New features:** Build in React in `apps/admin` (domain folders under `src/`)
 - **Use:** `admin-x-framework` for API hooks (`useBrowse`, `useEdit`, etc.)
 - **Use:** `shade` design system for new components (not admin-x-design-system)
 - **Translations:** Add to `ghost/i18n/locales/en/ghost.json`

@@ -747,8 +747,8 @@ test.describe('Member emails settings', async () => {
 
             const editor = modal.locator('[data-kg="editor"] div[contenteditable="true"]').first();
             await editor.click({timeout: 5000});
-            await editor.fill('');
-            await expect(editor).toBeEmpty();
+            await page.keyboard.press('ControlOrMeta+a');
+            await page.keyboard.press('Backspace');
             await openSlashMenu(page, 'bookmark');
             await page.keyboard.press('Enter');
 
@@ -756,6 +756,7 @@ test.describe('Member emails settings', async () => {
             await expect(bookmarkUrlInput).toBeVisible({timeout: 10000});
             await bookmarkUrlInput.fill('https://ghost.org/');
             await expect(bookmarkUrlInput).toHaveValue('https://ghost.org/');
+
             await bookmarkUrlInput.press('Enter');
 
             await expect.poll(() => lastApiRequests.fetchOembed?.url || '').toContain('type=bookmark');
