@@ -75,6 +75,14 @@ const features: Feature[] = [{
     title: 'React member details',
     description: 'Renders the member detail screen (/members/:id) from the React app instead of the Ember screen. Gates the migration behind a runtime toggle so we can compare both implementations.',
     flag: 'memberDetailsReact'
+}, {
+    title: 'Member custom fields',
+    description: 'Let admins create and manage custom field definitions for members',
+    flag: 'membersCustomFields'
+}, {
+    title: 'Preview by tier',
+    description: 'Preview posts and emails as a member of a specific tier',
+    flag: 'previewByTier'
 }];
 
 const AlphaFeatures: React.FC = () => {
