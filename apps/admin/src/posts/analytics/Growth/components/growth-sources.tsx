@@ -5,6 +5,7 @@ import {type BaseSourceData, type ProcessedSourceData, extendSourcesWithPercenta
 import {Button, Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle, EmptyIndicator, Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger, Table, TableBody, TableCell, TableHead, TableHeader, TableRow} from '@tryghost/shade/components';
 import {LucideIcon, cn, formatNumber} from '@tryghost/shade/utils';
 import {useAppContext} from '@tryghost/admin-x-framework';
+import {centsToDollars} from '@tryghost/shade/app';
 
 // Default source icon URL - apps can override this
 const DEFAULT_SOURCE_ICON_URL = 'https://www.google.com/s2/favicons?domain=ghost.org&sz=64';
@@ -39,9 +40,6 @@ const SourcesTable: React.FC<SourcesTableProps> = ({headerStyle = 'table', child
                 </TableHeader>
                 <TableBody>
                     {data?.map((row) => {
-                        const IsJPYCurrency = () => { return true; };
-                        const centsToDollars = (value: number) => Math.round(value / (IsJPYCurrency() ? 1 : 100));
-
                         return (
                             <TableRow key={row.source} className='last:border-none'>
                                 <TableCell>

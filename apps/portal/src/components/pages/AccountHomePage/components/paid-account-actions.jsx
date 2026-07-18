@@ -6,14 +6,7 @@ import LoaderIcon from '../../../../images/icons/loader.svg?react';
 import OfferTagIcon from '../../../../images/icons/offer-tag.svg?react';
 import {useContext} from 'react';
 import {t} from '../../../../utils/i18n';
-
-const IsJPYCurrency = (currency) => {
-    if (currency !== null && typeof currency.toUpperCase === 'function') {
-        return currency.toUpperCase() === 'JPY';
-    } else {
-        return true;
-    }
-};
+import {isJPYCurrency} from '../../../../utils/helpers';
 
 const PaidAccountActions = () => {
     const {member, site, doAction} = useContext(AppContext);
@@ -38,7 +31,7 @@ const PaidAccountActions = () => {
         let label = '';
         if (price) {
             const {amount = 0, currency, interval} = price;
-            label = `${Intl.NumberFormat('en', {currency, style: 'currency'}).format(IsJPYCurrency(currency) ? amount : (amount / 100))}/${t(interval)}`;
+            label = `${Intl.NumberFormat('en', {currency, style: 'currency'}).format(isJPYCurrency(currency) ? amount : (amount / 100))}/${t(interval)}`;
         }
 
         const subscriptionExpiry = getSubscriptionExpiry({member});

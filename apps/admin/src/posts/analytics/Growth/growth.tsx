@@ -12,11 +12,6 @@ import {useAppContext} from '@tryghost/admin-x-framework';
 import {useNavigate, useParams} from '@tryghost/admin-x-framework';
 import {usePostReferrers} from '@/posts/analytics/hooks/use-post-referrers';
 
-export const centsToDollars = (value : number) => {
-    const IsJPYCurrency = () => { return true; };
-    return Math.round(value / (IsJPYCurrency() ? 1 : 100));
-};
-
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
 interface postAnalyticsProps {}
 
