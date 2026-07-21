@@ -336,8 +336,8 @@ async function initServices({ghostServer} = {}) {
     const members = require('./server/services/members');
     const tiers = require('./server/services/tiers');
     const permissions = require('./server/services/permissions');
-    const indexnow = require('./server/services/indexnow-ping');
-    const slack = require('./server/services/slack-ping');
+    const indexnow = require('./server/services/indexnow-ping').default;
+    const slack = require('./server/services/slack-ping').default;
     const webhooks = require('./server/services/webhooks');
     const postScheduling = require('./server/services/post-scheduling').default;
     const comments = require('./server/services/comments');
@@ -362,15 +362,16 @@ async function initServices({ghostServer} = {}) {
     const explorePingService = require('./server/services/explore-ping');
     const domainEvents = require('@tryghost/domain-events');
     const automations = require('./server/services/automations');
+    const adapterManager = require('./server/services/adapter-manager').default;
+    const {withErrorCapture} = require('./server/adapters/scheduling/error-capture');
 
-    const {createAdapter: createSchedulerAdapter} = require('./server/adapters/scheduling/utils');
     const urlUtils = require('./shared/url-utils');
     const internalKeys = require('./server/services/internal-keys').default;
 
     // Initialize things that other services depend on first.
     emailAddressService.init();
     const apiUrl = urlUtils.urlFor('api', {type: 'admin'}, true);
-    const schedulerAdapter = createSchedulerAdapter();
+    const schedulerAdapter = withErrorCapture(adapterManager.getAdapter('scheduling'));
     schedulerAdapter.run();
     await stripe.init();
 
