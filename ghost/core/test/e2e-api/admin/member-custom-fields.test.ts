@@ -910,10 +910,8 @@ describe('Member Custom Fields Admin API', function () {
 
         it('rejects a key too long to name a field, without echoing it back', async function () {
             // Keys are minted into a bounded column, so a longer one cannot name a
-            // field that exists. Refused as input rather than looked up, which also
-            // means the response never carries the key back — the unknown-key error
-            // names the key it was given, so an enormous one would otherwise answer
-            // a request with a multiple of its own size.
+            // field. Refused as input rather than looked up, so the response never
+            // carries it back — the unknown-key error names the key it was given.
             const memberId = await createMember();
             const hugeKey = 'k'.repeat(200000);
 
@@ -923,10 +921,8 @@ describe('Member Custom Fields Admin API', function () {
         });
 
         it('rejects a write naming more fields than the site may define', async function () {
-            // A write can't name more fields than the site is allowed definitions, so
-            // the ceiling is the operator's configured one. Without it, each key binds
-            // a query parameter and a big enough object exceeds the driver's limit,
-            // surfacing as a 500 with the generated SQL in the error.
+            // The ceiling is the operator's configured definitions limit, so it moves
+            // with the setting rather than being fixed in the service.
             configUtils.set('members:customFields:maxDefinitions', 3);
             const memberId = await createMember();
 
@@ -943,10 +939,9 @@ describe('Member Custom Fields Admin API', function () {
         });
 
         it('refuses a malformed custom_fields identically on create and on edit', async function () {
-            // The schema lets every shape through on purpose, so the service is the
-            // only thing judging it — and both verbs must judge it the same way. A
-            // body too malformed to be a write is refused, not accepted and dropped,
-            // which is the whole reason create refuses rather than ignoring.
+            // The schema lets every shape through, so the service is the only thing
+            // judging it, and both verbs judge it the same way. A body too malformed
+            // to be a write is refused rather than accepted and dropped.
             const memberId = await createMember();
 
             for (const [index, malformed] of [null, 'not-an-object', 42, true, [], ['a']].entries()) {
@@ -1266,9 +1261,8 @@ describe('Member Custom Fields Admin API', function () {
 
         it('ignores custom_fields on a member edit and never returns them', async function () {
             // The schema declares `custom_fields` on every site, so with the feature
-            // off the key reaches the service and is dropped there. A flag-off site
-            // stays byte-identical to a Ghost that predates the feature: the edit
-            // succeeds, the rest of it applies, and the values are ignored.
+            // off the key reaches the service and is dropped there: the edit succeeds,
+            // the rest of it applies, and the values are ignored.
             //
             // The field and value are set up with the flag on, then the flag goes
             // off for the request under test.
@@ -1296,9 +1290,8 @@ describe('Member Custom Fields Admin API', function () {
         });
 
         it('ignores custom_fields on a member create', async function () {
-            // The not-yet-supported refusal that create gets with the flag on must
-            // not leak to a site without the feature: there, the key is simply
-            // dropped, exactly as a pre-feature Ghost would have.
+            // The not-supported-on-create refusal is gated behind the feature too:
+            // with it off, the key is dropped and the create succeeds.
             const {body} = await agent
                 .post('members/')
                 .body({members: [{email: 'create-flag-off@example.com', custom_fields: {'favourite-topic': 'Ghosts'}}]})
@@ -1308,10 +1301,9 @@ describe('Member Custom Fields Admin API', function () {
         });
 
         it('ignores a malformed custom_fields rather than rejecting it', async function () {
-            // The schema declares `custom_fields` on every site, so a shape it might
-            // have judged would be judged everywhere — including sites without the
-            // feature, which accepted anything under this key before it existed.
-            // Leaving the schema permissive is what keeps those callers working.
+            // The schema declares `custom_fields` on every site, so any shape it
+            // judged would be judged on sites without the feature too. Leaving it
+            // unconstrained is what keeps the flag the only thing that matters here.
             const memberId = await createMember();
 
             for (const malformed of [null, 'not-an-object', 42, []]) {
@@ -1332,7 +1324,7 @@ describe('Member Custom Fields Admin API', function () {
         let actorId: string;
 
         const customFieldActions = async () => {
-            const {body} = await agent.get('actions/?filter=resource_type:member_custom_field').expectStatus(200);
+            const {body} = await agent.get('actions/?filter=resource_type:member_custom_field&include=actor,resource').expectStatus(200);
             return body.actions;
         };
 
@@ -1355,6 +1347,7 @@ describe('Member Custom Fields Admin API', function () {
             assert.equal(contextOf(actions[0]).key, field.key);
             assert.equal(actions[0].actor_type, 'user');
             assert.equal(actions[0].actor_id, actorId);
+            assert.equal(actions[0].resource.name, field.name);
         });
 
         // `resource_id` holds 24 characters and a key derived from a publisher-chosen
@@ -1436,6 +1429,7 @@ describe('Member Custom Fields Admin API', function () {
             assert.ok(deleted, 'a deleted action should be recorded');
             assert.equal(contextOf(deleted).key, field.key);
             assert.equal(deleted.actor_id, actorId);
+            assert.deepEqual(deleted.resource, {});
         });
 
         it('records the whole lifecycle as an ordered, attributed, named timeline', async function () {
@@ -1469,6 +1463,7 @@ describe('Member Custom Fields Admin API', function () {
             for (const a of timeline) {
                 assert.equal(a.actor_id, actorId, `the ${a.event} action is attributed`);
                 assert.ok(contextOf(a)?.primary_name, `the ${a.event} action names the field`);
+                assert.deepEqual(a.resource, {}, `the ${a.event} action tolerates its deleted resource`);
             }
 
             // Names track the field at each point; the rename also records what it was.

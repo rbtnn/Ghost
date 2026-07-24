@@ -10,6 +10,7 @@ import {
     renderAdminApp,
     settingsResponse,
     currentUserResponse,
+    currentRoute,
     type StaffUser,
 } from "@test-utils/acceptance";
 import {settingsScreen} from "@/settings/settings.screen";
@@ -235,7 +236,7 @@ describe("Advanced settings", () => {
         expect(initialQuery.get("filter")).toBe("resource_type:-[label]");
 
         await modal.getByRole("button", {name: "Filter"}).click();
-        const filters = modal.getByTestId("popover-content");
+        const filters = page.getByTestId("history-filters");
         await filters.getByLabelText("Posts").click();
         await expect(actionsApi).toHaveSentFilter("resource_type:-[label,post]");
         await expect(modal.getByText(/Page edited/)).toHaveCount(0);
@@ -243,7 +244,37 @@ describe("Advanced settings", () => {
         await filters.getByLabelText("Deleted").click();
         await expect(actionsApi).toHaveSentFilter("event:-[deleted]+resource_type:-[label,post]");
         await expect.poll(() => usersApi.requests.some(request => request.limit === 20)).toBe(true);
+
+        const staffFilter = modal.getByTestId("history-staff-filter");
+        await staffFilter.click();
+        await page.getByRole("option", {name: "Owner User"}).click();
+        await expect.poll(() => new URL(actionsApi.requests.at(-1)!.url).searchParams.get("filter")).toContain("actor_id:");
+
+        const clearButton = modal.getByRole("button", {name: "Clear selection"});
+        const clearIndicator = clearButton.element();
+        const dropdownIndicator = staffFilter.element().querySelector("svg");
+        expect(dropdownIndicator).not.toBeNull();
+        const indicatorGap = dropdownIndicator!.getBoundingClientRect().left - clearIndicator.getBoundingClientRect().right;
+        expect(indicatorGap).toBeGreaterThanOrEqual(8);
+        await clearButton.click();
+        await expect.element(staffFilter).toHaveTextContent("Search staff");
+        await expect.poll(currentRoute).toBe("/settings/history/view");
+
         await modal.getByRole("button", {name: "Close"}).click();
         await expect(modal).toHaveCount(0);
+    });
+
+    it("hydrates the staff filter from a history route", async () => {
+        const user = currentUserResponse().users[0] as unknown as StaffUser;
+        fakeSettingsScreens();
+        fakeUsers([user]);
+        fakeActions([]);
+
+        await renderAdminApp(`/settings/history/view/${user.id}`);
+
+        const modal = settingsScreen.section("history-modal");
+        const staffFilter = modal.getByTestId("history-staff-filter");
+        await expect.element(staffFilter).toHaveTextContent(user.name);
+        await expect.element(modal.getByRole("button", {name: "Clear selection"})).toBeVisible();
     });
 });

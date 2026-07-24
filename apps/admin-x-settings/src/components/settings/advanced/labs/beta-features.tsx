@@ -3,11 +3,12 @@ import LabItem from './lab-item';
 import NiceModal from '@ebay/nice-modal-react';
 import React, {useState} from 'react';
 import YamlFileEditorModal from './yaml-file-editor-modal';
-import {Button, FileUpload, List, showToast} from '@tryghost/admin-x-design-system';
+import {ActionList, Button, Dropzone} from '@tryghost/shade/components';
 import {Inline, Stack} from '@tryghost/shade/primitives';
 import {downloadRedirects, useUploadRedirects} from '@tryghost/admin-x-framework/api/redirects';
 import {downloadRoutes, useUploadRoutes} from '@tryghost/admin-x-framework/api/routes';
 import {getSettingValue} from '@tryghost/admin-x-framework/api/settings';
+import {toast} from 'sonner';
 import {useGlobalData} from '../../../providers/global-data-provider';
 import {useHandleError} from '@tryghost/admin-x-framework/hooks';
 
@@ -48,7 +49,7 @@ const BetaFeatures: React.FC = () => {
     };
 
     return (
-        <List titleSeparator={false}>
+        <ActionList>
             {IS_AUTOMATIONS_BETA_ACTIVE ? (
                 <LabItem
                     action={<FeatureToggle
@@ -79,16 +80,14 @@ const BetaFeatures: React.FC = () => {
             <LabItem
                 action={<Stack align='end' gap='xs'>
                     <Inline gap='sm'>
-                        <FileUpload
-                            id='upload-redirects'
-                            onUpload={async (file) => {
+                        <Dropzone
+                            inputId='upload-redirects'
+                            variant='buttonSecondary'
+                            onDropAccepted={async ([file]) => {
                                 try {
                                     setRedirectsUploading(true);
                                     await uploadRedirects(file);
-                                    showToast({
-                                        title: 'Redirects uploaded',
-                                        type: 'success'
-                                    });
+                                    toast.success('Redirects uploaded');
                                 } catch (e) {
                                     handleError(e);
                                 } finally {
@@ -96,11 +95,11 @@ const BetaFeatures: React.FC = () => {
                                 }
                             }}
                         >
-                            <Button color='grey' label={redirectsUploading ? 'Uploading ...' : 'Upload redirects file'} size='sm' tag='div' />
-                        </FileUpload>
-                        <Button color='grey' label='Edit' size='sm' onClick={openRedirectsEditor} />
+                            {redirectsUploading ? 'Uploading ...' : 'Upload redirects file'}
+                        </Dropzone>
+                        <Button size='sm' type='button' variant='secondary' onClick={openRedirectsEditor}>Edit</Button>
                     </Inline>
-                    <Button color='green' label='Download current redirects' link onClick={() => downloadRedirects()} />
+                    <Button className='h-auto p-0 text-green hover:text-green' size='sm' type='button' variant='link' onClick={() => downloadRedirects()}>Download current redirects</Button>
                 </Stack>}
                 detail={<>Configure redirects for old or moved content, <br /> more info in the <a className='text-green' href="https://ghost.org/tutorials/implementing-redirects/" rel="noopener noreferrer" target="_blank">docs</a></>}
                 testId='redirects'
@@ -108,16 +107,14 @@ const BetaFeatures: React.FC = () => {
             <LabItem
                 action={<Stack align='end' gap='xs'>
                     <Inline gap='sm'>
-                        <FileUpload
-                            id='upload-routes'
-                            onUpload={async (file) => {
+                        <Dropzone
+                            inputId='upload-routes'
+                            variant='buttonSecondary'
+                            onDropAccepted={async ([file]) => {
                                 try {
                                     setRoutesUploading(true);
                                     await uploadRoutes(file);
-                                    showToast({
-                                        type: 'success',
-                                        title: 'Routes uploaded'
-                                    });
+                                    toast.success('Routes uploaded');
                                 } catch (e) {
                                     handleError(e);
                                 } finally {
@@ -125,16 +122,16 @@ const BetaFeatures: React.FC = () => {
                                 }
                             }}
                         >
-                            <Button color='grey' label={routesUploading ? 'Uploading ...' : 'Upload routes file'} size='sm' tag='div' />
-                        </FileUpload>
-                        <Button color='grey' label='Edit' size='sm' onClick={openRoutesEditor} />
+                            {routesUploading ? 'Uploading ...' : 'Upload routes file'}
+                        </Dropzone>
+                        <Button size='sm' type='button' variant='secondary' onClick={openRoutesEditor}>Edit</Button>
                     </Inline>
-                    <Button color='green' label='Download current routes' link onClick={() => downloadRoutes()} />
+                    <Button className='h-auto p-0 text-green hover:text-green' size='sm' type='button' variant='link' onClick={() => downloadRoutes()}>Download current routes</Button>
                 </Stack>}
                 detail='Configure dynamic routing by modifying the routes.yaml file'
                 testId='routes'
                 title='Routes' />
-        </List>
+        </ActionList>
     );
 };
 

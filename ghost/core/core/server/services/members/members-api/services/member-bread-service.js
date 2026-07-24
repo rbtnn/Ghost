@@ -37,16 +37,6 @@ const CUSTOM_FIELDS_EDITED_ACTION = 'custom_fields_edited';
  * @prop {{getActiveByMembers: (memberIds: string[]) => Promise<Map<string, {cadence: 'month' | 'year', currency: string, amount: number}>>}} service
  */
 
-/**
- * @typedef {object} ICustomFieldsServiceWrapper
- * @prop {{
- *   getValuesForMembers: (memberIds: string[]) => Promise<Map<string, Record<string, unknown>>>,
- *   namesValues: (values: unknown) => boolean,
- *   planWrite: (values: unknown) => Promise<object[]>,
- *   applyWrite: (memberId: string, writes: object[]) => Promise<void>
- * }} values
- */
-
 module.exports = class MemberBREADService {
     /**
      * @param {object} deps
@@ -60,9 +50,9 @@ module.exports = class MemberBREADService {
      * @param {import('../../../settings-helpers/settings-helpers')} deps.settingsHelpers
      * @param {import('./next-payment-calculator')} deps.nextPaymentCalculator
      * @param {IGiftServiceWrapper} deps.giftService
-     * @param {ICustomFieldsServiceWrapper} deps.customFieldsService
+     * @param {import('../../../members-custom-fields/values-service').CustomFieldValuesService} deps.customFieldValues Required: boot builds it before the members service
      */
-    constructor({memberRepository, labsService, emailService, stripeService, offersAPI, memberAttributionService, emailSuppressionList, settingsHelpers, nextPaymentCalculator, commentsService, giftService, customFieldsService}) {
+    constructor({memberRepository, labsService, emailService, stripeService, offersAPI, memberAttributionService, emailSuppressionList, settingsHelpers, nextPaymentCalculator, commentsService, giftService, customFieldValues}) {
         this.offersAPI = offersAPI;
         /** @private */
         this.memberRepository = memberRepository;
@@ -85,7 +75,7 @@ module.exports = class MemberBREADService {
         /** @private */
         this.giftService = giftService;
         /** @private */
-        this.customFieldsService = customFieldsService;
+        this.customFieldValues = customFieldValues;
     }
 
     /**
@@ -114,7 +104,7 @@ module.exports = class MemberBREADService {
             return null;
         }
 
-        return this.customFieldsService.values.getValuesForMembers(memberIds);
+        return this.customFieldValues.getValuesForMembers(memberIds);
     }
 
     /**
@@ -448,11 +438,9 @@ module.exports = class MemberBREADService {
 
     /**
      * @private
-     * The write-side flag gate, mirroring the read side in `fetchCustomFieldValues`:
-     * with the feature off the key is dropped, so a flag-off site stays byte-identical
-     * to a Ghost that predates the feature. The schema declares `custom_fields`
-     * unconditionally — it describes the endpoint, not any one site — which is what
-     * makes the flag, rather than ajv, the thing deciding whether values are written.
+     * The write-side flag gate, paired with `fetchCustomFieldValues` on the read
+     * side. The schema declares `custom_fields` for every site, so the key arrives
+     * whether or not the feature is on and this is what decides it goes no further.
      * @param {object} data
      */
     dropCustomFieldsWhenDisabled(data) {
@@ -464,24 +452,18 @@ module.exports = class MemberBREADService {
     async add(data, options) {
         this.dropCustomFieldsWhenDisabled(data);
 
-        // Setting values while *creating* a member is a later vertical, not this
-        // one. Refuse rather than accept-and-drop, so the gap is legible.
-        //
-        // What counts as "naming a value" belongs to the values service, which
-        // answers it exactly as resolving an edit would — so a body malformed enough
-        // to be refused on edit is refused here too, rather than being accepted and
-        // dropped. Guarded on the key being present at all, so a create that never
-        // mentions custom fields — the overwhelming majority, and every create on a
-        // site without the feature — does not reach for the collaborator at all.
-        if (data.custom_fields !== undefined && this.customFieldsService.values.namesValues(data.custom_fields)) {
+        // Values cannot be set on create, only on a subsequent edit. `namesValues`
+        // both judges the body and rejects a malformed one, so a body refused here is
+        // refused on edit for the same reason.
+        if (this.customFieldValues.namesValues(data.custom_fields)) {
             throw new errors.ValidationError({
                 message: tpl(messages.customFieldsOnAdd),
                 property: 'custom_fields'
             });
         }
 
-        // `custom_fields` is not a member column, so it comes off before the
-        // repository sees it, exactly as on edit. Only `{}` can reach here.
+        // Not a member column, so it comes off before the repository sees it. Only
+        // an absent key or one naming no values gets this far.
         delete data.custom_fields;
 
         if (!this.stripeService.configured && (data.comped || data.stripe_customer_id)) {
@@ -581,7 +563,7 @@ module.exports = class MemberBREADService {
         // plan to apply once below, so the values aren't resolved and validated
         // twice.
         const plannedCustomFields = writeCustomFields
-            ? await this.customFieldsService.values.planWrite(customFields)
+            ? await this.customFieldValues.planWrite(customFields)
             : null;
 
         let model;
@@ -630,7 +612,7 @@ module.exports = class MemberBREADService {
         }
 
         if (plannedCustomFields) {
-            await this.customFieldsService.values.applyWrite(model.id, plannedCustomFields);
+            await this.customFieldValues.applyWrite(model.id, plannedCustomFields);
 
             // Custom fields aren't a member column or relation, so an edit touching
             // only them leaves `model._changed` empty and the save fires nothing.

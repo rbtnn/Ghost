@@ -1,8 +1,12 @@
+import CodeEditor from '../../../code-editor';
 import NiceModal, {useModal} from '@ebay/nice-modal-react';
 import React, {useEffect, useMemo, useState} from 'react';
 import {APIError, JSONError} from '@tryghost/admin-x-framework/errors';
-import {ButtonGroup, CodeEditor, Heading, Modal, showToast} from '@tryghost/admin-x-design-system';
+import {Button} from '@tryghost/shade/components';
+import {Inline, Text} from '@tryghost/shade/primitives';
+import {SettingsModal} from '@tryghost/shade/patterns';
 import {getGhostPaths} from '@tryghost/admin-x-framework/helpers';
+import {toast} from 'sonner';
 import {useHandleError} from '@tryghost/admin-x-framework/hooks';
 
 export interface YamlFileEditorModalProps {
@@ -109,10 +113,7 @@ const YamlFileEditorModal: React.FC<YamlFileEditorModalProps> = ({
             const file = new File([content], uploadFilename, {type: 'text/yaml'});
             await onUpload(file);
 
-            showToast({
-                type: 'success',
-                title: successMessage
-            });
+            toast.success(successMessage);
 
             closeModal();
         } catch (error) {
@@ -141,7 +142,7 @@ const YamlFileEditorModal: React.FC<YamlFileEditorModalProps> = ({
     const canSave = !isLoading && !loadError && !isSaving;
 
     return (
-        <Modal
+        <SettingsModal
             afterClose={afterClose}
             backDropClick={false}
             cancelLabel='Close'
@@ -152,20 +153,11 @@ const YamlFileEditorModal: React.FC<YamlFileEditorModalProps> = ({
         >
             <div className='flex h-full min-h-0 flex-col'>
                 <div className='mb-4 flex items-center justify-between'>
-                    <Heading level={2}>{title}</Heading>
-                    <ButtonGroup buttons={[
-                        {
-                            label: 'Close',
-                            color: 'outline',
-                            onClick: closeModal
-                        },
-                        {
-                            disabled: !canSave,
-                            label: isSaving ? 'Saving...' : 'Save',
-                            color: 'black',
-                            onClick: () => void handleSave()
-                        }
-                    ]} />
+                    <Text as='h2' className='md:text-3xl' leading='heading' size='2xl' weight='bold'>{title}</Text>
+                    <Inline gap='md'>
+                        <Button className='font-semibold' type='button' variant='ghost' onClick={closeModal}>Close</Button>
+                        <Button disabled={!canSave} type='button' onClick={() => void handleSave()}>{isSaving ? 'Saving...' : 'Save'}</Button>
+                    </Inline>
                 </div>
 
                 {(loadError || saveError) && (
@@ -188,7 +180,7 @@ const YamlFileEditorModal: React.FC<YamlFileEditorModalProps> = ({
                     )}
                 </div>
             </div>
-        </Modal>
+        </SettingsModal>
     );
 };
 
