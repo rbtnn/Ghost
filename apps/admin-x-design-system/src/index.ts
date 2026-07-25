@@ -1,8 +1,3 @@
-export {default as FacebookLogo} from './assets/images/facebook-logo.svg?react';
-export {default as GoogleLogo} from './assets/images/google-logo.svg?react';
-export {default as TwitterLogo} from './assets/images/twitter-logo.svg?react';
-export {default as XLogo} from './assets/images/x-logo.svg?react';
-
 export {default as DesktopChromeHeader} from './global/chrome/desktop-chrome-header';
 export type {DesktopChromeHeaderProps} from './global/chrome/desktop-chrome-header';
 
@@ -20,10 +15,6 @@ export {default as ViewContainer} from './global/layout/view-container';
 export type {View} from './global/layout/view-container';
 export type {PrimaryActionProps} from './global/layout/view-container';
 
-export {default as SettingNavItem} from './settings/setting-nav-item';
-export type {SettingNavItemProps} from './settings/setting-nav-item';
-export {default as SettingNavSection} from './settings/setting-nav-section';
-export type {SettingNavSectionProps} from './settings/setting-nav-section';
 export {debounce} from './utils/debounce';
 export {formatUrl} from './utils/format-url';
 
