@@ -1,5 +1,5 @@
 import moment from 'moment';
-import {Transform, type Readable} from 'node:stream';
+import {Transform, pipeline, type Readable} from 'node:stream';
 import type {Knex} from 'knex';
 
 const logging = require('@tryghost/logging');
@@ -81,7 +81,6 @@ interface MemberExportRow extends MemberDbRow {
     labels: Array<{name: string}>;
     subscribed: boolean;
     comped: boolean;
-    complimentary_plan: boolean;
     gift_id: string | null;
     stripe_customer_id: string | null;
     custom_field_cells: Record<string, unknown>;
@@ -164,15 +163,18 @@ export default class MembersCSVExporter {
         }
 
         logging.info('[MembersExporter] Starting streaming export of members');
-        const stream = membersQuery.stream()
-            .pipe(this.createBatchingTransform())
-            .pipe(this.createProcessingTransform(reference));
+        const batchingTransform = this.createBatchingTransform();
+        const processingTransform = this.createProcessingTransform(reference);
 
-        stream.on('end', () => {
-            logging.info('[MembersExporter] Total time taken for member export: ' + (Date.now() - start) / 1000 + 's');
+        pipeline(membersQuery.stream(), batchingTransform, processingTransform, (err) => {
+            if (err) {
+                logging.error({event: {name: 'members-export.stream.error'}, err}, 'Members export stream failed');
+            } else {
+                logging.info('[MembersExporter] Total time taken for member export: ' + (Date.now() - start) / 1000 + 's');
+            }
         });
 
-        return stream;
+        return processingTransform;
     }
 
     // products and labels are small, stable tables, read once up front as id->name
@@ -307,7 +309,6 @@ export default class MembersCSVExporter {
                 ...row,
                 subscribed: subscribedSet.has(row.id),
                 comped: row.status === 'comped',
-                complimentary_plan: row.status === 'complimentary',
                 gift_id: giftIdMap.get(row.id) || null,
                 stripe_customer_id: stripeCustomerMap.get(row.id) || null,
                 created_at: moment(row.created_at).toISOString(),
