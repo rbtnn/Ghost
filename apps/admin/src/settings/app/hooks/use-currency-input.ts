@@ -2,17 +2,18 @@ import {useEffect, useRef, useState} from 'react';
 
 const stripNonNumeric = (input: string) => input.replace(/[^\d.]+/g, '');
 
-const forceCurrencyValue = (input: string) => {
-    return Math.round(parseFloat(input.match(/[\d]+\.?[\d]{0,2}/)?.[0] || '0') * 100);
-};
+const useCurrencyInput = (valueInCents: number | '', onChange?: (cents: number) => void, currency?: string) => {
+    const divisor = currency?.toUpperCase() === 'JPY' ? 1 : 100;
+    const forceCurrencyValue = (input: string) => {
+        return Math.round(parseFloat(input.match(/[\d]+\.?[\d]{0,2}/)?.[0] || '0') * divisor);
+    };
 
-const useCurrencyInput = (valueInCents: number | '', onChange?: (cents: number) => void) => {
-    const [value, setValue] = useState(valueInCents === '' ? '' : ((valueInCents || 0) / 100).toString());
+    const [value, setValue] = useState(valueInCents === '' ? '' : ((valueInCents || 0) / divisor).toString());
     const lastEmittedValue = useRef<number | ''>(valueInCents);
 
     useEffect(() => {
         if (!Object.is(valueInCents, lastEmittedValue.current)) {
-            setValue(valueInCents === '' ? '' : ((valueInCents || 0) / 100).toString());
+            setValue(valueInCents === '' ? '' : ((valueInCents || 0) / divisor).toString());
         }
 
         lastEmittedValue.current = valueInCents;
@@ -20,7 +21,7 @@ const useCurrencyInput = (valueInCents: number | '', onChange?: (cents: number) 
 
     return {
         value,
-        onBlur: () => setValue((forceCurrencyValue(value) / 100).toString()),
+        onBlur: () => setValue((forceCurrencyValue(value) / divisor).toString()),
         onChange: (input: string) => {
             const cents = forceCurrencyValue(input);
 
