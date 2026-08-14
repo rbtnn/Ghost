@@ -11,7 +11,7 @@ import {ZERO_DECIMAL_CURRENCIES} from './member-event';
 import type {Member, MemberSubscription} from '@tryghost/admin-x-framework/api/members';
 import type {SubscriptionKind} from './member-subscription';
 
-const formatPriceBlockAmount = (amount: number, currency: string) => {
+export const formatPriceBlockAmount = (amount: number, currency: string) => {
     const value = ZERO_DECIMAL_CURRENCIES.has(currency.toLowerCase()) ? amount : amount / 100;
     // Match Ember: whole = no decimals, fractional = 2 decimals with locale separators.
     return value.toLocaleString(undefined, value % 1 === 0
