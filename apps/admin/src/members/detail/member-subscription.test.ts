@@ -79,6 +79,12 @@ describe('formatSubscriptionAmount', () => {
     it('formats zero', () => {
         expect(formatSubscriptionAmount(0, 'usd')).toBe('$0');
     });
+
+    it('formats zero-decimal currencies (e.g. JPY) without dividing by 100', () => {
+        // JPY stores amounts in whole yen (no minor unit), so 500 yen is ¥500, not ¥5.
+        expect(formatSubscriptionAmount(500, 'jpy')).toBe('¥500');
+        expect(formatSubscriptionAmount(0, 'jpy')).toBe('¥0');
+    });
 });
 
 describe('formatSubscriptionInterval', () => {

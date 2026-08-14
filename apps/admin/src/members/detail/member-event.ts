@@ -71,7 +71,7 @@ export interface ParsedMemberEvent {
  * gift-purchase row can display the amount without pulling in the whole utils
  * module. Zero-decimal currencies match the Stripe list.
  */
-const ZERO_DECIMAL_CURRENCIES = new Set([
+export const ZERO_DECIMAL_CURRENCIES = new Set([
     'bif', 'clp', 'djf', 'gnf', 'jpy', 'kmf', 'krw', 'mga', 'pyg',
     'rwf', 'ugx', 'vnd', 'vuv', 'xaf', 'xof', 'xpf'
 ]);

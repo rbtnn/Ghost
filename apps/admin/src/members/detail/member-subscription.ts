@@ -1,5 +1,6 @@
 import moment from 'moment-timezone';
 import {getSymbol} from '@tryghost/admin-x-framework';
+import {ZERO_DECIMAL_CURRENCIES} from './member-event';
 import type {MemberSubscription, MemberTier} from '@tryghost/admin-x-framework/api/members';
 
 export type SubscriptionKind = 'paid' | 'complimentary' | 'gift';
@@ -39,7 +40,7 @@ export function classifyMemberSubscription(sub: MemberSubscription): Subscriptio
  */
 export function formatSubscriptionAmount(amount: number, currency: string): string {
     const symbol = getSymbol(currency);
-    const value = amount / 100;
+    const value = ZERO_DECIMAL_CURRENCIES.has(currency.toLowerCase()) ? amount : amount / 100;
     const isWhole = value % 1 === 0;
     const formatted = value.toLocaleString(undefined, isWhole ? undefined : {minimumFractionDigits: 2, maximumFractionDigits: 2});
     return `${symbol}${formatted}`;
