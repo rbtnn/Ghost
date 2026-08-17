@@ -89,10 +89,17 @@ Practice and contributor guides explain how to make and verify changes:
 
 - [API design](practices/api-design.md)
 - [Database migrations](practices/database-migrations.md)
+- [Browser E2E testing](contributing/e2e-testing.md)
+- [Codebase documentation](contributing/documentation.md)
 - [Email testing](contributing/testing-email.md)
 - [Error handling](practices/error-handling.md)
 - [Internationalization](practices/internationalization.md)
 - [Performance testing](contributing/performance-testing.md)
+
+Reference guides provide tables and other information to look up while working
+on Ghost:
+
+- [Node.js compatibility](reference/node-compatibility.md)
 
 ### Finding Issues to Work On
 
