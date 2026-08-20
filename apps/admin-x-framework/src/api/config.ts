@@ -32,6 +32,10 @@ export type Config = {
         apiKey?: string | null;
         contentFilter?: string;
     };
+    pintura?: {
+        js?: string;
+        css?: string;
+    };
     hostSettings?: {
         siteId?: string;
         forceUpgrade?: boolean;
@@ -104,13 +108,14 @@ export type Config = {
                 }[]
             }
         },
-        pintura?: {
-            js?: string
-            css?: string
-        },
         managedEmail?: {
             enabled?: boolean
             sendingDomain?: string
+        },
+        export?: {
+            // Host archive webhook — when set, "Export data" delivers the
+            // archive by email instead of a synchronous download
+            generate_archive_url?: string
         }
     }
     security?: {

@@ -3,7 +3,6 @@ export interface IGhostPaths {
     adminRoot: string;
     assetRoot: string;
     apiRoot: string;
-    activityPubRoot: string;
 }
 
 export function getGhostPaths(): IGhostPaths {
@@ -12,8 +11,7 @@ export function getGhostPaths(): IGhostPaths {
     const adminRoot = `${subdir}/ghost/`;
     const assetRoot = `${subdir}/ghost/assets/`;
     const apiRoot = `${subdir}/ghost/api/admin`;
-    const activityPubRoot = `${subdir}/.ghost/activitypub`;
-    return {subdir, adminRoot, assetRoot, apiRoot, activityPubRoot};
+    return {subdir, adminRoot, assetRoot, apiRoot};
 }
 
 export function downloadFile(url: string) {
@@ -72,6 +70,11 @@ export function getFilenameFromContentDisposition(header: string | null): string
     return undefined;
 }
 
+export interface BlobDownloadOptions {
+    /** Aborts the in-flight fetch (e.g. the user cancelled the download). */
+    signal?: AbortSignal;
+}
+
 /**
  * Downloads a file by fetching it as a blob and triggering a browser download.
  * Use this instead of downloadFile/downloadFromEndpoint for streaming responses
@@ -80,8 +83,8 @@ export function getFilenameFromContentDisposition(header: string | null): string
  * The filename comes from the response's `Content-Disposition` header;
  * `fallbackFilename` is only used when the server omits it.
  */
-export async function blobDownload(url: string, fallbackFilename?: string): Promise<void> {
-    const response = await fetch(url, {method: 'GET'});
+export async function blobDownload(url: string, fallbackFilename?: string, {signal}: BlobDownloadOptions = {}): Promise<void> {
+    const response = await fetch(url, {method: 'GET', signal});
 
     if (!response.ok) {
         throw new Error(`Download failed: ${response.status} ${response.statusText}`);
@@ -103,7 +106,7 @@ export async function blobDownload(url: string, fallbackFilename?: string): Prom
     window.URL.revokeObjectURL(blobUrl);
 }
 
-export async function blobDownloadFromEndpoint(path: string, fallbackFilename?: string): Promise<void> {
+export async function blobDownloadFromEndpoint(path: string, fallbackFilename?: string, options: BlobDownloadOptions = {}): Promise<void> {
     const url = `${getGhostPaths().apiRoot}${path}`;
-    return blobDownload(url, fallbackFilename);
+    return blobDownload(url, fallbackFilename, options);
 }

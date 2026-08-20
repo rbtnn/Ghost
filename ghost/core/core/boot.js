@@ -361,7 +361,7 @@ async function initServices({ghostServer, config, prometheusClient}) {
     const statsService = require('./server/services/stats');
     const explorePingService = require('./server/services/explore-ping');
     const domainEvents = require('@tryghost/domain-events');
-    const automations = require('./server/services/automations');
+    const {automationsService} = require('./server/services/automations');
     const automationsApi = require('./server/services/automations/automations-api');
     const adapterManager = require('./server/services/adapter-manager').default;
     const {withErrorCapture} = require('./server/adapters/scheduling/error-capture');
@@ -424,7 +424,7 @@ async function initServices({ghostServer, config, prometheusClient}) {
             internalKeys
         }),
         machinePaymentsService.init(),
-        automations.init({
+        automationsService.init({
             domainEvents,
             apiUrl,
             schedulerAdapter,
@@ -484,8 +484,17 @@ async function initBackgroundServices({config}) {
         const emailAnalyticsJobs = require('./server/services/email-analytics/jobs');
         await Promise.all([
             emailAnalyticsJobs.scheduleRecurringNewslettersJob(),
-            emailAnalyticsJobs.scheduleRecurringAutomationsJob()
+            emailAnalyticsJobs.scheduleRecurringAutomationsJob(),
+            emailAnalyticsJobs.scheduleRecurringGiftDeliveriesJob()
         ]);
+    }
+
+    try {
+        const memberJobs = require('./server/services/members/jobs');
+        await memberJobs.scheduleTokenCleanupJob();
+    } catch (err) {
+        const logging = require('@tryghost/logging');
+        logging.error(err);
     }
 
     const updateCheck = require('./server/services/update-check');
@@ -522,6 +531,7 @@ async function bootGhost({backend = true, frontend = true, server = true} = {}) 
     // We need access to these variables in both the try and catch block
     let bootLogger;
     let config;
+    let flushLogs;
     let ghostServer;
     let logging;
     let metrics;
@@ -544,6 +554,7 @@ async function bootGhost({backend = true, frontend = true, server = true} = {}) 
         debug('Begin: Load logging');
         logging = require('@tryghost/logging');
         metrics = require('@tryghost/metrics');
+        flushLogs = require('./shared/flush-logs').flushLogs;
         bootLogger = new BootLogger(logging, metrics, startTime);
         debug('End: Load logging');
 
@@ -650,6 +661,7 @@ async function bootGhost({backend = true, frontend = true, server = true} = {}) 
 
         // If we pass the env var, kill Ghost
         if (process.env.GHOST_CI_SHUTDOWN_AFTER_BOOT) {
+            await flushLogs();
             process.exit(0);
         }
 
@@ -679,10 +691,9 @@ async function bootGhost({backend = true, frontend = true, server = true} = {}) 
             notifyServerReady(serverStartError);
             ghostServer.shutdown(2);
         } else {
-            // Ghost server failed to start, set a timeout to give logging a chance to flush
-            setTimeout(() => {
-                process.exit(2);
-            }, 100);
+            // Ghost server failed to start, drain the log transports before exiting
+            await flushLogs();
+            process.exit(2);
         }
     }
 }

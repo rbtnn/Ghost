@@ -543,7 +543,7 @@ describe('Portal Data links:', () => {
             let {
                 ghostApi, triggerButtonFrame, ...utils
             } = await setupGiftRedemption({
-                giftError: new Error('Gift not found')
+                giftError: Object.assign(new Error('Gift not found'), {code: 'GIFT_NOT_FOUND'})
             });
 
             expect(triggerButtonFrame).toBeInTheDocument();
@@ -551,7 +551,7 @@ describe('Portal Data links:', () => {
 
             await expectGiftRedemptionErrorToast({
                 utils,
-                subtitle: /Something went wrong, please try again later\./i
+                subtitle: /This gift link is invalid\./i
             });
         });
 
@@ -601,10 +601,13 @@ describe('Portal Data links:', () => {
 
     describe('?stripe=gift-purchase-success', () => {
         test('opens gift success page', async () => {
-            const site = FixtureSite.singleTier.basic;
+            const site = {
+                ...FixtureSite.singleTier.basic,
+                labs: {giftSubCustomization: true}
+            };
             const tierId = site.products.find(product => product.type === 'paid').id;
-            window.location.href = `https://portal.localhost/?stripe=gift-purchase-success&gift_token=abc123&gift_tier=${tierId}&gift_cadence=year&gift_duration=12`;
-            window.location.search = `?stripe=gift-purchase-success&gift_token=abc123&gift_tier=${tierId}&gift_cadence=year&gift_duration=12`;
+            window.location.href = `https://portal.localhost/?stripe=gift-purchase-success&gift_token=abc123&gift_tier=${tierId}&gift_cadence=year&gift_duration=12&gift_delivery=email`;
+            window.location.search = `?stripe=gift-purchase-success&gift_token=abc123&gift_tier=${tierId}&gift_cadence=year&gift_duration=12&gift_delivery=email`;
             window.location.hash = '';
             window.location.pathname = '/';
 
@@ -620,7 +623,7 @@ describe('Portal Data links:', () => {
             popupFrame = await utils.findByTitle(/portal-popup/i);
             expect(popupFrame).toBeInTheDocument();
 
-            const giftTitle = within(popupFrame.contentDocument).queryByText(/your gift is ready/i);
+            const giftTitle = within(popupFrame.contentDocument).queryByText(/your gift is on its way/i);
             expect(giftTitle).toBeInTheDocument();
 
             const redeemUrl = within(popupFrame.contentDocument).queryByText(/\/gift\/abc123$/);
