@@ -12,7 +12,7 @@ type CurrencyOption = {
 // Fork-specific JPY handling: JPY is a zero-decimal currency, so amounts are
 // stored as-is (not divided by 100). Unspecified/empty currency falls back to
 // the decimal (~/100) path to stay compatible with upstream single-arg callers.
-const IsJPYCurrency = (currency: string): boolean => {
+const IsJPYCurrency = (currency?: string): boolean => {
   if (currency && typeof currency.toUpperCase === 'function') {
     return currency.toUpperCase() === 'JPY';
   } else {
