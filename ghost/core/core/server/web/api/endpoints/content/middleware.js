@@ -16,12 +16,12 @@ const shared = require('../../../shared');
  * @type {import('express').RequestHandler[]}
  */
 module.exports.authenticatePublic = [
-    shared.middleware.brute.contentApiKey,
-    auth.authenticate.authenticateContentApi,
-    auth.authorize.authorizeContentApi,
-    cors(),
-    shared.middleware.urlRedirects.adminSSLAndHostRedirect,
-    shared.middleware.prettyUrls
+  shared.middleware.brute.contentApiKey,
+  auth.authenticate.authenticateContentApi,
+  auth.authorize.authorizeContentApi,
+  cors(),
+  shared.middleware.urlRedirects.adminSSLAndHostRedirect,
+  shared.middleware.prettyUrls,
 ];
 
 module.exports.bsmPodcast = [
