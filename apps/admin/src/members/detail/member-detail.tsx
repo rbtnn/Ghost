@@ -37,7 +37,7 @@ import {
 import { dequal } from 'dequal';
 import { deriveMemberDetailBackPath } from './member-detail-nav';
 import { formatMemberName } from '@tryghost/shade/app';
-import { getMember, useAddMember, useEditMember } from '@tryghost/admin-x-framework/api/members';
+import { useMember, useAddMember, useEditMember } from '@tryghost/admin-x-framework/api/members';
 import { getSettingValue, useBrowseSettings } from '@tryghost/admin-x-framework/api/settings';
 import { toast } from 'sonner';
 import { useBrowseNewsletters } from '@tryghost/admin-x-framework/api/newsletters';
@@ -74,7 +74,7 @@ const MemberDetailPage: React.FC<MemberDetailPageProps> = ({
   const customFieldsEnabled = useFeatureFlag('membersCustomFields');
 
   // `include=tiers` mirrors the Ember route so complimentary tiers arrive with the member.
-  const { data, isLoading, error, refetch } = getMember(memberId, {
+  const { data, isLoading, error, refetch } = useMember(memberId, {
     enabled: !!memberId && !isCreating,
     searchParams: { include: customFieldsEnabled ? 'tiers,custom_fields' : 'tiers' },
     defaultErrorHandler: false,
@@ -201,7 +201,7 @@ const MemberDetailPage: React.FC<MemberDetailPageProps> = ({
     when: hasUnsavedChanges,
     confirmUnloadWhen: activeMutation.isPending || hasUnsavedChanges,
   });
-  const emailValid = !!draft && isValidMemberEmail(draft.email);
+  const emailValid = !!draft && isValidMemberEmail(draft.email, member?.email ?? undefined);
   // `touched` is set on the email field's first blur. That keeps the New
   // member screen from painting an "Email is required." error before the
   // user has done anything, matching Ember's save-time-only validator
@@ -211,7 +211,9 @@ const MemberDetailPage: React.FC<MemberDetailPageProps> = ({
   React.useEffect(() => {
     setEmailTouched(false);
   }, [member?.id, isCreating]);
-  const emailError = draft ? getEmailErrorMessage(draft.email, emailTouched) : null;
+  const emailError = draft
+    ? getEmailErrorMessage(draft.email, emailTouched, member?.email ?? undefined)
+    : null;
 
   // The sidebar's identity block (avatar + heading) reads from a "committed"
   // copy of name/email that only advances on blur, not per keystroke.

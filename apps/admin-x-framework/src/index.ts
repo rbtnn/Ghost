@@ -1,6 +1,10 @@
 // Framework
 export type { StatsConfig, TopLevelFrameworkProps } from './providers/framework-provider';
-export { FrameworkProvider, useFramework } from './providers/framework-provider';
+export {
+  FrameworkProvider,
+  defaultUnsplashConfig,
+  useFramework,
+} from './providers/framework-provider';
 
 // App Context
 export type { AppSettings, AppContextType } from './providers/app-provider';
@@ -80,6 +84,7 @@ export {
 export { useNavigationStack } from './providers/navigation-stack-provider';
 export {
   Link,
+  NavigationType,
   Outlet,
   useBlocker,
   useLocation,
@@ -91,6 +96,7 @@ export {
   useMatch,
   useMatches,
 } from 'react-router';
+export type { BlockerFunction } from 'react-router';
 
 // Lazy component loader
 export { lazyComponent } from './utils/lazy-component';
