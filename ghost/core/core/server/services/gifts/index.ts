@@ -4,7 +4,7 @@ import { GiftBookshelfRepository } from './gift-bookshelf-repository';
 import { GiftDeliveryBookshelfRepository } from './gift-delivery-bookshelf-repository';
 import { GiftDeliveryService } from './gift-delivery-service';
 import { GiftService } from './gift-service';
-import { GiftFlushScheduler } from './gift-flush-scheduler';
+import { SignedFlushScheduler } from '../../adapters/scheduling/signed-flush-scheduler';
 import { GiftEmailService } from './gift-email-service';
 import { GiftController } from './gift-controller';
 import { SendGiftDeliveryEvent } from './events/send-gift-delivery-event';
@@ -48,7 +48,6 @@ export async function init(options: GiftServiceInitOptions): Promise<void> {
   const { SubscriptionActivatedEvent } = require('../../../shared/events');
   const StartGiftReminderFlushEvent = require('./events/start-gift-reminder-flush-event');
   const { StartGiftDeliveryFlushEvent } = require('./events/start-gift-delivery-flush-event');
-  const StartGiftCleanupEvent = require('./events/start-gift-cleanup-event');
   const jobs = require('./jobs');
   const emailAnalyticsJobs = require('../email-analytics/jobs');
 
@@ -82,14 +81,15 @@ export async function init(options: GiftServiceInitOptions): Promise<void> {
     settingsCache,
     urlUtils,
     getFromAddress: () => EmailAddressParser.stringify(settingsHelpers.getDefaultEmail()),
+    getReplyToAddress: () => settingsHelpers.getMembersSupportAddress(),
     blogIcon,
     t,
   });
-  const giftDeliveryScheduler = new GiftFlushScheduler({
+  const giftDeliveryScheduler = new SignedFlushScheduler({
     apiUrl: options.apiUrl,
     adapter: options.schedulerAdapter,
     internalKeys: options.internalKeys,
-    endpoint: 'flush_deliveries',
+    endpoint: ['gifts', 'flush_deliveries'],
     name: 'gift_delivery',
     findScheduledTimes: async () => {
       const scheduled = await deliveryRepository.findScheduledTimesForPurchasedGifts(new Date());
@@ -107,12 +107,13 @@ export async function init(options: GiftServiceInitOptions): Promise<void> {
     giftDeliveryScheduler,
   });
 
-  const giftReminderScheduler = new GiftFlushScheduler({
+  const giftReminderScheduler = new SignedFlushScheduler({
     apiUrl: options.apiUrl,
     adapter: options.schedulerAdapter,
     internalKeys: options.internalKeys,
-    endpoint: 'flush_reminders',
+    endpoint: ['gifts', 'flush_reminders'],
     name: 'gift_reminder',
+    legacyDelaysMs: [0],
     findScheduledTimes: async () => {
       const pending = await repository.findUnsentReminders();
       return pending
@@ -192,58 +193,6 @@ export async function init(options: GiftServiceInitOptions): Promise<void> {
     }
   });
 
-  DomainEvents.subscribe(StartGiftCleanupEvent, async () => {
-    const cleanupStart = Date.now();
-    logging.info('[Background Job] clean-gifts started');
-
-    const checkoutStart = Date.now();
-    try {
-      const { deletedCount } = await giftService.processAbandonedCheckouts();
-
-      logging.info(
-        `[Background Job] clean-gifts processed abandoned checkouts: deleted ${deletedCount} in ${Date.now() - checkoutStart}ms`,
-      );
-    } catch (err) {
-      logging.error(err, '[Background Job] clean-gifts error processing abandoned checkouts');
-    }
-
-    const consumedStart = Date.now();
-    try {
-      const { consumedCount, updatedMemberCount } = await giftService.processConsumed();
-
-      logging.info(
-        `[Background Job] clean-gifts processed consumed gifts: consumed ${consumedCount}, updated ${updatedMemberCount} members in ${Date.now() - consumedStart}ms`,
-      );
-    } catch (err) {
-      logging.error(err, '[Background Job] clean-gifts error processing consumed gifts');
-    }
-
-    const expiredStart = Date.now();
-    try {
-      const { expiredCount } = await giftService.processExpired();
-
-      logging.info(
-        `[Background Job] clean-gifts processed expired gifts: expired ${expiredCount} in ${Date.now() - expiredStart}ms`,
-      );
-    } catch (err) {
-      logging.error(err, '[Background Job] clean-gifts error processing expired gifts');
-    }
-
-    try {
-      const { sentCount, skippedCount, failedCount } = await giftDeliveryService.recoverPending();
-      if (sentCount + skippedCount + failedCount > 0) {
-        logging.info(
-          `[Background Job] clean-gifts processed pending gift deliveries: ${sentCount} sent, ${skippedCount} not due, ${failedCount} rejected`,
-        );
-      }
-    } catch (err) {
-      logging.error(err, '[Background Job] clean-gifts error processing pending gift deliveries');
-    }
-
-    logging.info(`[Background Job] clean-gifts completed in ${Date.now() - cleanupStart}ms`);
-  });
-
-  jobs.scheduleGiftCleanupJob();
   jobs.scheduleGiftReminderJob();
 }
 

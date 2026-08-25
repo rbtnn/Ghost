@@ -12,7 +12,6 @@ const {
   getMarkdownPath,
   getMarkdownUrl,
   getResourcePathFromMarkdownPath,
-  getAcceptedMarkdownContentType,
   markdownFromHtml,
   getPrimaryAuthorName,
   getTagNames,
@@ -161,20 +160,6 @@ describe('Integration: machine-payments orchestration coverage', function () {
       assert.deepEqual(getTagNames({ tags: [{ name: 'A' }, { name: 'B' }] }), ['A', 'B']);
       assert.deepEqual(getTagNames({ primary_tag: { name: 'Solo' } }), ['Solo']);
       assert.deepEqual(getTagNames({}), []);
-      assert.equal(
-        getAcceptedMarkdownContentType({
-          get: () => 'text/markdown',
-          accepts: () => 'text/markdown',
-        }),
-        'text/markdown',
-      );
-      assert.equal(
-        getAcceptedMarkdownContentType({
-          get: () => 'text/html',
-          accepts: () => 'text/html',
-        }),
-        null,
-      );
     });
   });
 
@@ -536,11 +521,13 @@ describe('Integration: machine-payments orchestration coverage', function () {
     it('validates facilitator URLs and settlement helpers', function () {
       assert.deepEqual(
         parseX402Config({
+          enabled: true,
           network: 'eip155:8453',
           stripeNetwork: 'base',
           facilitatorUrl: 'https://facilitator.xpay.sh',
         }),
         {
+          enabled: true,
           network: 'eip155:8453',
           stripeNetwork: 'base',
           facilitatorUrl: 'https://facilitator.xpay.sh',
@@ -570,11 +557,13 @@ describe('Integration: machine-payments orchestration coverage', function () {
 
       assert.deepEqual(
         parseX402Config({
+          enabled: true,
           network: 'eip155:84532',
           stripeNetwork: 'base',
           facilitatorUrl: 'https://X402.ORG:443/facilitator/',
         }),
         {
+          enabled: true,
           network: 'eip155:84532',
           stripeNetwork: 'base',
           facilitatorUrl: 'https://X402.ORG:443/facilitator/',
@@ -607,6 +596,7 @@ describe('Integration: machine-payments orchestration coverage', function () {
           getOrCreateAddress: async () => '0xrecipient',
         },
         configProvider: () => ({
+          enabled: true,
           network: 'eip155:8453',
           stripeNetwork: 'base',
           facilitatorUrl: 'https://facilitator.xpay.sh',

@@ -89,6 +89,7 @@ describe('GiftService', function () {
     createForCheckout: sinon.SinonStub;
     dispatchForGift: sinon.SinonStub;
     cancelPendingForGift: sinon.SinonStub;
+    recoverPending: sinon.SinonStub;
   };
   let memberRepository: {
     get: sinon.SinonStub;
@@ -178,6 +179,7 @@ describe('GiftService', function () {
       createForCheckout: sinon.stub().resolves(undefined),
       dispatchForGift: sinon.stub().resolves(null),
       cancelPendingForGift: sinon.stub().resolves(false),
+      recoverPending: sinon.stub().resolves({ sentCount: 0, skippedCount: 0, failedCount: 0 }),
     };
     memberRepository = {
       get: sinon.stub().callsFake(() => {
@@ -1206,6 +1208,167 @@ describe('GiftService', function () {
         new Date('2026-07-19T12:00:00.000Z'),
       );
       clock.restore();
+    });
+  });
+
+  describe('cleanup', function () {
+    function stubPhases(service: GiftService) {
+      return {
+        processAbandonedCheckouts: sinon
+          .stub(service, 'processAbandonedCheckouts')
+          .resolves({ deletedCount: 0 }),
+        processConsumed: sinon
+          .stub(service, 'processConsumed')
+          .resolves({ consumedCount: 0, updatedMemberCount: 0 }),
+        processExpired: sinon.stub(service, 'processExpired').resolves({ expiredCount: 0 }),
+        recoverPending: giftDeliveryService.recoverPending,
+      };
+    }
+
+    it('runs every cleanup phase in order', async function () {
+      sinon.stub(logging, 'info');
+      const service = createService();
+      const phases = stubPhases(service);
+
+      await service.cleanup();
+
+      sinon.assert.calledOnce(phases.processAbandonedCheckouts);
+      sinon.assert.calledOnce(phases.processConsumed);
+      sinon.assert.calledOnce(phases.processExpired);
+      sinon.assert.calledOnce(phases.recoverPending);
+      sinon.assert.callOrder(
+        phases.processAbandonedCheckouts,
+        phases.processConsumed,
+        phases.processExpired,
+        phases.recoverPending,
+      );
+    });
+
+    it('logs the outcome of each phase', async function () {
+      const infoLog = sinon.stub(logging, 'info');
+      const service = createService();
+      const phases = stubPhases(service);
+      phases.processAbandonedCheckouts.resolves({ deletedCount: 2 });
+      phases.processConsumed.resolves({ consumedCount: 3, updatedMemberCount: 1 });
+      phases.processExpired.resolves({ expiredCount: 4 });
+      phases.recoverPending.resolves({ sentCount: 5, skippedCount: 6, failedCount: 7 });
+
+      await service.cleanup();
+
+      const messages = infoLog.getCalls().map((call) => String(call.args[0]));
+      assert.ok(
+        messages.some((message) =>
+          message.startsWith(
+            '[Background Job] clean-gifts processed abandoned checkouts: deleted 2 in ',
+          ),
+        ),
+      );
+      assert.ok(
+        messages.some((message) =>
+          message.startsWith(
+            '[Background Job] clean-gifts processed consumed gifts: consumed 3, updated 1 members in ',
+          ),
+        ),
+      );
+      assert.ok(
+        messages.some((message) =>
+          message.startsWith('[Background Job] clean-gifts processed expired gifts: expired 4 in '),
+        ),
+      );
+      assert.ok(
+        messages.includes(
+          '[Background Job] clean-gifts processed pending gift deliveries: 5 sent, 6 not due, 7 rejected',
+        ),
+      );
+    });
+
+    it('logs a structured clean_gifts.completed event carrying every phase count', async function () {
+      const infoLog = sinon.stub(logging, 'info');
+      const service = createService();
+      const phases = stubPhases(service);
+      phases.processAbandonedCheckouts.resolves({ deletedCount: 2 });
+      phases.processConsumed.resolves({ consumedCount: 3, updatedMemberCount: 1 });
+      phases.processExpired.resolves({ expiredCount: 4 });
+      phases.recoverPending.resolves({ sentCount: 5, skippedCount: 6, failedCount: 7 });
+
+      await service.cleanup();
+
+      const completionLog = infoLog
+        .getCalls()
+        .find((call) => (call.args[0] as any)?.system?.event === 'clean_gifts.completed');
+      assert.ok(completionLog, 'the cleanup logs a structured clean_gifts.completed event');
+      const { system } = completionLog!.args[0] as any;
+      assert.equal(system.deleted_checkout_count, 2);
+      assert.equal(system.consumed_count, 3);
+      assert.equal(system.updated_member_count, 1);
+      assert.equal(system.expired_count, 4);
+      assert.equal(system.delivery_sent_count, 5);
+      assert.equal(system.delivery_skipped_count, 6);
+      assert.equal(system.delivery_failed_count, 7);
+      assert.equal(typeof system.duration_ms, 'number');
+    });
+
+    it('reports null, not zero, for the phases that failed', async function () {
+      const infoLog = sinon.stub(logging, 'info');
+      sinon.stub(logging, 'error');
+      const service = createService();
+      const phases = stubPhases(service);
+      phases.processAbandonedCheckouts.rejects(new Error('nope'));
+      phases.processExpired.resolves({ expiredCount: 4 });
+
+      await service.cleanup();
+
+      const completionLog = infoLog
+        .getCalls()
+        .find((call) => (call.args[0] as any)?.system?.event === 'clean_gifts.completed');
+      assert.equal((completionLog!.args[0] as any).system.deleted_checkout_count, null);
+      assert.equal((completionLog!.args[0] as any).system.expired_count, 4);
+    });
+
+    it('does not log a delivery recovery summary when nothing was pending', async function () {
+      const infoLog = sinon.stub(logging, 'info');
+      const service = createService();
+      stubPhases(service);
+
+      await service.cleanup();
+
+      const messages = infoLog.getCalls().map((call) => String(call.args[0]));
+      assert.ok(!messages.some((message) => message.includes('processed pending gift deliveries')));
+    });
+
+    it('logs a failing phase and still runs the remaining phases', async function () {
+      sinon.stub(logging, 'info');
+      const errorLog = sinon.stub(logging, 'error');
+      const service = createService();
+      const phases = stubPhases(service);
+      const failure = new Error('abandoned checkouts blew up');
+      phases.processAbandonedCheckouts.rejects(failure);
+
+      await service.cleanup();
+
+      sinon.assert.calledOnceWithExactly(
+        errorLog,
+        failure,
+        '[Background Job] clean-gifts error processing abandoned checkouts',
+      );
+      sinon.assert.calledOnce(phases.processConsumed);
+      sinon.assert.calledOnce(phases.processExpired);
+      sinon.assert.calledOnce(phases.recoverPending);
+    });
+
+    it('resolves even when every phase fails', async function () {
+      sinon.stub(logging, 'info');
+      const errorLog = sinon.stub(logging, 'error');
+      const service = createService();
+      const phases = stubPhases(service);
+      phases.processAbandonedCheckouts.rejects(new Error('one'));
+      phases.processConsumed.rejects(new Error('two'));
+      phases.processExpired.rejects(new Error('three'));
+      phases.recoverPending.rejects(new Error('four'));
+
+      await service.cleanup();
+
+      assert.equal(errorLog.callCount, 4);
     });
   });
 
