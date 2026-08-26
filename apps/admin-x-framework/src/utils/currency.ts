@@ -236,16 +236,19 @@ export function validateCurrencyAmount(
 
   const symbol = getSymbol(currency);
   const minAmount = minimumAmountForCurrency(currency);
+  // JPY(zero-decimal)は金額が既に円の整数(例: ¥500=500)で保存されるため、×100しない。
+  // ×100は2小数点(cent)通貨専用。JPYに適用すると「¥100以上」なのに500が弾かれる。
+  const decimalFactor = IsJPYCurrency(currency) ? 1 : 100;
 
   if (!allowZero && cents === 0) {
     return `Amount must be at least ${symbol}${minAmount}.`;
   }
 
-  if (cents !== 0 && cents < minAmount * 100) {
+  if (cents !== 0 && cents < minAmount * decimalFactor) {
     return `Non-zero amount must be at least ${symbol}${minAmount}.`;
   }
 
-  if (maxAmount && cents !== 0 && cents > maxAmount * 100) {
+  if (maxAmount && cents !== 0 && cents > maxAmount * decimalFactor) {
     return `Suggested amount cannot be more than ${symbol}${maxAmount}.`;
   }
 }
