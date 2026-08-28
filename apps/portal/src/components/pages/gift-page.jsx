@@ -672,7 +672,7 @@ export function formatGiftValue(price) {
   if (amount === null || amount === undefined || !currency) {
     return '';
   }
-  return `${getCurrencySymbol(currency)}${formatNumber(getStripeAmount(amount))}`;
+  return `${getCurrencySymbol(currency)}${formatNumber(getStripeAmount(amount, currency))}`;
 }
 
 function getTierPriceLabel(product, selectedInterval) {
