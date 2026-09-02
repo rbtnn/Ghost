@@ -363,6 +363,11 @@ renderings: at Stripe's current default the shipping address moves to
 `collected_information.shipping_details`, which Ghost never sees. Ghost reads only
 `event.type` and `event.data.object`, so the envelope carries nothing worth pinning.
 
+The same difference applies to `stripe listen`, which `pnpm dev:stripe --listen` uses:
+it renders events at the account default too. The default `pnpm dev:stripe` lets Ghost
+register its own pinned endpoint, so it receives the payloads production receives (see
+[Development setup](../docs/contributing/development-setup.md#stripe-webhooks)).
+
 ## Resolving issues
 
 ### Test Failures

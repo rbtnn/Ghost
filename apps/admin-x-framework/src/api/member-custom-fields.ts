@@ -1,9 +1,11 @@
 import {
   FIELD_TYPES,
   FIELD_TYPE_IDS,
+  partTypesOf,
   subFieldsOf,
   type FieldKind,
   type FieldType,
+  type PartType,
   type PartsOf,
 } from '@tryghost/custom-field-types';
 import { csvColumnsForField } from '@tryghost/custom-field-types/csv';
@@ -12,6 +14,7 @@ import { Meta, createMutation, createQuery } from '../utils/api/hooks';
 // Re-exported so the import mapping can recognize a custom_fields.* column (same reason
 // as the re-exports below).
 export { isCustomFieldColumn } from '@tryghost/custom-field-types/csv';
+export type { FieldIdentity, FieldIdentityString } from '@tryghost/custom-field-types/identity';
 
 // Re-exported so admin apps can type address values and validate against the
 // same schemas the server enforces, without a direct dependency on the shared
@@ -22,7 +25,10 @@ export { FIELD_KINDS as MEMBER_CUSTOM_FIELD_KINDS } from '@tryghost/custom-field
 export type { FieldKind as MemberCustomFieldKind } from '@tryghost/custom-field-types';
 
 export type MemberCustomField = {
-  // Fields are addressed by their immutable key; the DB id is never exposed.
+  namespace: string;
+  // The Admin API never serializes a database id for these records, so there is no `id` to
+  // key off. A field is addressed by its namespace and key, and neither is reissued once
+  // minted.
   key: string;
   name: string;
   // The same field-type enum the backend validates against, so admin and
@@ -148,23 +154,28 @@ export const memberCustomFieldCsvColumns = (
 ): MemberCustomFieldCsvColumn[] => {
   return fields.flatMap((field) => {
     const labels = partLabelsFor(field.type);
-    return csvColumnsForField({ key: field.key, type: field.type }).map(({ column, subField }) => {
-      const partLabel = subField === null ? undefined : labels[subField];
-      return {
-        value: column,
-        fieldName: field.name,
-        ...(partLabel === undefined ? {} : { partLabel }),
-        label: partLabel === undefined ? field.name : `${field.name} (${partLabel})`,
-        type: field.type,
-      };
-    });
+    return csvColumnsForField({ namespace: field.namespace, key: field.key, type: field.type }).map(
+      ({ column, subField }) => {
+        const partLabel = subField === null ? undefined : labels[subField];
+        return {
+          value: column,
+          fieldName: field.name,
+          ...(partLabel === undefined ? {} : { partLabel }),
+          label: partLabel === undefined ? field.name : `${field.name} (${partLabel})`,
+          type: field.type,
+        };
+      },
+    );
   });
 };
 
-/** One part of a composite field type: the key the value schema declares, and its label. */
+export type { PartType as MemberCustomFieldPartType } from '@tryghost/custom-field-types';
+
+/** One part of a composite field type: the key the value schema declares, its label, and its declared type. */
 export type MemberCustomFieldPart<T extends FieldType = FieldType> = {
   key: PartsOf<T>;
   label: string;
+  type: PartType;
 };
 
 /**
@@ -177,11 +188,12 @@ export const memberCustomFieldParts = <T extends FieldType>(
   type: T,
 ): MemberCustomFieldPart<T>[] | null => {
   const partKeys = subFieldsOf(type);
-  if (!partKeys) {
+  const partTypes = partTypesOf(type);
+  if (!partKeys || !partTypes) {
     return null;
   }
   const labels = partLabelsFor(type);
-  return partKeys.map((key) => ({ key, label: labels[key] }));
+  return partKeys.map((key) => ({ key, label: labels[key], type: partTypes[key] }));
 };
 
 /**
@@ -289,7 +301,7 @@ export const memberCustomFieldKind = (type: FieldType): FieldKind => FIELD_TYPES
 
 export interface MemberCustomFieldsResponseType {
   meta?: Meta;
-  members_custom_fields: MemberCustomField[];
+  members_metafields: MemberCustomField[];
 }
 
 const dataType = 'MemberCustomFieldsResponseType';
@@ -297,9 +309,10 @@ const dataType = 'MemberCustomFieldsResponseType';
 // a drag that waits for a round-trip snaps back under the cursor.
 export const memberCustomFieldsDataType = dataType;
 
-export const useBrowseMemberCustomFields = createQuery<MemberCustomFieldsResponseType>({
+export const useBrowseMemberCustomFields = createQuery<MemberCustomField[]>({
   dataType,
-  path: '/members/custom_fields/',
+  path: '/members/metafields/custom/',
+  returnData: (raw) => (raw as MemberCustomFieldsResponseType).members_metafields,
 });
 
 // Browse hides archived fields by default. Settings is the one surface that
@@ -316,8 +329,8 @@ export const useCreateMemberCustomField = createMutation<
   Pick<MemberCustomField, 'name' | 'type'>
 >({
   method: 'POST',
-  path: () => '/members/custom_fields/',
-  body: (field) => ({ members_custom_fields: [field] }),
+  path: () => '/members/metafields/custom/',
+  body: (field) => ({ members_metafields: [field] }),
   invalidateQueries: { dataType },
   // The created field is put into the cached lists as well as refetched, so a screen that
   // has just made one can use it in the same breath instead of waiting for a round trip or
@@ -333,13 +346,13 @@ export const useCreateMemberCustomField = createMutation<
     emberUpdateType: 'skip',
     update: (newData, currentData) => {
       const current = currentData as MemberCustomFieldsResponseType | undefined;
-      if (!current?.members_custom_fields) {
+      if (!current?.members_metafields) {
         return currentData;
       }
-      const created = newData.members_custom_fields.filter(
-        (field) => !current.members_custom_fields.some((existing) => existing.key === field.key),
+      const created = newData.members_metafields.filter(
+        (field) => !current.members_metafields.some((existing) => existing.key === field.key),
       );
-      return { ...current, members_custom_fields: [...current.members_custom_fields, ...created] };
+      return { ...current, members_metafields: [...current.members_metafields, ...created] };
     },
   },
 });
@@ -352,8 +365,8 @@ export const useEditMemberCustomField = createMutation<
   Pick<MemberCustomField, 'key'> & Partial<Pick<MemberCustomField, 'name' | 'status'>>
 >({
   method: 'PUT',
-  path: (field) => `/members/custom_fields/${field.key}/`,
-  body: ({ key: _key, ...patch }) => ({ members_custom_fields: [patch] }),
+  path: (field) => `/members/metafields/custom/${field.key}/`,
+  body: ({ key: _key, ...patch }) => ({ members_metafields: [patch] }),
   invalidateQueries: { dataType },
 });
 
@@ -371,8 +384,8 @@ export const useReorderMemberCustomFields = createMutation<
   MemberCustomField[]
 >({
   method: 'PUT',
-  path: () => '/members/custom_fields/',
-  body: (fields) => ({ members_custom_fields: fields.map(({ key }) => ({ key })) }),
+  path: () => '/members/metafields/custom/',
+  body: (fields) => ({ members_metafields: fields.map(({ key }) => ({ key })) }),
   // The response is the settled order, so it is written straight to the cached lists
   // rather than refetched. A reorder only succeeds when it named exactly the fields the
   // site has, so a success carries no news about the set — only about its order — and
@@ -388,13 +401,13 @@ export const useReorderMemberCustomFields = createMutation<
     emberUpdateType: 'skip',
     update: (newData, currentData) => {
       const current = currentData as MemberCustomFieldsResponseType | undefined;
-      if (!current?.members_custom_fields) {
+      if (!current?.members_metafields) {
         return currentData;
       }
-      const settledOrder = newData.members_custom_fields.map(({ key }) => key);
+      const settledOrder = newData.members_metafields.map(({ key }) => key);
       return {
         ...current,
-        members_custom_fields: inOrderOf(settledOrder, current.members_custom_fields),
+        members_metafields: inOrderOf(settledOrder, current.members_metafields),
       };
     },
   },
@@ -424,6 +437,6 @@ export const inOrderOf = (
 // archiving and reactivating are separate status edits over PUT.
 export const useDeleteMemberCustomField = createMutation<void, string>({
   method: 'DELETE',
-  path: (key) => `/members/custom_fields/${key}/`,
+  path: (key) => `/members/metafields/custom/${key}/`,
   invalidateQueries: { dataType },
 });

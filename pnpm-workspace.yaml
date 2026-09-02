@@ -38,6 +38,7 @@ allowBuilds:
   'protobufjs@7.6.4': true
   're2@1.26.1': true
   'sharp@0.35.3': true
+  sqlite3: false
   ssh2: false
 
 catalog:
@@ -121,7 +122,6 @@ catalog:
   ajv-formats: 3.0.1
   better-sqlite3: 12.11.1
   bson-objectid: 2.0.4
-  c8: 11.0.0
   chai: 4.5.0
   chalk: 4.1.2
   clsx: 2.1.1

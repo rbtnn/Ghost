@@ -1,46 +1,66 @@
-import { CUSTOM_FIELD_SET_OPERATORS, customFieldAddressing } from './addressing';
-import { filterType } from '@/shared/filters';
-import { memberCustomFieldKind } from '@tryghost/admin-x-framework/api/member-custom-fields';
+import { METAFIELDS_FIELD_PREFIX, customFieldAddressing, metafieldFieldId } from './addressing';
+import {
+  memberCustomFieldKind,
+  memberCustomFieldParts,
+} from '@tryghost/admin-x-framework/api/member-custom-fields';
 import type { FieldDescriptor, FieldProvider, FilterTypeId } from '@/shared/filters';
 import type {
   MemberCustomField,
   MemberCustomFieldKind,
+  MemberCustomFieldPartType,
 } from '@tryghost/admin-x-framework/api/member-custom-fields';
 
-const FILTER_TYPE_FOR_KIND: Record<MemberCustomFieldKind, FilterTypeId> = {
+export const SCALAR_KIND_FILTER_TYPE: {
+  [K in Exclude<MemberCustomFieldKind, 'record'>]: FilterTypeId;
+} = {
   text: 'text',
   date: 'plain_date',
   number: 'number',
-  record: 'text',
 };
 
-export const CUSTOM_FIELD_CLAUSE = 'custom_fields.';
+export const PART_FILTER_TYPE: { [P in MemberCustomFieldPartType]: FilterTypeId } = {
+  short_text: 'text',
+  postal_code: 'text',
+  country_code: 'text',
+};
+
+function compositeFilterType(type: MemberCustomField['type']): FilterTypeId {
+  const partFilterTypes = [
+    ...new Set((memberCustomFieldParts(type) ?? []).map((p) => PART_FILTER_TYPE[p.type])),
+  ];
+
+  if (partFilterTypes.length > 1) {
+    throw new Error(
+      `The parts of '${type}' filter as different types (${partFilterTypes.join(', ')}), ` +
+        'but the filter engine reads a composite with a single semantics. Build per-part ' +
+        'dispatch into the codec before mapping a part type away from its siblings.',
+    );
+  }
+
+  return partFilterTypes[0] ?? 'text';
+}
+
+export const CUSTOM_FIELD_CLAUSE = METAFIELDS_FIELD_PREFIX;
 
 export interface CustomFieldDefinition {
+  namespace: string;
   key: string;
   name: string;
   type: MemberCustomField['type'];
 }
 
-function filterTypeFor(type: MemberCustomField['type']): FilterTypeId {
-  return FILTER_TYPE_FOR_KIND[memberCustomFieldKind(type)];
-}
-
 export function customFieldDescriptor(definition: CustomFieldDefinition): FieldDescriptor {
-  const type = filterTypeFor(definition.type);
-  const isRecord = memberCustomFieldKind(definition.type) === 'record';
+  const kind = memberCustomFieldKind(definition.type);
 
   return {
-    key: `custom_fields.${definition.key}`,
+    key: metafieldFieldId(definition),
     icon: 'text',
-    type,
-    addressing: customFieldAddressing(definition.key),
+    type: kind === 'record' ? compositeFilterType(definition.type) : SCALAR_KIND_FILTER_TYPE[kind],
+    addressing: customFieldAddressing(definition),
     ui: {
       label: definition.name,
       type: 'custom',
-      defaultOperator: isRecord
-        ? CUSTOM_FIELD_SET_OPERATORS[0]
-        : (filterType(type).defaultOperator ?? CUSTOM_FIELD_SET_OPERATORS[0]),
+      ...(kind === 'record' ? { defaultOperator: 'is-set' } : {}),
     },
   } as FieldDescriptor;
 }
