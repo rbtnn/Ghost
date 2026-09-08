@@ -1,4 +1,4 @@
-import { createChangeTracker } from '@/editor/engine/change-tracker';
+import { createChangeTracker, sameFieldValue } from '@/editor/engine/change-tracker';
 import { createSlugMachine } from '@/editor/engine/slug-machine';
 import {
   DEFAULT_TITLE,
@@ -28,7 +28,8 @@ import { buildSaveSnapshot, type EditorSaveSnapshot } from './snapshot';
 import { latestRevisionOf, newPostProjection, projectionOf, type EditorRecord } from './projection';
 import {
   SETTINGS_FIELD_KEYS,
-  type EditorSettingsFields,
+  TIERS_REQUIRED,
+  tiersIncomplete,
   type EditorSettingsPatch,
   type SettingsFieldKey,
 } from './settings-fields';
@@ -50,8 +51,10 @@ export interface PreparedSave extends SaveRequest<EditorSaveSnapshot> {
   projection: EditablePostPatch;
   /** What the live post held for the authored fields when the request was built. */
   authoredFrom: AuthoredFields;
-  /** The same, for the settings fields, so the acknowledgement can be adopted. */
-  settingsFrom: EditorSettingsFields;
+  /** Access values captured for validation of this request. */
+  access: Pick<EditablePostProjection, 'visibility' | 'tiers'>;
+  /** The edit version the request was built at, for the settings adoption guard. */
+  builtAtVersion: number;
   payload: EditorWritePayload;
   options: PostWriteOptions;
   isCreate: boolean;
@@ -151,8 +154,11 @@ export function createEditorSession({
   let latestRevision: RevisionProjection | null = latestRevisionOf(record);
   let version = 0;
   let disposed = false;
-  // Refetches must also preserve an undo of a value the current request is writing.
-  let inFlightSettings: EditorSettingsFields | null = null;
+  // The version each settings field was last edited at by the writer. Adopting
+  // is not an edit, so a snapshot of the live values could not answer this.
+  const writerEdits = new Map<SettingsFieldKey, number>();
+  // The version the in-flight request was built at, or null when none is.
+  let inFlightSince: number | null = null;
 
   const tracker = createChangeTracker({ siteUrl });
   tracker.load(identity.id, live);
@@ -186,8 +192,16 @@ export function createEditorSession({
   }
 
   function patchLive(patch: EditablePostPatch): void {
+    const before = live;
     live = { ...live, ...patch };
     version += 1;
+    for (const key of SETTINGS_FIELD_KEYS) {
+      // Re-emitting a value the field already holds is not an edit, and a
+      // relation re-emitted as a fresh array holds the same value.
+      if (patch[key] !== undefined && !sameFieldValue(key, before[key], patch[key])) {
+        writerEdits.set(key, version);
+      }
+    }
     tracker.setLive(identity.id, patch);
     dirtyChanged();
   }
@@ -209,12 +223,13 @@ export function createEditorSession({
     }
   }
 
-  function settingsSnapshot(): EditorSettingsFields {
-    const fields = {} as Record<string, unknown>;
-    for (const key of SETTINGS_FIELD_KEYS) {
-      fields[key] = live[key];
+  // The one rule both adoption paths ask, so a refetch and an acknowledgement
+  // cannot disagree about who owns a field.
+  function isAdoptable(key: SettingsFieldKey): boolean {
+    if (tracker.isFieldDirty(key)) {
+      return false;
     }
-    return fields as EditorSettingsFields;
+    return inFlightSince === null || (writerEdits.get(key) ?? 0) <= inFlightSince;
   }
 
   // The server's copy of a settings field the writer has not moved past wins,
@@ -222,11 +237,11 @@ export function createEditorSession({
   // normalized or someone else changed reads as a local edit for good.
   function adoptSettings(
     next: EditablePostProjection,
-    isAdoptable: (key: SettingsFieldKey) => boolean,
+    adoptable: (key: SettingsFieldKey) => boolean,
   ): void {
     const patch: Record<string, unknown> = {};
     for (const key of SETTINGS_FIELD_KEYS) {
-      if (isAdoptable(key) && live[key] !== next[key]) {
+      if (adoptable(key) && live[key] !== next[key]) {
         patch[key] = next[key];
       }
     }
@@ -288,6 +303,15 @@ export function createEditorSession({
         payload[key] = live[key];
       }
     }
+    // The write contract requires the pair even when only one field changed.
+    // Reads include tier relations for Public and Paid posts too, so switching
+    // to specific tiers can leave the relation IDs unchanged.
+    if (live.visibility === 'tiers' && ('visibility' in payload || 'tiers' in payload)) {
+      projection.visibility = live.visibility;
+      payload.visibility = live.visibility;
+      projection.tiers = live.tiers;
+      payload.tiers = live.tiers;
+    }
     if (!isCreate) {
       if (!projection.updated_at) {
         // Without the token the server skips its collision check entirely and the
@@ -307,7 +331,8 @@ export function createEditorSession({
       ...request,
       projection,
       authoredFrom: { title: live.title, slug: live.slug },
-      settingsFrom: settingsSnapshot(),
+      access: { visibility: live.visibility, tiers: live.tiers },
+      builtAtVersion: version,
       payload,
       options: {
         saveRevision: request.saveRevision,
@@ -321,14 +346,20 @@ export function createEditorSession({
   // No abort signal: the transport owns its own controller and takes none. A
   // response arriving after disposal is dropped by the engine instead.
   async function execute(prepared: PreparedSave): Promise<SaveOutcome<EditorSaveResult>> {
-    inFlightSettings = prepared.settingsFrom;
+    // Untouched creates carry null visibility and use the server's default.
+    // An explicit tier selection needs a tier, including on the first save.
+    if (tiersIncomplete(prepared.access)) {
+      return { ok: false, error: { kind: 'validation', message: TIERS_REQUIRED } };
+    }
+
+    inFlightSince = prepared.builtAtVersion;
     try {
       const saved = prepared.isCreate
         ? await transport.create(prepared.payload)
         : await transport.update(prepared.payload, prepared.options);
 
       if (!saved) {
-        inFlightSettings = null;
+        inFlightSince = null;
         return { ok: false, error: { kind: 'unknown', message: saveFailureMessage } };
       }
 
@@ -342,7 +373,7 @@ export function createEditorSession({
         },
       };
     } catch (error) {
-      inFlightSettings = null;
+      inFlightSince = null;
       return { ok: false, error: toSaveError(error, saveFailureMessage) };
     }
   }
@@ -354,11 +385,24 @@ export function createEditorSession({
     };
     adoptWhereUnchanged(prepared.authoredFrom, submitted);
 
+    // A matching refetch can make an unsubmitted edit look saved. Preserve
+    // those edits through the rebase, whose fallback base is the latest saved
+    // copy. Submitted fields already have a stable base in the request.
+    const unsubmittedEdits = Object.fromEntries(
+      SETTINGS_FIELD_KEYS.filter(
+        (key) =>
+          prepared.projection[key] === undefined &&
+          (writerEdits.get(key) ?? 0) > prepared.builtAtVersion,
+      ).map((key) => [key, live[key]]),
+    );
     const acknowledged = projectionOf(result.post);
     tracker.saveAcknowledged(result.id, prepared.projection, acknowledged);
+    tracker.setLive(result.id, unsubmittedEdits);
     adoptWhereUnchanged(submitted, { title: acknowledged.title, slug: acknowledged.slug });
-    adoptSettings(acknowledged, (key) => live[key] === prepared.settingsFrom[key]);
-    inFlightSettings = null;
+    // The tracker now holds the retained edits as well as the rebase, so its
+    // compare can decide adoption after the request's window closes.
+    inFlightSince = null;
+    adoptSettings(acknowledged, isAdoptable);
     machine.saveAcknowledged(submitted, {
       title: acknowledged.title,
       slug: acknowledged.slug,
@@ -421,7 +465,9 @@ export function createEditorSession({
     // The one place the sidebar's save policy lives. A draft persists a settings
     // field the way the body does; every other status stages it until Update.
     commitField: () => {
-      if (status !== 'draft') {
+      // Ember validates the field before saving it, so an incomplete tier
+      // selection stays staged rather than failing a save the writer sees.
+      if (status !== 'draft' || tiersIncomplete(live)) {
         return;
       }
       void engine.dispatch('field');
@@ -460,15 +506,8 @@ export function createEditorSession({
       ) {
         return false;
       }
-      // Decide against the old saved copy before the refetch replaces it. Saved
-      // and undone edits no longer own a field; only outstanding changes do.
-      const adoptable = new Set(
-        SETTINGS_FIELD_KEYS.filter(
-          (key) =>
-            !tracker.isFieldDirty(key) &&
-            (!inFlightSettings || live[key] === inFlightSettings[key]),
-        ),
-      );
+      // Decide against the old saved copy before the refetch replaces it.
+      const adoptable = new Set(SETTINGS_FIELD_KEYS.filter(isAdoptable));
       const projection = projectionOf(next);
       tracker.setSaved(next.id, projection);
       adoptSettings(projection, (key) => adoptable.has(key));
@@ -501,7 +540,8 @@ export function createEditorSession({
       publishedAt = next.published_at ?? null;
       latestRevision = latestRevisionOf(next);
       live = projectionOf(next);
-      inFlightSettings = null;
+      writerEdits.clear();
+      inFlightSince = null;
       version += 1;
       tracker.load(identity.id, live);
       machine.loaded({ slug: live.slug, title: live.title });
