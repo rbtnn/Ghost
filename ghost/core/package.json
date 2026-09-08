@@ -1,6 +1,6 @@
 {
   "name": "ghost",
-  "version": "6.63.0-rc.0",
+  "version": "6.63.1-rc.0",
   "description": "The professional publishing platform",
   "keywords": [
     "blog",
@@ -115,7 +115,7 @@
     "@tryghost/kg-html-to-lexical": "workspace:*",
     "@tryghost/kg-lexical-html-renderer": "workspace:*",
     "@tryghost/kg-markdown-html-renderer": "workspace:*",
-    "@tryghost/limit-service": "catalog:",
+    "@tryghost/limit-service": "workspace:*",
     "@tryghost/logging": "catalog:",
     "@tryghost/metafield-types": "workspace:*",
     "@tryghost/metrics": "catalog:",
@@ -184,7 +184,7 @@
     "ghost-storage-base": "workspace:*",
     "glob": "catalog:",
     "got": "catalog:",
-    "gscan": "6.4.2",
+    "gscan": "6.6.0",
     "handlebars": "4.7.9",
     "heic-convert": "2.1.0",
     "hono": "catalog:",
