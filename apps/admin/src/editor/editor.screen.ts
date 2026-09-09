@@ -1,6 +1,8 @@
 import { page } from 'vitest/browser';
 import {
+  addFacebookImageLabel,
   addFeatureImageLabel,
+  addXImageLabel,
   conflictCancelReloadButton,
   conflictCopyContentButton,
   conflictDiscardAndReloadButton,
@@ -28,6 +30,7 @@ import {
   editorStatus,
   editorTitleInput,
   editorWordCount,
+  facebookImageUnsplashButton,
   featureImageAltLabel,
   featureImageTkIndicator,
   featureImageUnsplashButton,
@@ -44,7 +47,9 @@ import {
   postHistoryRevisionList,
   postSettingsSidebar,
   postsBackLink,
+  removeFacebookImageButton,
   removeFeatureImageButton,
+  removeXImageButton,
   settingsAuthorChip,
   settingsAuthorsError,
   settingsAuthorsList,
@@ -55,6 +60,10 @@ import {
   settingsDeleteDialog,
   settingsDeleteError,
   settingsExcerptInput,
+  settingsFacebookDescriptionInput,
+  settingsFacebookPreview,
+  settingsFacebookPreviewImage,
+  settingsFacebookTitleInput,
   settingsFeaturedToggle,
   settingsMenuToggle,
   settingsPublishDate,
@@ -64,6 +73,13 @@ import {
   settingsMetaDescriptionInput,
   settingsMetaTitleInput,
   settingsSerpPreview,
+  settingsShortcutRow,
+  settingsXDescriptionInput,
+  settingsXImage,
+  settingsXPreview,
+  settingsXPreviewImage,
+  settingsXTitleInput,
+  xImageUnsplashButton,
   restoreRevisionButton,
   settingsPostHistoryButton,
   settingsShowTitleToggle,
@@ -215,6 +231,31 @@ export const editorScreen = {
   settingsMetaTitle: () => page.getByTestId(settingsMetaTitleInput),
   settingsMetaDescription: () => page.getByTestId(settingsMetaDescriptionInput),
   settingsSerpPreview: () => page.getByTestId(settingsSerpPreview),
+  /** CodeMirror exposes its content as a textbox named by the editor's label. */
+  settingsCodeInjection: (label: string) =>
+    page.getByRole('textbox', { name: new RegExp(`^${label}`) }),
+  /** Each keyboard-shortcut row as its label followed by the keys shown against it. */
+  settingsShortcutRows: (): string[] =>
+    page
+      .getByTestId(settingsShortcutRow)
+      .elements()
+      .map((row) => row.textContent ?? ''),
+  settingsXImage: () => page.getByTestId(settingsXImage),
+  settingsXImageInput: () => page.getByLabelText(addXImageLabel),
+  settingsXImageUnsplashButton: () => page.getByRole('button', { name: xImageUnsplashButton }),
+  removeSettingsXImage: () => page.getByRole('button', { name: removeXImageButton }),
+  settingsXTitle: () => page.getByTestId(settingsXTitleInput),
+  settingsXDescription: () => page.getByTestId(settingsXDescriptionInput),
+  settingsXPreview: () => page.getByTestId(settingsXPreview),
+  settingsXPreviewImage: () => page.getByTestId(settingsXPreviewImage),
+  settingsFacebookTitle: () => page.getByTestId(settingsFacebookTitleInput),
+  settingsFacebookDescription: () => page.getByTestId(settingsFacebookDescriptionInput),
+  settingsFacebookPreview: () => page.getByTestId(settingsFacebookPreview),
+  settingsFacebookPreviewImage: () => page.getByTestId(settingsFacebookPreviewImage),
+  settingsFacebookImageInput: () => page.getByLabelText(addFacebookImageLabel),
+  settingsFacebookImageUnsplashButton: () =>
+    page.getByRole('button', { name: facebookImageUnsplashButton }),
+  removeSettingsFacebookImage: () => page.getByRole('button', { name: removeFacebookImageButton }),
 
   settingsPostHistory: () => page.getByTestId(settingsPostHistoryButton),
   postHistoryModal: () => page.getByTestId(postHistoryModal),
@@ -242,6 +283,9 @@ export const editorScreen = {
   featureImage: () => page.getByTestId(editorFeatureImage),
   featureImageInput: () => page.getByLabelText(addFeatureImageLabel),
   featureImageUnsplashButton: () => page.getByRole('button', { name: featureImageUnsplashButton }),
+  /** The Unsplash search modal, wherever the picker that opened it sits. */
+  unsplashModal: () => page.getByRole('heading', { name: 'Unsplash' }),
+  unsplashInsertImage: () => page.getByText('Insert image'),
   removeFeatureImage: () => page.getByRole('button', { name: removeFeatureImageButton }),
   featureImageAltToggle: () => page.getByRole('button', { name: toggleFeatureImageAltButton }),
   featureImageAltInput: () => page.getByLabelText(featureImageAltLabel),
