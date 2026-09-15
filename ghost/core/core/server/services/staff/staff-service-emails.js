@@ -685,7 +685,11 @@ class StaffServiceEmails {
 
     const juice = require('juice');
 
-    return juice(html, { inlinePseudoElements: true, removeStyleTags: true });
+    return juice(html, {
+      inlinePseudoElements: true,
+      removeStyleTags: true,
+      resolveCSSVariables: false,
+    });
   }
 
   async renderText(templateName, data) {
