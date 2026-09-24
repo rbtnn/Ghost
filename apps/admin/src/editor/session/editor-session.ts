@@ -157,7 +157,7 @@ export interface EditorSession {
   /** Writes a revision's fields into the post and saves them; true once persisted. */
   restoreRevision: (restored: RestoredRevision) => Promise<boolean>;
   setBaseline: (lexical: LexicalInput) => void;
-  baselineFailed: (error: unknown) => void;
+  baselineFailed: () => void;
   commitTitle: (title: string) => void;
   dispatchField: () => void;
   dispatchAutosave: () => void;
@@ -338,7 +338,11 @@ export function createEditorSession({
   function adoptWhereUnchanged(before: AuthoredFields, next: Partial<AuthoredFields>): void {
     for (const key of AUTHORED_KEYS) {
       const value = next[key];
-      if (value === undefined || value === before[key] || live[key] !== before[key]) {
+      if (
+        value === undefined ||
+        value === before[key] ||
+        !sameFieldValue(key, live[key], before[key])
+      ) {
         continue;
       }
       live = { ...live, [key]: value };
@@ -594,7 +598,7 @@ export function createEditorSession({
     autosaveDebounceMs,
     onStateChange: (next) => {
       if (next.kind === 'error' || next.kind === 'conflict') {
-        tracker.markSaveError(next.error.message);
+        tracker.markSaveError();
       }
       // A save error also moves dirtiness without going through a field patch.
       notifyChanged();
@@ -749,8 +753,8 @@ export function createEditorSession({
       tracker.setBaseline(identity.id, lexical);
       notifyChanged();
     },
-    baselineFailed: (error) => {
-      tracker.baselineFailed(identity.id, error);
+    baselineFailed: () => {
+      tracker.baselineFailed(identity.id);
       notifyChanged();
     },
 
