@@ -191,12 +191,16 @@ selection, and a tier ID without type metadata is preserved. A failed tier
 lookup shows an error and a Retry action in place of the list.
 
 An empty tier selection is staged like any other edit but never sent: the
-section asks for at least one tier, and while the pairing is incomplete no field
-save runs and a save the writer asks for is refused with the same message.
-Because the pairing is staged rather than held in the panel, it survives closing
-the sidebar, enables Update and is what the leave guard asks about. A create
-with untouched access settings still uses the server default; an explicit tier
-selection must include a tier even on the first save.
+section asks for at least one tier. On a post that exists, no field save runs
+while the pairing is incomplete and a save the writer asks for is refused with
+the same message. Because the pairing is staged rather than held in the panel,
+it survives closing the sidebar, enables Update and is what the leave guard asks
+about. A post the server has not created yet is not held to the rule: the
+section stages the incomplete pair without a save of its own, content saves go
+ahead with the pair left out, and the pair stays the writer's edit across the
+create, so the section keeps asking for a tier and the first tier picked sends
+visibility and tiers together. A create with untouched access settings uses the
+server default.
 
 When either access field changes to specific tiers, the save submits both
 visibility and the tier list, including tier IDs the writer never touched. A
@@ -288,11 +292,13 @@ The row opens the post's saved versions, and it is absent whenever there is
 nothing to show: a post that has never been saved, one with no lexical content,
 and a published or sent post that only ever went out as an email.
 
-Versions are listed newest first, each with its date in the site's timezone and
-the author who wrote it, shown with their avatar; an author the API no longer
-resolves reads as a deleted staff user. The newest carries a `Latest` label, the version that first took the
-post to published carries `Published`, and one written because the post was
-unpublished carries `Unpublished`. Selecting a version previews it — feature
+Versions are listed newest first by the millisecond the server recorded them,
+so two saved within the same second keep the order they were saved in. Each shows its date
+in the site's timezone and the author who wrote it, shown with their avatar; an
+author the API no longer resolves reads as a deleted staff user. The newest
+carries a `Latest` label, the version that first took the post to published
+carries `Published`, and one written because the post was unpublished carries
+`Unpublished`. Selecting a version previews it — feature
 image, title, the excerpt where the inline excerpt is on, and a read-only
 rendering of its body — and changes nothing about the post. The feature image
 caption is stored HTML, rendered as such and limited to the marks a caption can
