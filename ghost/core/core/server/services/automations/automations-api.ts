@@ -6,7 +6,13 @@ import { z } from 'zod';
 import { createDatabaseAutomationsRepository } from './database-automations-repository';
 import { parseFakeWaitHoursMultiplier } from './fake-wait-hours-multiplier';
 import type { AutomationsRepository, EditAutomationData } from './automations-repository';
-import { EMPTY_AUTOMATION_STATS, fetchAutomationStats } from './tinybird-automation-stats';
+import {
+  EMPTY_AUTOMATION_STATS,
+  fetchAutomationStats,
+  fetchAutomationPerformanceStats,
+  fetchAutomationRuns,
+} from './tinybird-automation-stats';
+import { entryDate, getEntryStatsWindow, parseEntryStatsOptions } from './automation-entry-stats';
 import { StartAutomationsPollEvent } from './events/start-automations-poll-event';
 
 const { knex } = require('../../data/db');
@@ -22,6 +28,11 @@ const lexicalLib = require('../../lib/lexical');
 const MAX_AUTOMATION_ACTIONS = 50;
 
 const messages = {
+  invalidRunStatus: 'Automation run status must be one of: in_progress, completed, exited_early.',
+  tinybirdRunsFailed: 'Could not load Tinybird automation runs.',
+  tinybirdEntriesOutsideRange: 'Tinybird returned entries outside the requested range.',
+  tinybirdPerformanceStatsFailed: 'Could not load Tinybird automation performance stats.',
+
   automationNotFound: 'Automation not found.',
   automationActionNotFound: 'Automation action not found.',
   invalidAutomationPayload: 'Automation edit payload must include status, actions, and edges.',
@@ -123,6 +134,10 @@ export async function browse() {
   };
 }
 
+export async function getNumberOfAutomations(): Promise<number> {
+  return await repository.getNumberOfAutomations();
+}
+
 export async function read(automationId: string) {
   const automation = await repository.getById(automationId);
 
@@ -133,6 +148,84 @@ export async function read(automationId: string) {
   }
 
   return automation;
+}
+
+export async function readPerformanceStats(automationId: string, options: unknown = {}) {
+  const exists = await repository.exists(automationId);
+  if (!exists) {
+    throw new errors.NotFoundError({ message: tpl(messages.automationNotFound) });
+  }
+
+  const client = getTinybirdClient();
+  if (!client) {
+    throw new errors.InternalServerError({
+      message: tpl(messages.tinybirdPerformanceStatsFailed),
+    });
+  }
+  const { timezone, window: requestedWindow } = parseEntryStatsOptions(options);
+  const stats = await fetchAutomationPerformanceStats(client, automationId, {
+    timezone,
+    ...(requestedWindow
+      ? { dateFrom: requestedWindow.date_from, dateTo: requestedWindow.date_to }
+      : {}),
+  });
+  if (stats === null) {
+    throw new errors.InternalServerError({
+      message: tpl(messages.tinybirdPerformanceStatsFailed),
+    });
+  }
+  const returnedWindow = getEntryStatsWindow(stats.entries, timezone);
+  const entryWindow = requestedWindow
+    ? { ...requestedWindow, bucket: returnedWindow.bucket }
+    : returnedWindow;
+  if (
+    stats.entries.some(({ date }) => {
+      const day = entryDate(date, timezone);
+      return day < entryWindow.date_from || day >= entryWindow.date_to;
+    })
+  ) {
+    throw new errors.InternalServerError({ message: tpl(messages.tinybirdEntriesOutsideRange) });
+  }
+  return {
+    automation_id: automationId,
+    ...stats,
+    entry_window: entryWindow,
+  };
+}
+
+export async function browseRuns(automationId: string, options: Record<string, unknown> = {}) {
+  const { window: entryWindow, timezone } = parseEntryStatsOptions(options);
+  const parsedStatus = z
+    .enum(['in_progress', 'completed', 'exited_early'])
+    .optional()
+    .safeParse(options.status);
+  if (!parsedStatus.success) {
+    throw new errors.ValidationError({
+      message: tpl(messages.invalidRunStatus),
+    });
+  }
+  const exists = await repository.exists(automationId);
+  if (!exists) {
+    throw new errors.NotFoundError({ message: tpl(messages.automationNotFound) });
+  }
+  const client = getTinybirdClient();
+  if (!client) {
+    throw new errors.InternalServerError({ message: tpl(messages.tinybirdRunsFailed) });
+  }
+  const runs = await fetchAutomationRuns(client, automationId, parsedStatus.data, {
+    timezone,
+    dateFrom: entryWindow?.date_from,
+    dateTo: entryWindow?.date_to,
+  });
+  if (runs === null) {
+    throw new errors.InternalServerError({ message: tpl(messages.tinybirdRunsFailed) });
+  }
+  // Keep member details in Core; a deleted member must not remove a run from this page.
+  const members = await repository.getRunMembers(
+    automationId,
+    runs.map((run) => run.id),
+  );
+  return runs.map((run) => ({ ...run, member: members.get(run.id) ?? null }));
 }
 
 export async function browseActionLinks(automationId: string, actionId: string) {

@@ -1,9 +1,20 @@
 import logging from '@tryghost/logging';
 import { z } from 'zod';
 import type { AutomationBrowseResult } from './automations-repository';
+import type { EntryStatsData } from './automation-entry-stats';
 
 export type TinybirdClient = {
-  fetch(pipeName: string, options: { version: string }): Promise<unknown>;
+  fetch(
+    pipeName: string,
+    options: {
+      version: string;
+      automationId?: string;
+      timezone?: string;
+      dateFrom?: string;
+      dateTo?: string;
+      runStatus?: string;
+    },
+  ): Promise<unknown>;
 };
 
 export type AutomationStats = NonNullable<AutomationBrowseResult['stats']>;
@@ -34,7 +45,9 @@ export async function fetchAutomationStats(
   let rows: unknown;
   try {
     // Override the traffic analytics version: this pipe has no version suffix.
-    rows = await client.fetch('api_automation_browse_stats', { version: '' });
+    rows = await client.fetch('api_automation_browse_stats', {
+      version: '',
+    });
   } catch (error) {
     logging.error('Error fetching Tinybird automation stats:', error);
     return null;
@@ -65,4 +78,110 @@ export async function fetchAutomationStats(
       },
     ]),
   );
+}
+
+export type AutomationPerformanceStats = EntryStatsData & {
+  in_progress_run_count: number;
+  completed_run_count: number;
+  exited_early_run_count: number;
+};
+
+const performanceRowSchema = z.object({
+  date: z.union([z.iso.date(), z.iso.datetime()]),
+  in_progress_run_count: runCountSchema,
+  completed_run_count: runCountSchema,
+  exited_early_run_count: runCountSchema,
+  invalid_run_count: runCountSchema.refine((count) => count === 0, {
+    message: 'Automation runs contain an unexpected step status.',
+  }),
+});
+
+export async function fetchAutomationPerformanceStats(
+  client: TinybirdClient,
+  automationId: string,
+  options: { dateFrom?: string; dateTo?: string; timezone?: string } = {},
+): Promise<AutomationPerformanceStats | null> {
+  try {
+    const rows = await client.fetch('api_automation_performance_stats', {
+      version: '',
+      automationId,
+      timezone: 'UTC',
+      ...options,
+    });
+    const parsed = z.array(performanceRowSchema).min(1).safeParse(rows);
+    if (
+      !parsed.success ||
+      new Set(parsed.data.map((row) => row.date)).size !== parsed.data.length
+    ) {
+      logging.error('Unexpected response from the Tinybird automation performance stats pipe');
+      return null;
+    }
+    const stats: AutomationPerformanceStats = {
+      total_run_count: 0,
+      in_progress_run_count: 0,
+      completed_run_count: 0,
+      exited_early_run_count: 0,
+      entries: [],
+    };
+    for (const row of parsed.data) {
+      const count =
+        row.in_progress_run_count + row.completed_run_count + row.exited_early_run_count;
+      stats.total_run_count += count;
+      stats.in_progress_run_count += row.in_progress_run_count;
+      stats.completed_run_count += row.completed_run_count;
+      stats.exited_early_run_count += row.exited_early_run_count;
+      stats.entries.push({ date: row.date, count });
+    }
+    if (!Number.isSafeInteger(stats.total_run_count)) {
+      logging.error('Automation entry total exceeds the supported integer range');
+      return null;
+    }
+    stats.entries.sort((a, b) => a.date.localeCompare(b.date));
+    return stats;
+  } catch (error) {
+    logging.error('Error fetching Tinybird automation performance stats:', error);
+    return null;
+  }
+}
+
+const automationRunsSchema = z
+  .array(
+    z
+      .object({
+        id: z.string().min(1),
+        created_at: z.iso.datetime().transform((value) => new Date(value).toISOString()),
+        status: z.enum(['in_progress', 'completed', 'exited_early']),
+        failed: z.boolean(),
+      })
+      .refine((run) => !run.failed || run.status === 'exited_early'),
+  )
+  .max(50);
+
+export async function fetchAutomationRuns(
+  client: TinybirdClient,
+  automationId: string,
+  status?: 'in_progress' | 'completed' | 'exited_early',
+  options: { dateFrom?: string; dateTo?: string; timezone?: string } = {},
+) {
+  try {
+    const rows = await client.fetch('api_automation_runs', {
+      version: '',
+      automationId,
+      runStatus: status,
+      ...options,
+    });
+    const parsed = automationRunsSchema.safeParse(rows);
+    if (
+      !parsed.success ||
+      new Set(parsed.data.map((row) => row.id)).size !== parsed.data.length ||
+      (status && parsed.data.some((row) => row.status !== status))
+    ) {
+      logging.error('Unexpected response from the Tinybird automation runs pipe');
+      return null;
+    }
+    return parsed.data;
+  } catch (error) {
+    logging.error('Error fetching Tinybird automation runs:', error);
+    return null;
+  }
 }
