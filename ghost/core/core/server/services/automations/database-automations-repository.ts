@@ -1,4 +1,6 @@
 import errors from '@tryghost/errors';
+import { z } from 'zod';
+import { AUTOMATION_STEP_TERMINAL_STATUSES } from './automations-repository';
 import tpl from '@tryghost/tpl';
 import crypto from 'node:crypto';
 import ObjectId from 'bson-objectid';
@@ -22,6 +24,9 @@ import type {
   AutomationEmailStats,
   AutomationSummary,
   AutomationRunMember,
+  AutomationRunHistory,
+  AutomationRunHistoryStep,
+  AutomationRunHistoryAction,
   AutomationStepTerminalStatus,
   AutomationStepToRun,
   AutomationTriggerTierScope,
@@ -30,7 +35,12 @@ import type {
   EditAutomationData,
   Page,
 } from './automations-repository';
-import { fromDatabaseDate, toDatabaseDate, type DatabaseDate } from '../../lib/db-types/date';
+import {
+  DbDate,
+  fromDatabaseDate,
+  toDatabaseDate,
+  type DatabaseDate,
+} from '../../lib/db-types/date';
 import { getStaleLockCutoff } from './stale-lock-cutoff';
 import type { ExclusifyUnion, ReadonlyDeep } from 'type-fest';
 
@@ -55,6 +65,7 @@ const TRIGGER_TIER_SCOPE_BY_MEMBER_STATUS = {
 } as const satisfies Record<'free' | 'paid', AutomationTriggerTierScope>;
 
 const messages = {
+  duplicateAutomationName: 'An automation with this name already exists.',
   invalidAutomationActionRevision:
     'Automation action "{actionId}" of type "{actionType}" is missing required revision field "{field}".',
   conflictingAutomationActionId:
@@ -81,6 +92,38 @@ type AutomationBrowseRow = AutomationRow & {
   total_run_count: string | number | null;
   in_progress_run_count: string | number | null;
 };
+
+const runHistoryRowSchema = z.object({
+  id: z.string(),
+  automation_id: z.string(),
+  created_at: DbDate,
+  member_id: z.string().nullable(),
+  member_name: z.string().nullable(),
+  member_email: z.string().nullable(),
+});
+
+const runHistoryStepRowSchema = z
+  .object({
+    id: z.string(),
+    automation_action_revision_id: z.string(),
+    created_at: DbDate,
+    updated_at: DbDate,
+    ready_at: DbDate,
+    started_at: DbDate.nullable(),
+    finished_at: DbDate.nullable(),
+    email_sent_at: DbDate.nullable(),
+    email_delivered_at: DbDate.nullable(),
+    status: z.enum(['pending', ...AUTOMATION_STEP_TERMINAL_STATUSES]),
+    action_id: z.string(),
+    action_type: z.enum(['wait', 'send_email']),
+    revision_id: z.string(),
+    wait_hours: z.number().nullable(),
+    email_subject: z.string().nullable(),
+    email_lexical: z.string().nullable(),
+  })
+  .refine((step) => step.status === 'pending' || step.finished_at !== null, {
+    message: 'Terminal automation steps must have a completion timestamp.',
+  });
 
 type ActionRow = {
   id: string;
@@ -228,6 +271,10 @@ export function createDatabaseAutomationsRepository({
       });
     },
 
+    async getRunHistory(automationId, runId) {
+      return knex.transaction((trx) => loadRunHistory(trx, automationId, runId));
+    },
+
     async getRunMembers(automationId, runIds) {
       if (runIds.length === 0) {
         return new Map();
@@ -297,6 +344,8 @@ export function createDatabaseAutomationsRepository({
 
         const updatedAutomation = await updateAutomation(trx, {
           ...automation,
+          name: data.name ?? automation.name,
+          description: data.description ?? automation.description,
           status: data.status,
           updated_at: toDatabaseDate(now),
         });
@@ -497,6 +546,161 @@ export function createDatabaseAutomationsRepository({
 
       await knex.transaction(trackClick);
     },
+  };
+}
+
+async function loadRunHistory(
+  trx: Knex.Transaction,
+  automationId: string,
+  runId: string,
+): Promise<AutomationRunHistory | null> {
+  const storedRun = await trx('automation_runs as runs')
+    .leftJoin('members', 'members.id', 'runs.member_id')
+    .where({ 'runs.id': runId, 'runs.automation_id': automationId })
+    .select(
+      'runs.id',
+      'runs.automation_id',
+      'runs.created_at',
+      'members.id as member_id',
+      'members.name as member_name',
+      'members.email as member_email',
+    )
+    .first();
+  if (!storedRun) {
+    return null;
+  }
+  // Scope revision content to this automation before joining it to recorded steps.
+  const revisions = trx('automation_action_revisions as revisions')
+    .join('automation_actions as actions', 'actions.id', 'revisions.action_id')
+    .where('actions.automation_id', automationId)
+    .select('revisions.*', 'actions.type as action_type');
+  const storedSteps = await trx('automation_run_steps as steps')
+    .leftJoin(revisions.as('revisions'), 'revisions.id', 'steps.automation_action_revision_id')
+    .where('steps.automation_run_id', runId)
+    .select(
+      'steps.id',
+      'steps.automation_action_revision_id',
+      'steps.created_at',
+      'steps.updated_at',
+      'steps.ready_at',
+      'steps.started_at',
+      'steps.finished_at',
+      'steps.status',
+      'revisions.action_id',
+      'revisions.action_type',
+      'revisions.id as revision_id',
+      'revisions.wait_hours',
+      'revisions.email_subject',
+      'revisions.email_lexical',
+      // A retry can leave more than one recipient record. Read the first
+      // successful send/delivery without duplicating the recorded step or
+      // exposing recipient identity. Both the step and revision must match.
+      ...Object.entries({ created_at: 'email_sent_at', delivered_at: 'email_delivered_at' }).map(
+        ([column, alias]) =>
+          trx('automated_email_recipients as recipient')
+            .min(`recipient.${column}`)
+            .where('recipient.automation_run_step_id', trx.ref('steps.id'))
+            .where('recipient.automation_action_revision_id', trx.ref('revisions.id'))
+            .where('revisions.action_type', 'send_email')
+            .as(alias),
+      ),
+    )
+    .orderBy('steps.created_at', 'asc')
+    .orderBy('steps.id', 'asc');
+
+  const parsedRun = runHistoryRowSchema.safeParse(storedRun);
+  const parsedSteps = z.array(runHistoryStepRowSchema).min(1).safeParse(storedSteps);
+  if (!parsedRun.success || !parsedSteps.success) {
+    throw new errors.InternalServerError({ message: 'Invalid automation run history.' });
+  }
+  return buildRunHistory(parsedRun.data, parsedSteps.data.map(buildRunHistoryStep));
+}
+
+function buildRunHistoryStep(
+  row: z.infer<typeof runHistoryStepRowSchema>,
+): AutomationRunHistoryStep {
+  const revision = { ...row, id: row.action_id, type: row.action_type };
+  let action: AutomationRunHistoryAction;
+  switch (row.action_type) {
+    case 'wait':
+      action = {
+        id: row.action_id,
+        type: 'wait',
+        data: { wait_hours: requireValue(revision, 'wait_hours') },
+      };
+      break;
+    case 'send_email':
+      action = {
+        id: row.action_id,
+        type: 'send_email',
+        data: {
+          email_subject: requireValue(revision, 'email_subject'),
+          email_lexical: requireValue(revision, 'email_lexical'),
+        },
+      };
+      break;
+    default: {
+      const _exhaustive: never = row.action_type;
+      throw new errors.InternalServerError({ message: `Unhandled action type: ${_exhaustive}` });
+    }
+  }
+  return {
+    id: row.id,
+    automation_action_revision_id: row.automation_action_revision_id,
+    created_at: row.created_at.toISOString(),
+    updated_at: row.updated_at.toISOString(),
+    ready_at: row.ready_at.toISOString(),
+    started_at: row.started_at?.toISOString() ?? null,
+    finished_at: row.finished_at?.toISOString() ?? null,
+    email_sent_at: row.email_sent_at?.toISOString() ?? null,
+    email_delivered_at: row.email_delivered_at?.toISOString() ?? null,
+    status: row.status,
+    action,
+  };
+}
+
+function getRunHistoryStatus(steps: AutomationRunHistoryStep[]): AutomationRunHistory['status'] {
+  let status: AutomationRunHistory['status'] = 'completed';
+  for (const step of steps) {
+    switch (step.status) {
+      case 'pending':
+        status = 'in_progress';
+        break;
+      case 'finished':
+        break;
+      case 'automation disabled':
+      case 'failed':
+      case 'member changed status':
+      case 'member unsubscribed':
+        if (status !== 'in_progress') {
+          status = 'exited_early';
+        }
+        break;
+      default: {
+        const _exhaustive: never = step.status;
+        throw new errors.InternalServerError({ message: `Unhandled step status: ${_exhaustive}` });
+      }
+    }
+  }
+  return status;
+}
+
+function buildRunHistory(
+  run: z.infer<typeof runHistoryRowSchema>,
+  steps: AutomationRunHistoryStep[],
+): AutomationRunHistory {
+  const status = getRunHistoryStatus(steps);
+  return {
+    id: run.id,
+    automation_id: run.automation_id,
+    created_at: run.created_at.toISOString(),
+    member:
+      run.member_id && run.member_email
+        ? { id: run.member_id, name: run.member_name, email: run.member_email }
+        : null,
+    status,
+    failed: status === 'exited_early' && steps.some((step) => step.status === 'failed'),
+    steps,
   };
 }
 
@@ -1228,12 +1432,24 @@ async function updateAutomation(
   trx: Knex.Transaction,
   automation: AutomationRow,
 ): Promise<AutomationRow> {
-  await trx('automations')
-    .update({
-      status: automation.status,
-      updated_at: automation.updated_at,
-    })
-    .where('id', automation.id);
+  try {
+    await trx('automations')
+      .update({
+        name: automation.name,
+        description: automation.description,
+        status: automation.status,
+        updated_at: automation.updated_at,
+      })
+      .where('id', automation.id);
+  } catch (error) {
+    if (error instanceof Error && 'code' in error && error.code === 'ER_DUP_ENTRY') {
+      throw new errors.ValidationError({
+        message: tpl(messages.duplicateAutomationName),
+        property: 'name',
+      });
+    }
+    throw error;
+  }
 
   return requireAutomation(await loadAutomation(trx, automation.id), automation.id);
 }

@@ -27,7 +27,8 @@ const messages = {
 };
 
 // flags in this list always return `true`, allows quick global enable prior to full flag removal
-// Keep the pill milestone enabled for older Admin builds during independent deployments.
+// Admin no longer reads admin7Pill, postsListReact or membersActivityReact; they stay enabled
+// for older Admin builds during independent deployments.
 const GA_FEATURES = [
   'automationAnalytics',
   'admin7Pill',
@@ -62,7 +63,6 @@ const PRIVATE_FEATURES = [
   'pictureImageFormats',
   'getHelperDeduplication',
   'membersCustomFields',
-  'memberLocationMap',
   'stripeCheckoutCollection',
   'membersImportRedesign',
   'paywallImprovements',

@@ -3,10 +3,14 @@ import {
   addFacebookImageLabel,
   addFeatureImageLabel,
   addXImageLabel,
+  analyticsBackLink,
   conflictCancelReloadButton,
   conflictCopyContentButton,
   conflictDiscardAndReloadButton,
   conflictReloadButton,
+  editFacebookImageButton,
+  editFeatureImageButton,
+  editXImageButton,
   editorBody,
   editorConflictBanner,
   editorConflictReloadConfirm,
@@ -186,6 +190,10 @@ export const editorScreen = {
     page.getByTestId(editorHeaderActions).getByRole('button', { name: editorUnpublishButton }),
   unscheduleButton: () =>
     page.getByTestId(editorHeaderActions).getByRole('button', { name: editorUnscheduleButton }),
+  /** A header button by its whole label, for a save button whose label tracks its save. */
+  headerButton: (label: string) =>
+    page.getByTestId(editorHeaderActions).getByRole('button', { name: label, exact: true }),
+  saveToast: (title: string) => page.getByRole('listitem').filter({ hasText: title }),
   publishInputsError: () => page.getByTestId(editorPublishInputsError),
   retryPublishInputs: () =>
     page.getByTestId(editorHeaderActions).getByRole('button', { name: 'Retry' }),
@@ -204,6 +212,17 @@ export const editorScreen = {
 
   settingsToggle: () => page.getByTestId(settingsMenuToggle),
   settingsSidebar: () => page.getByTestId(postSettingsSidebar),
+  /** The settings fields scroll independently of their fixed heading. */
+  settingsScrollPane: (): HTMLElement => {
+    const sidebar = page.getByTestId(postSettingsSidebar).element();
+    const pane = Array.from(sidebar.querySelectorAll('div')).find((element) =>
+      ['auto', 'scroll'].includes(getComputedStyle(element).overflowY),
+    );
+    if (!pane) {
+      throw new Error('The editor settings have no scroll surface');
+    }
+    return pane;
+  },
   settingsExcerpt: () => page.getByTestId(settingsExcerptInput),
   /** A section's failed-browse notice, wherever the sidebar shows one. */
   settingsLoadError: () => page.getByTestId(settingsLoadError),
@@ -289,6 +308,7 @@ export const editorScreen = {
   settingsXImageInput: () => page.getByLabelText(addXImageLabel),
   settingsXImageUnsplashButton: () => page.getByRole('button', { name: xImageUnsplashButton }),
   removeSettingsXImage: () => page.getByRole('button', { name: removeXImageButton }),
+  editSettingsXImage: () => page.getByRole('button', { name: editXImageButton }),
   settingsXTitle: () => page.getByTestId(settingsXTitleInput),
   settingsXDescription: () => page.getByTestId(settingsXDescriptionInput),
   settingsXPreview: () => page.getByTestId(settingsXPreview),
@@ -301,6 +321,7 @@ export const editorScreen = {
   settingsFacebookImageUnsplashButton: () =>
     page.getByRole('button', { name: facebookImageUnsplashButton }),
   removeSettingsFacebookImage: () => page.getByRole('button', { name: removeFacebookImageButton }),
+  editSettingsFacebookImage: () => page.getByRole('button', { name: editFacebookImageButton }),
 
   settingsPostHistory: () => page.getByTestId(settingsPostHistoryButton),
   postHistoryModal: () => page.getByTestId(postHistoryModal),
@@ -334,6 +355,7 @@ export const editorScreen = {
   unsplashSearchInput: () => page.getByPlaceholder('Search free high-resolution photos'),
   unsplashInsertImage: () => page.getByTestId(unsplashSearchModal).getByText('Insert image'),
   removeFeatureImage: () => page.getByRole('button', { name: removeFeatureImageButton }),
+  editFeatureImage: () => page.getByRole('button', { name: editFeatureImageButton }),
   featureImageAltToggle: () => page.getByRole('button', { name: toggleFeatureImageAltButton }),
   featureImageAltInput: () => page.getByLabelText(featureImageAltLabel),
   /** The caption's Koenig content editable. */
@@ -344,6 +366,7 @@ export const editorScreen = {
       name: postType === 'page' ? pagesBackLink : postsBackLink,
       exact: true,
     }),
+  analyticsBackLink: () => page.getByRole('link', { name: analyticsBackLink, exact: true }),
   /** Whether keyboard focus is inside the primary Koenig body. */
   bodyHasFocus: (): boolean =>
     document.querySelector(`[data-testid="${editorBody}"]`)?.contains(document.activeElement) ??

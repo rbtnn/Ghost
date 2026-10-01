@@ -69,8 +69,7 @@ the web analytics 1,000-day fetch window.
 
 The chart and cards share the request and cache, populated on first sidebar open
 and kept until navigation. Closing, reopening, focus, and reconnect do not refresh
-it. Failed requests, including a missing endpoint, replace the performance content
-with one error and retry button, without guessing whether the backend is older.
+it. Failed requests replace the performance content with one error and retry button.
 
 ## Run list
 
@@ -138,10 +137,15 @@ reads, not a snapshot: status changes can affect later pages.
 In Admin, the list loads on first sidebar open and stays cached through closing
 and reopening. Selecting a status card filters only the list; selecting it again
 clears the status filter. Each selection fetches fresh rows while the chart and
-counts stay unchanged. Previous rows remain visible during status requests, with
+counts stay unchanged. The Entered heading switches between newest and oldest
+first. Scrolling loads additional fifty-run pages; changing status, direction,
+or dates starts from the first page. A failed next page retains the loaded rows
+and retries only that page. Previous rows remain visible during status and sort requests, with
 a delayed loading indicator. Date changes clear previous rows and load both the
-summary and list for the selected period. Initial list loading uses one compact
-placeholder row rather than filling the panel with skeleton rows.
+summary and list for the selected period. Loading without existing rows shows ten
+skeleton rows, with a loading announcement for screen readers. The list scrolls
+within the panel; on short windows the panel can also scroll so the chart and
+cards never squeeze the list out of view.
 
 Empty-state messages appear only in the list: "No entries yet" for all time,
 "No entries in this period" for a date filter, and "No matching entries" for a
@@ -187,3 +191,28 @@ analytics. Hourly entry dates are UTC ISO timestamps; `entry_window.bucket`
 is `hour`. Window boundaries remain local calendar dates in the requested
 timezone, with an exclusive end. Today includes buckets through the current
 hour; historical days include every hour, including 23/25-hour DST days.
+
+## Run history
+
+`GET /ghost/api/admin/automations/:id/runs/:run_id/` returns one record in
+`automation_run_history`, with the run's identity, current member (or null),
+status, failure flag, and recorded steps. It requires automation read permission
+and reads the database independently of Tinybird. Missing or differently owned
+runs return 404; malformed records return an error.
+
+Steps are ordered by creation time, then ID. They include UTC timestamps and
+content from their referenced action revision, including soft-deleted actions.
+They never substitute the current graph or add unrecorded future steps. A run
+can include revisions from multiple edits because each next step is queued when
+the preceding step finishes.
+
+- Status follows the run-list rules: `in_progress` if a step is pending,
+  `exited_early` if a step exited, otherwise `completed`. Unknown statuses, missing
+  required revision data, missing terminal timestamps, and runs without steps
+  are errors.
+- `email_sent_at` and `email_delivered_at` are the earliest recipient timestamps
+  for that step and revision. Sending does not establish delivery. Recipient
+  identity and stored historical member email are not returned.
+- Trigger/end nodes are not stored steps, and there is no stored run-end
+  timestamp. `ready_at` is eligibility to execute, not a guaranteed send time;
+  `updated_at` is not a completion time.

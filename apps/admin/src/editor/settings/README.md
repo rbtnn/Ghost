@@ -23,11 +23,13 @@ through the slug machine, and the Publish date section stages the publish time,
 which is the save engine's command target. Both are then subject to the same
 engine policy as everything else.
 
-The meta and social-card text fields are held to the widths their columns give
-them, 300 characters for a title and 500 for a description. Past one of those
-the field says so where the writer is typing and nothing is saved — not the
-field itself, and not a save the writer asks for, which is refused with the same
-message rather than sent and answered with a server error.
+The excerpt, the header and footer code, and the meta and social-card text
+fields are held to the lengths the server accepts: 300 characters for the
+excerpt, 65,535 for each code field, 300 for a meta or card title and 500 for a
+description, counted by code point so a multibyte character counts once. Past
+one of those the field says so where the writer is typing and nothing is saved —
+not the field itself, and not a save the writer asks for, which is refused with
+the same message rather than sent and answered with a server error.
 
 ## Sections
 
@@ -49,8 +51,9 @@ runs full-bleed. Every pane keeps the same width as the section list.
 Only one pane is open at a time. While it is, the panel shows that section
 alone: its heading, the other sections and their rows are all out of the way,
 and the back button or Escape brings them back. The pane's title is the panel's
-heading and its accessible name, and the pane's header stays in place while the
-fields under it scroll. Opening a pane moves focus to its back button, and
+heading and its accessible name. Both the main panel and each pane keep their
+header outside the scrolling fields, so scroll bounce cannot move the title.
+Opening a pane moves focus to its back button, and
 closing one returns focus to the row it was opened from. Closing also blurs the
 focused field before removing it, so Escape commits the edit as the back button
 does.
@@ -107,9 +110,11 @@ navigation and tab-close guards ask about it; the session owns
 [that wait](../session/README.md#the-slug).
 
 The preview under the input is the site URL without its scheme, then the slug,
-both slash-terminated. Published posts also show a View post link beside the
-label. It uses the saved record's URL, preserving custom routes and avoiding links to an unsaved slug.
-A sent post previews its site URL like any other rather than its separate email URL.
+both slash-terminated. A sent post previews its email URL instead: the site URL,
+then `email/` and the post's uuid. Published and sent posts also show a View
+post link beside the label. It uses the saved record's URL, preserving custom
+routes and avoiding links to an unsaved slug. A scheduled post shows a Preview
+link to its `/p/<uuid>/` preview instead, and a draft shows neither.
 
 ## Publish date
 
@@ -172,7 +177,10 @@ The list offers the first hundred tags matching what is typed, in name order.
 Narrowing the search is how the rest are reached. Enter takes the highlighted
 row, and so does Tab once something is typed; Tab through an empty field moves
 on. Escape closes the list and leaves the term where it was typed. A chip is
-removed by clicking it, or with Backspace on an empty field.
+removed by clicking it, or with Backspace on an empty field. Dragging a chip
+with the mouse or a finger moves it to a new place in the order, which is an
+edit like any other; a press that moves less than a few pixels is still a click.
+There is no keyboard reorder: Enter and Space on a chip remove it.
 
 ## Access
 
@@ -217,7 +225,8 @@ the cards describe before any save.
 
 The excerpt is the one field with two homes. When the inline excerpt is on it
 renders under the title and the sidebar leaves it out; when it is off the
-sidebar owns it. Either way the same session binding is behind it.
+sidebar owns it. Either way the same session binding and the same limit are
+behind it, and the message for an excerpt past its limit sits under the field.
 
 ## Authors
 
@@ -244,7 +253,9 @@ last one and opens the list on the staff it can offer again. A pick that empties
 the row under the highlight moves it to the last row rather than losing it.
 
 Order is meaningful and the field keeps it: a new author joins the end of the
-list, and the post is written with its authors' identities alone, in that order.
+list, a chip dragged to a new place moves the author there, the same way tag
+chips reorder, and the post is written with its authors' identities alone, in
+that order.
 The whole staff record stays in the field and the request is what reduces it.
 A post always needs one. A new post is credited to whoever started it, which is
 what the first save sends; emptying the list instead leaves the field asking for
@@ -328,7 +339,8 @@ editors are named for a page rather than a post.
 Closing the pane commits the editor the writer was in, and a field cleared back
 to empty is stored as no value, as the excerpt is. A post saved before that
 convention holds an empty string rather than no value, so clearing such a field
-back to empty counts as a change until the next save.
+back to empty counts as a change until the next save. An editor past its limit
+is marked invalid, with the message between its label and the code.
 
 Escape inside either editor leaves the pane open. An open completion list or a
 selection wider than the cursor takes it first; otherwise it frees the editor's
@@ -373,6 +385,8 @@ The image comes from the file picker, a drop, or Unsplash, and an upload the
 server refuses is reported without changing the field. The Unsplash picker is
 offered only while the site's Unsplash integration is on, and it writes the
 image it is given the same way an upload does.
+A set image can be edited in Pintura when the site has it configured, as the
+feature image can; the edited image is uploaded and written the same way.
 
 Nothing here is required, and both cards fall back the same way rather than
 emptying. The title is the card's own title, else the meta title, else the title
