@@ -28,7 +28,13 @@ const messages = {
 
 // flags in this list always return `true`, allows quick global enable prior to full flag removal
 // Keep the pill milestone enabled for older Admin builds during independent deployments.
-const GA_FEATURES = ['automationAnalytics', 'admin7Pill'];
+const GA_FEATURES = [
+  'automationAnalytics',
+  'admin7Pill',
+  'globalSearchReact',
+  'postsListReact',
+  'membersActivityReact',
+];
 
 // These features are considered publicly available and can be enabled/disabled by users
 const PUBLIC_BETA_FEATURES = [
@@ -62,11 +68,8 @@ const PRIVATE_FEATURES = [
   'paywallImprovements',
   'selfServeArchives',
   'machinePayments',
-  'postsListReact',
-  'membersActivityReact',
   'editorReact',
   'authReact',
-  'globalSearchReact',
   'dunningWarnings',
 ];
 

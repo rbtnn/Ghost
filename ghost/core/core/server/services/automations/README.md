@@ -69,12 +69,12 @@ the web analytics 1,000-day fetch window.
 
 The chart and cards share the request and cache, populated on first sidebar open
 and kept until navigation. Closing, reopening, focus, and reconnect do not refresh
-it. Failed requests, including a missing endpoint, show an inline error and retry
-without guessing whether the backend is older.
+it. Failed requests, including a missing endpoint, replace the performance content
+with one error and retry button, without guessing whether the backend is older.
 
 ## Run list
 
-`GET /ghost/api/admin/automations/:id/runs/` returns the latest fifty runs:
+`GET /ghost/api/admin/automations/:id/runs/` returns up to fifty runs per page:
 
 ```json
 {
@@ -84,11 +84,18 @@ without guessing whether the backend is older.
     "status": "completed",
     "failed": false,
     "member": {"id": "…", "name": "Alex", "email": "alex@example.com"}
-  }]
+  }],
+  "meta": {
+    "pagination": {"limit": 50, "next_cursor": "opaque-cursor"}
+  }
 }
 ```
 
-Each row is a run, including repeat entries by the same member. Ordering is entry
+`next_cursor` is null when no further page is available, including empty results
+and a final page containing exactly fifty runs. Pass a non-null value as `cursor`
+with the same filters and ordering to request the next page.
+
+Each row is a run, including repeat entries by the same member. Default ordering is entry
 time (`created_at`) descending, then run ID descending for ties. Timestamps are UTC
 with millisecond precision. Status is `in_progress`, `completed`, or `exited_early`,
 using the same recorded-step rules as the status counts. Runs without steps are
@@ -112,11 +119,35 @@ ordering and limiting to fifty matching runs; pending steps take precedence as t
 do in the summary counts. The optional `date_from`, `date_to`, and `timezone`
 parameters use the same inclusive calendar-date contract as performance stats:
 `date_from` is required when `date_to` is supplied; omitting `date_to` uses today
-in the requested timezone, and omitting both dates selects all history.
+in the requested timezone on the first page, and omitting both dates selects all
+history. When continuing with a cursor and no `date_to`, the first page's end date
+is retained even across local midnight. An explicit `date_to` must still match
+the cursor's end date.
 Entry-date filters select runs before classification, keeping the list and summary
-counts on the same cohort. There are no search or pagination controls. An empty history or no matches
+counts on the same cohort. There is no member search in this slice. An empty history or no matches
 returns `automation_runs: []`. It requires automation read permission, returns 404
 for unknown automations, and uses the same Tinybird availability checks as summaries.
+
+The optional `order` is `created_at desc` (default) or `created_at asc`; both use
+run ID in the same direction to break ties. `cursor` continues after the last
+returned timestamp and ID. It is bound to the automation, status, direction, entry dates, and timezone;
+malformed or mismatched cursors return 422. Core requests one extra row to decide
+whether to return a next cursor and hydrates only the visible page. These are live
+reads, not a snapshot: status changes can affect later pages.
+
+In Admin, the list loads on first sidebar open and stays cached through closing
+and reopening. Selecting a status card filters only the list; selecting it again
+clears the status filter. Each selection fetches fresh rows while the chart and
+counts stay unchanged. Previous rows remain visible during status requests, with
+a delayed loading indicator. Date changes clear previous rows and load both the
+summary and list for the selected period. Initial list loading uses one compact
+placeholder row rather than filling the panel with skeleton rows.
+
+Empty-state messages appear only in the list: "No entries yet" for all time,
+"No entries in this period" for a date filter, and "No matching entries" for a
+status filter. Empty histories and periods keep the zero chart visible; status
+filters do not change it. A failed list request shows its own retry action without
+replacing a successful chart or status counts.
 
 ## Availability
 
