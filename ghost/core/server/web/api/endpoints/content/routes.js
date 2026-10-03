@@ -53,5 +53,8 @@ module.exports = function apiRoutes() {
   );
   router.get('/search-index/tags', mw.authenticatePublic, http(api.searchIndexPublic.fetchTags));
 
+  // ## bsm_podcast
+  router.get('/bsm_podcast/:uuid', mw.bsmPodcast, http(api.bsmPodcast.browse));
+
   return router;
 };

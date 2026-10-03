@@ -101,8 +101,8 @@ const controller = {
         invites: frame.data.invites,
         options: frame.options,
         user: {
-          name: frame.user?.get('name'),
-          email: frame.user?.get('email'),
+          name: 'drikin',
+          email: 'drikin@gmail.com',
         },
       });
     },
