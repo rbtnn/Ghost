@@ -15,11 +15,12 @@ import {
   groupSubscriptionsByTier,
 } from './member-subscription';
 import { getSymbol } from '@tryghost/admin-x-framework';
+import { ZERO_DECIMAL_CURRENCIES } from './member-event';
 import type { Member, MemberSubscription } from '@tryghost/admin-x-framework/api/members';
 import type { SubscriptionKind } from './member-subscription';
 
-const formatPriceBlockAmount = (amount: number) => {
-  const value = amount / 100;
+export const formatPriceBlockAmount = (amount: number, currency: string) => {
+  const value = ZERO_DECIMAL_CURRENCIES.has(currency.toLowerCase()) ? amount : amount / 100;
   // Match Ember: whole = no decimals, fractional = 2 decimals with locale separators.
   return value.toLocaleString(
     undefined,
@@ -39,7 +40,7 @@ const PriceBlock: React.FC<{ sub: MemberSubscription; kind: SubscriptionKind }> 
     );
   }
   const symbol = getSymbol(sub.price.currency);
-  const amount = formatPriceBlockAmount(sub.price.amount);
+  const amount = formatPriceBlockAmount(sub.price.amount, sub.price.currency);
   const interval = formatSubscriptionInterval(sub.price.interval);
   return (
     <div className="flex size-20 shrink-0 flex-col items-center justify-center rounded-lg bg-muted text-foreground">

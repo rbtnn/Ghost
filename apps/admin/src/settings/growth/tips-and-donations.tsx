@@ -72,8 +72,10 @@ const TipsAndDonations: React.FC<{ keywords: string[] }> = ({ keywords }) => {
     donations_suggested_amount: donationsSuggestedAmountSetting,
   });
 
-  const suggestedAmountInput = useCurrencyInput(suggestedAmountInCents, (cents) =>
-    handleSettingChange('donations_suggested_amount', cents.toString()),
+  const suggestedAmountInput = useCurrencyInput(
+    suggestedAmountInCents,
+    (cents) => handleSettingChange('donations_suggested_amount', cents.toString()),
+    donationsCurrency,
   );
   const donateUrl = `${siteData?.url.replace(/\/$/, '')}/#/portal/support`;
   const currencyOptions = currencySelectGroups().flatMap((group) =>

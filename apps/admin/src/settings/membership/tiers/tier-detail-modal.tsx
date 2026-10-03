@@ -156,11 +156,15 @@ const TierDetailModalContent: React.FC<{ tier?: Tier }> = ({ tier }) => {
       onSaveError: handleError,
     });
 
-  const monthlyPriceInput = useCurrencyInput(formState.monthly_price || '', (price) =>
-    updateForm((state) => ({ ...state, monthly_price: price })),
+  const monthlyPriceInput = useCurrencyInput(
+    formState.monthly_price || '',
+    (price) => updateForm((state) => ({ ...state, monthly_price: price })),
+    formState.currency,
   );
-  const yearlyPriceInput = useCurrencyInput(formState.yearly_price || '', (price) =>
-    updateForm((state) => ({ ...state, yearly_price: price })),
+  const yearlyPriceInput = useCurrencyInput(
+    formState.yearly_price || '',
+    (price) => updateForm((state) => ({ ...state, yearly_price: price })),
+    formState.currency,
   );
   const welcomePageUrlInput = useUrlInput({
     baseUrl: siteData?.url,

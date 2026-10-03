@@ -646,7 +646,7 @@ function ProductCardPrice({ product }) {
                 {currencySymbol}
               </span>
               <span className="amount" data-testid="product-amount">
-                {formatPrice(getStripeAmount(activePrice.amount), site.locale)}
+                {formatPrice(getStripeAmount(activePrice.amount, activePrice.currency), site.locale)}
               </span>
               <span className="billing-period">/{interval}</span>
             </div>
@@ -663,7 +663,7 @@ function ProductCardPrice({ product }) {
           )}
           <ProductCardAlternatePrice price={alternatePrice} />
         </div>
-        {/* <span className="after-trial-amount">Then {currencySymbol}{formatPrice(getStripeAmount(activePrice.amount), site.locale)}/{activePrice.interval}</span> */}
+        {/* <span className="after-trial-amount">Then {currencySymbol}{formatPrice(getStripeAmount(activePrice.amount, activePrice.currency), site.locale)}/{activePrice.interval}</span> */}
       </>
     );
   }
@@ -676,7 +676,7 @@ function ProductCardPrice({ product }) {
             {currencySymbol}
           </span>
           <span className="amount" data-testid="product-amount">
-            {formatPrice(getStripeAmount(activePrice.amount), site.locale)}
+            {formatPrice(getStripeAmount(activePrice.amount, activePrice.currency), site.locale)}
           </span>
           <span className="billing-period">/{interval}</span>
         </div>

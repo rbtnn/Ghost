@@ -176,6 +176,13 @@ export default tseslint.config(
       'ghost/ghost-custom/max-api-complexity': 'error',
     },
   },
+  {
+    // rbtnn: 独自の bsm-podcast endpoint は複雑度が高いため、このルールの適用を off にする (旧 .eslintrc.js の意図を flat config へ移行)
+    files: ['core/server/api/endpoints/bsm-podcast.js'],
+    rules: {
+      'ghost/ghost-custom/max-api-complexity': 'off',
+    },
+  },
   // ============================================================
   // Migrations: enforce filename pattern (with ignoreExporting)
   // ============================================================
