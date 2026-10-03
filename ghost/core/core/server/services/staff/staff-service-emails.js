@@ -4,6 +4,14 @@ const moment = require('moment');
 const { globSync } = require('glob');
 const emailAddressParser = require('../email-address/email-address-parser');
 
+const IsJPYCurrency = (currency) => {
+  if (currency !== null && typeof currency.toUpperCase === 'function') {
+    return currency.toUpperCase() === 'JPY';
+  } else {
+    return true;
+  }
+};
+
 class StaffServiceEmails {
   constructor({
     logging,
@@ -88,7 +96,7 @@ class StaffServiceEmails {
 
       const subject = `💸 Paid subscription started: ${memberData.name}`;
 
-      const amount = this.getAmount(subscription?.amount);
+      const amount = this.getAmount(subscription?.amount, subscription?.currency);
       const formattedAmount = this.getFormattedAmount({ currency: subscription?.currency, amount });
       const interval = subscription?.interval || '';
       const tierData = {
@@ -164,7 +172,7 @@ class StaffServiceEmails {
       const memberData = this.getMemberData(member);
       const subject = `⚠️ Cancellation: ${memberData.name}`;
 
-      const amount = this.getAmount(subscription?.amount);
+      const amount = this.getAmount(subscription?.amount, subscription?.currency);
       const formattedAmount = this.getFormattedAmount({ currency: subscription?.currency, amount });
       const interval = subscription?.interval;
       const tierDetail = `${formattedAmount}/${interval}`;
@@ -323,7 +331,7 @@ class StaffServiceEmails {
     const users = await this.models.User.getEmailAlertUsers('donation');
     const formattedAmount = this.getFormattedAmount({
       currency: donationPaymentEvent.currency,
-      amount: donationPaymentEvent.amount / 100,
+      amount: donationPaymentEvent.amount / (IsJPYCurrency(donationPaymentEvent.currency) ? 1 : 100),
     });
 
     const subject = `💰 One-time payment received: ${formattedAmount} from ${donationPaymentEvent.name ?? donationPaymentEvent.email}`;
@@ -521,6 +529,14 @@ class StaffServiceEmails {
       return amount > 0 ? Intl.NumberFormat('en', { maximumFractionDigits }).format(amount) : '';
     }
 
+    if (IsJPYCurrency(currency)) {
+      return Intl.NumberFormat('en', {
+        style: 'currency',
+        currency,
+        currencyDisplay: 'symbol',
+      }).format(amount > 0 ? amount : 0);
+    }
+
     return Intl.NumberFormat('en', {
       style: 'currency',
       currency,
@@ -532,12 +548,12 @@ class StaffServiceEmails {
   }
 
   /** @private */
-  getAmount(amount) {
+  getAmount(amount, currency) {
     if (!amount) {
       return 0;
     }
 
-    return amount / 100;
+    return amount / (IsJPYCurrency(currency) ? 1 : 100);
   }
 
   /** @private */
@@ -567,7 +583,7 @@ class StaffServiceEmails {
       if (offer.type === 'percent') {
         offAmount = `${offer.amount}% off`;
       } else if (offer.type === 'fixed') {
-        const amount = this.getAmount(offer.amount);
+        const amount = this.getAmount(offer.amount, offer.currency);
         offAmount = `${this.getFormattedAmount({ currency: offer.currency, amount })} off`;
       } else if (offer.type === 'trial') {
         offAmount = `${offer.amount} days free`;
