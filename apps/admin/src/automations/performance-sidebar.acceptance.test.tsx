@@ -1,14 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { page } from 'vitest/browser';
 import { fakeAdminEndpoint, renderAdminApp } from '@test-utils/acceptance';
-import {
-  flags,
-  response,
-  read as readAutomation,
-  setupEmbeddedRootFontSize,
-} from './run-list.test-utils';
-
-setupEmbeddedRootFontSize();
+import { flags, response, read as readAutomation } from './run-list.test-utils';
 
 const read = (id: string) => {
   fakeAdminEndpoint('GET', new RegExp(`/automations/${id}/runs/\\?`), {
@@ -213,7 +206,13 @@ describe('Performance sidebar request lifecycle', () => {
     async (flag) => {
       const request = prepare();
       await renderAdminApp('/automations/first', { labs: { ...flags.labs, [flag]: false } });
-      await expect.element(page.getByRole('button', { name: 'Wait: 1 day' })).toBeVisible();
+      await expect
+        .element(
+          page.getByRole(flag === 'automationRunAnalytics' ? 'button' : 'article', {
+            name: 'Wait: 1 day',
+          }),
+        )
+        .toBeVisible();
       expect(request.requests).toHaveLength(0);
       await expect
         .element(page.getByRole('button', { name: 'Show performance' }))
@@ -287,7 +286,7 @@ describe('Performance sidebar layout', () => {
       await open();
       await expect.element(statusCard('Completed')).toHaveTextContent('1,260');
       const panel = document.querySelector('aside')!;
-      const expectedWidth = Math.min(480, panel.parentElement!.getBoundingClientRect().width - 60);
+      const expectedWidth = panel.parentElement!.getBoundingClientRect().width;
       await expect.poll(() => panel.getBoundingClientRect().width).toBeCloseTo(expectedWidth, 0);
       expect(panel.scrollWidth).toBe(panel.clientWidth);
       for (const name of ['In progress', 'Completed', 'Exited early']) {
@@ -322,7 +321,7 @@ describe('Performance sidebar layout', () => {
         expect(card.scrollWidth).toBeLessThanOrEqual(card.clientWidth);
       }
     } finally {
-      document.documentElement.style.fontSize = '62.5%';
+      document.documentElement.style.fontSize = '';
     }
   });
 

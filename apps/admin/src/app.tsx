@@ -12,9 +12,18 @@ import {
   useEmberListReturnSync,
   useEmberNotificationsHost,
 } from './ember-bridge';
-import { AdminAlerts, createAlertsStore, useServerNotifications } from './alerts';
+import {
+  AdminAlerts,
+  createAlertsStore,
+  useServerNotifications,
+  useUpgradeStatusAlerts,
+} from './alerts';
 import { DocsBotWidgetHost } from './docsbot-widget-host';
+import { ClientExtensionScript } from './client-extension-script';
+import { usePreloadEditor } from './use-preload-editor';
 import { useAccentColorProperties } from './hooks/use-accent-color-properties';
+import { useDocumentTitle } from './hooks/use-document-title';
+import { usePrivateSiteLogin } from './hooks/use-private-site-login';
 import { SignedOutApp, useAuthNotice, useAuthScreensOwner } from './auth/api';
 
 function App() {
@@ -29,6 +38,8 @@ function App() {
   // (e.g. force-upgrade) ahead of screen-level data fetches.
   useBrowseSettings();
   useAccentColorProperties();
+  useDocumentTitle();
+  usePrivateSiteLogin();
   useEmberAuthSync();
   useEmberDataSync();
   useEmberListReturnSync();
@@ -36,7 +47,9 @@ function App() {
   useSyncEmberRoutePattern();
   useEmberNotificationsHost(alerts);
   useServerNotifications(alerts);
+  useUpgradeStatusAlerts(alerts);
   useAuthNotice(Boolean(currentUser));
+  usePreloadEditor(Boolean(currentUser));
 
   return (
     <EmberProvider>
@@ -46,6 +59,7 @@ function App() {
           <Outlet />
           <EmberRoot />
           <DocsBotWidgetHost />
+          <ClientExtensionScript />
         </AdminLayout>
       ) : isSignedOut && authScreensOwner === 'react' ? (
         <>

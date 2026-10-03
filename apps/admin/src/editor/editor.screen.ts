@@ -4,6 +4,7 @@ import {
   addFeatureImageLabel,
   addXImageLabel,
   analyticsBackLink,
+  chooseDateButton,
   conflictCancelReloadButton,
   conflictCopyContentButton,
   conflictDiscardAndReloadButton,
@@ -37,6 +38,8 @@ import {
   editorStatus,
   editorTitleInput,
   editorWordCount,
+  editorEmailSizeDetails,
+  editorEmailSizeWarning,
   facebookImageUnsplashButton,
   featureImageAltLabel,
   featureImageTkIndicator,
@@ -131,6 +134,9 @@ export const editorScreen = {
   /** An item in Koenig's `/` card menu, by its label. */
   cardMenuItem: (label: string) => page.getByRole('menuitem', { name: label }),
   wordCount: () => page.getByTestId(editorWordCount),
+  /** The footer's clipping flag, and the details hovering it reveals. */
+  emailSizeWarning: () => page.getByTestId(editorEmailSizeWarning),
+  emailSizeDetails: () => page.getByTestId(editorEmailSizeDetails),
   helpLink: () => page.getByRole('link', { name: editorHelpLink }),
   /** The document's own scroll surface, independent of the editor shell. */
   scrollPane: (): HTMLElement => {
@@ -152,6 +158,13 @@ export const editorScreen = {
   reauthSignIn: () => page.getByTestId(editorReauthDialog).getByRole('button', { name: 'Sign in' }),
   reauthCode: () => page.getByTestId(editorReauthDialog).getByLabelText('Verification code'),
   reauthVerify: () => page.getByTestId(editorReauthDialog).getByRole('button', { name: 'Verify' }),
+  /** The code step's Resend by the label it reads, which is Sent while it holds. */
+  reauthResend: (label: 'Resend' | 'Sent' = 'Resend') =>
+    page.getByTestId(editorReauthDialog).getByRole('button', { name: label, exact: true }),
+  codeSentToast: () =>
+    page
+      .getByRole('listitem')
+      .filter({ hasText: 'A new verification code has been sent to your email.' }),
   reauthError: () => page.getByTestId(editorReauthDialog).getByRole('alert'),
   cancelReauth: () => page.getByTestId(editorReauthDialog).getByRole('button', { name: 'Cancel' }),
   conflictBanner: () => page.getByTestId(editorConflictBanner),
@@ -257,6 +270,10 @@ export const editorScreen = {
     page.getByRole('listbox').getByRole('option', { name: label, exact: true }),
   settingsTemplateSlugMatch: () => page.getByTestId(settingsTemplateSlugMatch),
   settingsPublishDate: () => page.getByTestId(settingsPublishDate),
+  settingsPublishDateCalendarButton: () =>
+    page
+      .getByTestId(postSettingsSidebar)
+      .getByRole('button', { name: chooseDateButton, exact: true }),
   settingsPublishTime: () => page.getByTestId(settingsPublishTime),
   settingsPublishDateError: () => page.getByTestId(settingsPublishDateError),
   settingsPublishDateNote: () => page.getByTestId(settingsPublishDateNote),
@@ -340,6 +357,11 @@ export const editorScreen = {
   postHistoryPreviewFeatureImage: () => page.getByTestId(postHistoryPreviewFeatureImage),
   /** The read-only Koenig rendering of the selected version. */
   postHistoryPreviewBody: () => page.getByTestId(postHistoryPreviewBody),
+  /** A card Koenig has selected in the preview, if any. */
+  postHistoryPreviewSelectedCard: () =>
+    document.querySelector(
+      `[data-testid="${postHistoryPreviewBody}"] [data-kg-card-selected="true"]`,
+    ),
   restoreConfirm: () => page.getByTestId(postHistoryRestoreConfirm),
   confirmRestore: () =>
     page

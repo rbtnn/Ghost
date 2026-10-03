@@ -11,13 +11,14 @@ import {
 } from 'react';
 import { AdminLink } from '@/shared/admin-link';
 import { getPostListReturnUrl } from '@/posts/api';
+import { reloadAdmin } from '@/auth/api';
 import { NotFound } from '@/shared/not-found';
 import { Navigate, useLocation, useNavigate, useParams } from '@tryghost/admin-x-framework';
 import { Button, LoadingIndicator } from '@tryghost/shade/components';
 import { DirtyConfirmDialog, PageHeader } from '@tryghost/shade/patterns';
 import { Box, Grid, Inline, Stack, Text } from '@tryghost/shade/primitives';
 import { LucideIcon } from '@tryghost/shade/utils';
-import { APIError } from '@tryghost/admin-x-framework/errors';
+import { APIError, SessionExpiredError } from '@tryghost/admin-x-framework/errors';
 import { useFeatureFlag } from '@tryghost/admin-x-framework/hooks';
 import { useCurrentUser } from '@tryghost/admin-x-framework/api/current-user';
 import { useEditPage, useEditorPage } from '@tryghost/admin-x-framework/api/pages';
@@ -44,6 +45,7 @@ import {
 import { EditorHeaderActions, type OpenFlow } from './editor-header-actions';
 import { readEditorReturn } from './editor-return';
 import { EditorStatus } from './editor-status';
+import { EmailSizeWarning } from './email-size-warning';
 import { PostEditor } from './post-editor';
 import type { EditorStatusRecord } from './post-status';
 import { buildPublishFlowPost } from './publish/flow-post';
@@ -55,7 +57,12 @@ import { PostSettingsSidebar } from './settings/post-settings-sidebar';
 import { useFeatureImageBinding } from './session/feature-image-binding';
 import { EDITOR_REQUEST_OPTIONS } from './request-options';
 import { useEditorLeaveGuard } from './session/use-leave-guard';
-import { useEditorSession, useEditorSessionKey } from './session/use-editor-session';
+import {
+  EditorSessionCreatedProvider,
+  EditorSessionKeyProvider,
+  useEditorScreenSessionKey,
+} from './session/session-key';
+import { useEditorSession } from './session/use-editor-session';
 import { usePostCardConfig } from './use-post-card-config';
 import { usePostSnippets } from './use-post-snippets';
 import type { EditorRecord } from './session/projection';
@@ -344,7 +351,7 @@ function EditorContent({
             pendingSave={session.pendingSave}
             state={session.state}
             onReload={session.reload}
-            onRetrySave={session.dispatchExplicit}
+            onRetrySave={session.retrySave}
           />
           <ReauthDialog
             email={currentUser?.email ?? ''}
@@ -366,7 +373,8 @@ function EditorContent({
               postType={postType}
               showExcerpt={showExcerpt}
               titleError={titleError(session.bind.title)}
-              onExcerptBlur={session.commitSettings}
+              wordCountAccessory={<EmailSizeWarning post={publishPost} />}
+              onExcerptBlur={session.commitField}
               onTkCountChange={setTkCount}
             />
           </div>
@@ -493,7 +501,11 @@ function useLexicalConversion(postType: PostType) {
 function EditorLoader({ postType, id }: { postType: PostType; id?: string }) {
   // A create replaces the URL with the id it acquired; the load must not restart.
   const [openedId] = useState(id);
+  // Access and conversion are judged until the opening read settles. Later
+  // reads belong to the session; unmounting the editor would dispose it.
+  const [openedWith, setOpenedWith] = useState<EditorRecord>();
   const navigate = useNavigate();
+  const { pathname, search } = useLocation();
   const { data: currentUser } = useCurrentUser({ requestOptions: EDITOR_REQUEST_OPTIONS });
   const postQuery = useEditorPost(openedId ?? '', {
     enabled: postType === 'post' && !!openedId,
@@ -510,30 +522,48 @@ function EditorLoader({ postType, id }: { postType: PostType; id?: string }) {
     postType === 'page' ? pageQuery.data?.pages[0] : postQuery.data?.posts[0];
   const { state: conversion, convert } = useLexicalConversion(postType);
   const listPath = postType === 'page' ? '/pages' : '/posts';
+  // A failed refetch keeps the last post read; unmounting the editor would dispose its session.
+  const loadError = openedWith || loaded ? null : query.error;
+  // Reloading is safe only while nothing is unsaved: the signed-out admin
+  // remembers this route and returns to it after sign in.
+  const sessionExpired = loadError instanceof SessionExpiredError;
+  useEffect(() => {
+    if (sessionExpired) {
+      reloadAdmin(`${pathname}${search}`);
+    }
+  }, [sessionExpired, pathname, search]);
 
-  const returnToList = !!currentUser && !!loaded && shouldReturnToList(currentUser, loaded);
+  const opening = openedWith ? undefined : loaded;
+  const returnToList = !!currentUser && !!opening && shouldReturnToList(currentUser, opening);
   useEffect(() => {
     if (returnToList) {
       navigate(listPath, { replace: true });
     }
   }, [returnToList, navigate, listPath]);
 
-  const needsConversion = !!currentUser && !!loaded?.mobiledoc && !loaded.lexical && !returnToList;
+  const needsConversion =
+    !!currentUser && !!opening?.mobiledoc && !opening.lexical && !returnToList;
   useEffect(() => {
-    if (needsConversion && loaded && conversion?.id !== loaded.id) {
-      void convert(loaded);
+    if (needsConversion && opening && conversion?.id !== opening.id) {
+      void convert(opening);
     }
-  }, [needsConversion, loaded, conversion?.id, convert]);
+  }, [needsConversion, opening, conversion?.id, convert]);
 
   if (!openedId) {
     return <EditorSurface createdId={id} postType={postType} />;
   }
 
-  // A failed refetch keeps the last post read; unmounting the editor would dispose its session.
-  const loadError = loaded ? null : query.error;
+  if (openedWith) {
+    return <EditorSurface postType={postType} record={openedWith} />;
+  }
+
   const notFound = loadError instanceof APIError && loadError.response?.status === 404;
   if (notFound) {
     return <NotFound />;
+  }
+
+  if (sessionExpired) {
+    return <EditorLoading />;
   }
 
   if (loadError) {
@@ -573,12 +603,17 @@ function EditorLoader({ postType, id }: { postType: PostType; id?: string }) {
     record = converted.record;
   }
 
+  // Latched while rendering once the read settles: a reopened post's cached
+  // copy may be stale, so the refetch in flight still decides.
+  if (!query.isFetching) {
+    setOpenedWith(record);
+  }
   return <EditorSurface postType={postType} record={record} />;
 }
 
 export default function EditorScreen() {
   const editorPath = useParams()['*'] ?? '';
-  const sessionKey = useEditorSessionKey();
+  const { key: sessionKey, markCreated } = useEditorScreenSessionKey();
   const [typeSegment, id, ...rest] = editorPath.split('/').filter(Boolean);
 
   if (!typeSegment) {
@@ -589,5 +624,11 @@ export default function EditorScreen() {
     return <NotFound />;
   }
 
-  return <EditorLoader key={sessionKey} id={id} postType={typeSegment} />;
+  return (
+    <EditorSessionKeyProvider value={sessionKey}>
+      <EditorSessionCreatedProvider value={markCreated}>
+        <EditorLoader key={sessionKey} id={id} postType={typeSegment} />
+      </EditorSessionCreatedProvider>
+    </EditorSessionKeyProvider>
+  );
 }
