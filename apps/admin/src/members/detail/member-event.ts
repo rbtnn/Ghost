@@ -71,7 +71,7 @@ export interface ParsedMemberEvent {
  * Divides the minor-units integer by the currency's denominator (e.g. 100 for
  * USD/EUR, 1 for JPY). Zero-decimal currencies match the Stripe list.
  */
-const ZERO_DECIMAL_CURRENCIES = new Set([
+export const ZERO_DECIMAL_CURRENCIES = new Set([
   'bif',
   'clp',
   'djf',
