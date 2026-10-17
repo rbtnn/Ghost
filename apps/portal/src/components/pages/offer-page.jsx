@@ -16,7 +16,7 @@ import { interceptAnchorClicks } from '../../utils/links';
 import { sanitizeHtml } from '../../utils/sanitize-html';
 import NewsletterSelectionPage from './newsletter-selection-page';
 import { t } from '../../utils/i18n';
-import { translateCadence } from '../../utils/helpers';
+import { translateCadence, isJPYCurrency } from '../../utils/helpers';
 
 export const OfferPageStyles = () => {
   return `
@@ -498,17 +498,20 @@ export default class OfferPage extends React.Component {
 
   getOriginalPrice({ offer, product }) {
     const price = offer.cadence === 'month' ? product.monthlyPrice : product.yearlyPrice;
-    const originalAmount = formatPrice(price.amount / 100, this.context.site?.locale);
+    const originalAmount = formatPrice(
+      isJPYCurrency(price.currency) ? price.amount : price.amount / 100,
+      this.context.site?.locale,
+    );
     return `${getCurrencySymbol(price.currency)}${originalAmount}/${translateCadence(offer.cadence)}`;
   }
 
   getOffAmount({ offer }) {
     if (offer.type === 'fixed') {
-      return `${getCurrencySymbol(offer.currency)}${formatPrice(offer.amount / 100, this.context.site?.locale)}`;
+      return `${getCurrencySymbol(offer.currency)}${formatPrice(offer.amount / (isJPYCurrency(offer.currency) ? 1 : 100), this.context.site?.locale)}`;
     } else if (offer.type === 'percent') {
       return `${offer.amount}%`;
     } else if (offer.type === 'trial') {
-      return offer.amount;
+      return offer.amount / (isJPYCurrency(offer.currency) ? 1 : 100);
     }
     return '';
   }
@@ -606,7 +609,7 @@ export default class OfferPage extends React.Component {
     return (
       <div className="gh-portal-offer-oldprice">
         {getCurrencySymbol(price.currency)}{' '}
-        {formatPrice(price.amount / 100, this.context.site?.locale)}
+        {formatPrice(isJPYCurrency(price.currency) ? price.amount : price.amount / 100, this.context.site?.locale)}
       </div>
     );
   }

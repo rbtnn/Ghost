@@ -7,7 +7,7 @@ import {
   isGiftMember,
   subscriptionHasFreeTrial,
 } from '../../../../utils/helpers';
-import { getDateString } from '../../../../utils/date-time';
+import { getDateString, getSiteDateString } from '../../../../utils/date-time';
 import { useContext } from 'react';
 
 import SubscribeButton from './subscribe-button';
@@ -76,7 +76,7 @@ const AccountWelcome = () => {
       <div className="gh-portal-section">
         <p className="gh-portal-text-center gh-portal-free-ctatext">
           {t(`Your subscription will renew on {renewalDate}`, {
-            renewalDate: getDateString(currentPeriodEnd),
+            renewalDate: getSiteDateString(currentPeriodEnd, { locale: site?.locale, timezone: site?.timezone }),
           })}
         </p>
       </div>

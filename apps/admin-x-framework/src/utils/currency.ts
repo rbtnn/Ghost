@@ -9,6 +9,17 @@ type CurrencyOption = {
   name: string;
 };
 
+// Fork-specific JPY handling: JPY is a zero-decimal currency, so amounts are
+// stored as-is (not divided by 100). Unspecified/empty currency falls back to
+// the decimal (~/100) path to stay compatible with upstream single-arg callers.
+const IsJPYCurrency = (currency?: string): boolean => {
+  if (currency && typeof currency.toUpperCase === 'function') {
+    return currency.toUpperCase() === 'JPY';
+  } else {
+    return false;
+  }
+};
+
 export const currencies: CurrencyOption[] = [
   { isoCode: 'USD', name: 'United States dollar' },
   { isoCode: 'EUR', name: 'Euro' },
@@ -64,6 +75,7 @@ export const currencies: CurrencyOption[] = [
   { isoCode: 'INR', name: 'Indian rupee' },
   { isoCode: 'ISK', name: 'Icelandic króna' },
   { isoCode: 'JMD', name: 'Jamaican dollar' },
+  { isoCode: 'JPY', name: 'Japanese Yen' },
   { isoCode: 'KES', name: 'Kenyan shilling' },
   { isoCode: 'KGS', name: 'Kyrgyzstani som' },
   { isoCode: 'KHR', name: 'Cambodian riel' },
@@ -162,13 +174,13 @@ export function getSymbol(currency: string): string {
     .replace(/[\d\s.]/g, '');
 }
 
-// We currently only support decimal currencies
-export function currencyToDecimal(integerAmount: number): number {
-  return integerAmount / 100;
+// We currently only support decimal currencies (zero-decimal JPY handled via IsJPYCurrency)
+export function currencyToDecimal(integerAmount: number, currency?: string): number {
+  return IsJPYCurrency(currency) ? integerAmount : integerAmount / 100;
 }
 
-export function currencyFromDecimal(decimalAmount: number): number {
-  return decimalAmount * 100;
+export function currencyFromDecimal(decimalAmount: number, currency?: string): number {
+  return IsJPYCurrency(currency) ? decimalAmount : decimalAmount * 100;
 }
 
 /*
@@ -224,16 +236,19 @@ export function validateCurrencyAmount(
 
   const symbol = getSymbol(currency);
   const minAmount = minimumAmountForCurrency(currency);
+  // JPY(zero-decimal)は金額が既に円の整数(例: ¥500=500)で保存されるため、×100しない。
+  // ×100は2小数点(cent)通貨専用。JPYに適用すると「¥100以上」なのに500が弾かれる。
+  const decimalFactor = IsJPYCurrency(currency) ? 1 : 100;
 
   if (!allowZero && cents === 0) {
     return `Amount must be at least ${symbol}${minAmount}.`;
   }
 
-  if (cents !== 0 && cents < minAmount * 100) {
+  if (cents !== 0 && cents < minAmount * decimalFactor) {
     return `Non-zero amount must be at least ${symbol}${minAmount}.`;
   }
 
-  if (maxAmount && cents !== 0 && cents > maxAmount * 100) {
+  if (maxAmount && cents !== 0 && cents > maxAmount * decimalFactor) {
     return `Suggested amount cannot be more than ${symbol}${maxAmount}.`;
   }
 }

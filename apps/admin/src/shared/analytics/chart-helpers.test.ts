@@ -477,10 +477,10 @@ describe('chart-helpers', () => {
   });
 
   describe('centsToDollars', () => {
-    it('converts cents to rounded dollars', () => {
+    it('returns the rounded value without dividing by 100 (BSM is a JPY zero-decimal site)', () => {
       expect(centsToDollars(0)).toBe(0);
-      expect(centsToDollars(1050)).toBe(11);
-      expect(centsToDollars(123456)).toBe(1235);
+      expect(centsToDollars(1050)).toBe(1050);
+      expect(centsToDollars(123456)).toBe(123456);
     });
   });
 

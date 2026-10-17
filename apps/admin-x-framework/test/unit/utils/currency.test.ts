@@ -1,4 +1,4 @@
-import { getSymbol } from '../../../src/utils/currency';
+import { getSymbol, validateCurrencyAmount } from '../../../src/utils/currency';
 
 describe('currency utils', () => {
   describe('getSymbol', () => {
@@ -64,6 +64,31 @@ describe('currency utils', () => {
     it('throws error for currency codes with spaces', () => {
       expect(() => getSymbol(' USD ')).toThrow('Invalid currency code');
       expect(() => getSymbol('U SD')).toThrow('Invalid currency code');
+    });
+  });
+
+  describe('validateCurrencyAmount', () => {
+    it('allows JPY amount >= minimum (100) without dividing by 100', () => {
+      // JPYはゼロ小数点: ¥500 = 500 として保存される。500 < 100*100 と誤判定されないこと
+      expect(validateCurrencyAmount(500, 'JPY')).toBeUndefined();
+      expect(validateCurrencyAmount(100, 'JPY')).toBeUndefined();
+    });
+
+    it('rejects JPY amount below minimum', () => {
+      expect(validateCurrencyAmount(99, 'JPY')).toBe('Non-zero amount must be at least ¥100.');
+      expect(validateCurrencyAmount(0, 'JPY', { allowZero: false })).toBe('Amount must be at least ¥100.');
+    });
+
+    it('enforces maxAmount for JPY without x100', () => {
+      expect(validateCurrencyAmount(5000, 'JPY', { maxAmount: 1000 })).toBe('Suggested amount cannot be more than ¥1000.');
+      expect(validateCurrencyAmount(500, 'JPY', { maxAmount: 1000 })).toBeUndefined();
+    });
+
+    it('uses cents (x100) for decimal currencies', () => {
+      // USD: $5 = 500 cents, min $1 = 100 cents
+      expect(validateCurrencyAmount(500, 'USD')).toBeUndefined();
+      expect(validateCurrencyAmount(99, 'USD')).toBe('Non-zero amount must be at least $1.');
+      expect(validateCurrencyAmount(500, 'USD', { maxAmount: 3 })).toBe('Suggested amount cannot be more than $3.');
     });
   });
 });

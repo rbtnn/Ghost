@@ -1619,6 +1619,9 @@ importers:
 
   apps/portal:
     dependencies:
+      '@gravatar-com/quick-editor':
+        specifier: 0.8.0
+        version: 0.8.0
       '@tryghost/debug':
         specifier: 'catalog:'
         version: 2.3.18(supports-color@10.2.2)
@@ -5558,6 +5561,10 @@ packages:
 
   '@floating-ui/utils@0.2.11':
     resolution: {integrity: sha512-RiB/yIh78pcIxl6lLMG0CgBXAZ2Y0eVHqMPYugu+9U0AeT6YBeiJpf7lbdJNIugFP5SIjwNRgo4DhR1Qxi26Gg==}
+
+  '@gravatar-com/quick-editor@0.8.0':
+    resolution: {integrity: sha512-z9t6aOaP9i3x5aJGtQUfaXoO7YxHZd+h49E13qZFJQ4RNId8Qe7FcoT+TFXuvVry6+dqL44aYtUXiGl+890oxw==}
+    engines: {node: '>=20'}
 
   '@grpc/grpc-js@1.14.5':
     resolution: {integrity: sha512-7VZM+SVdEcUUqSQeNI3zM8Qs/BhQKZndPo2h5VkYkAM8Iz0wJIa8mKV5ekQGqG8UUsnkQ0NMxIxwkIHYvj0qOw==}
@@ -17883,6 +17890,8 @@ snapshots:
       '@types/react': 18.3.31
 
   '@floating-ui/utils@0.2.11': {}
+
+  '@gravatar-com/quick-editor@0.8.0': {}
 
   '@grpc/grpc-js@1.14.5':
     dependencies:
