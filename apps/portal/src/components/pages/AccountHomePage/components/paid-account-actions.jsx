@@ -17,6 +17,7 @@ import LoaderIcon from '../../../../images/icons/loader.svg?react';
 import OfferTagIcon from '../../../../images/icons/offer-tag.svg?react';
 import { useContext } from 'react';
 import { t } from '../../../../utils/i18n';
+import { isJPYCurrency } from '../../../../utils/helpers';
 
 const PaidAccountActions = () => {
   const { member, site, doAction } = useContext(AppContext);
@@ -41,7 +42,7 @@ const PaidAccountActions = () => {
     let label = '';
     if (price) {
       const { amount = 0, currency, interval } = price;
-      label = `${Intl.NumberFormat('en', { currency, style: 'currency' }).format(amount / 100)}/${t(interval)}`;
+      label = `${Intl.NumberFormat('en', { currency, style: 'currency' }).format(isJPYCurrency(currency) ? amount : amount / 100)}/${t(interval)}`;
     }
 
     const subscriptionExpiry = getSubscriptionExpiry({ member });
@@ -211,26 +212,18 @@ const PaidAccountActions = () => {
   const isPaid = isPaidMember({ member });
   if (subscription || isComplimentary) {
     const { price, default_payment_card_last4: defaultCardLast4 } = subscription || {};
-    let planLabel = t('Plan');
-
-    // Show the tier name if the member has one
-    if (getMemberTierName({ member })) {
-      planLabel = getMemberTierName({ member });
-    }
-    // const hasFreeTrial = subscriptionHasFreeTrial({sub: subscription});
-    // if (hasFreeTrial) {
-    //     planLabel += ' (Free Trial)';
-    // }
+    const memberTierName = getMemberTierName({ member });
     return (
       <>
         <section>
           <div className="gh-portal-list-detail">
             <h3>
-              {planLabel}
+              {t('Current plan')}
               {subscription?.cancel_at_period_end && (
                 <span className="gh-portal-canceled-badge">{t('Canceled')}</span>
               )}
             </h3>
+            {memberTierName && <p className="gh-portal-account-plan">{memberTierName}</p>}
             <PlanLabel
               price={price}
               isComplimentary={isComplimentary}

@@ -111,7 +111,7 @@ export const getOfferDiscount = (
 
   const formatToTwoDecimals = (num: number): number => parseFloat(num.toFixed(2));
   const formatPrice = (num: number): string =>
-    formatNumber(formatToTwoDecimals(currencyToDecimal(num)), { maximumFractionDigits: 2 });
+    formatNumber(formatToTwoDecimals(currencyToDecimal(num, currency)), { maximumFractionDigits: 2 });
 
   let originalPriceWithCurrency = getSymbol(currency) + formatPrice(originalPrice);
 
