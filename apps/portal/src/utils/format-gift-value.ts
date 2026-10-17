@@ -10,5 +10,7 @@ export function formatGiftValue(price?: GiftPrice | null, locale?: string): stri
   if (amount === null || amount === undefined || !currency) {
     return '';
   }
-  return `${getCurrencySymbol(currency)}${formatPrice(getStripeAmount(amount), locale)}`;
+  // rbtnn: JPY(zero-decimal)は円の整数で保存されるため÷100しない。通貨を渡さないと
+  // isJPYCurrency(undefined) が false になり ¥500 が ¥5 と誤表示される。
+  return `${getCurrencySymbol(currency)}${formatPrice(getStripeAmount(amount, currency), locale)}`;
 }

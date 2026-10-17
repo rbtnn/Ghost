@@ -42,7 +42,7 @@ const TierCard: React.FC<TierCardProps> = ({ tier }) => {
             {currencySymbol}
           </span>
           <span className="text-xl font-bold tracking-tighter">
-            {formatNumber(currencyToDecimal(tier.monthly_price || 0), { maximumFractionDigits: 2 })}
+            {formatNumber(currencyToDecimal(tier.monthly_price || 0, currency), { maximumFractionDigits: 2 })}
           </span>
           {tier.monthly_price && tier.monthly_price > 0 && (
             <span className="text-gray-700">/month</span>
