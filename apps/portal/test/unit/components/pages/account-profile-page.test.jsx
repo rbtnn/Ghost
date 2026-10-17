@@ -1,7 +1,19 @@
-import { render, fireEvent, within } from '../../../utils/test-utils';
+import { render, fireEvent, within, waitFor } from '../../../utils/test-utils';
 import { getSiteData, getMemberData } from '../../../../src/utils/fixtures-generator';
 import { COUNTRY_CODES } from '@tryghost/metafield-types/countries';
 import AccountProfilePage from '../../../../src/components/pages/account-profile-page';
+import { GravatarQuickEditorCore } from '@gravatar-com/quick-editor';
+
+vi.mock('@gravatar-com/quick-editor', () => ({
+  // The page instantiates GravatarQuickEditorCore with `new`, so expose a
+  // constructable mock. Each instance gets its own open/close spies.
+  GravatarQuickEditorCore: vi.fn(function (opts) {
+    this.opts = opts;
+    this.open = vi.fn(() => true);
+    this.close = vi.fn();
+    this.isOpen = vi.fn(() => false);
+  }),
+}));
 
 const setup = (overrides = {}) => {
   const { mockDoActionFn, context, ...utils } = render(<AccountProfilePage />, {
@@ -325,6 +337,33 @@ describe('Account Profile Page', () => {
         email: member.email,
         name: member.name,
       });
+    });
+  });
+
+  describe('Gravatar Quick Editor (avatar editing)', () => {
+    beforeEach(() => {
+      vi.clearAllMocks();
+    });
+
+    test('shows an Edit avatar button for a signed-in member', () => {
+      const { getByRole } = setup();
+
+      expect(getByRole('button', { name: 'Edit avatar' })).toBeInTheDocument();
+    });
+
+    test('opens Gravatar Quick Editor with the member email and avatar scope on click', async () => {
+      const { getByRole, context } = setup();
+
+      fireEvent.click(getByRole('button', { name: 'Edit avatar' }));
+
+      await waitFor(() => {
+        expect(GravatarQuickEditorCore).toHaveBeenCalledTimes(1);
+      });
+      expect(GravatarQuickEditorCore).toHaveBeenCalledWith(
+        expect.objectContaining({ email: context.member.email, scope: ['avatars'] }),
+      );
+      const instance = GravatarQuickEditorCore.mock.instances[0];
+      expect(instance.open).toHaveBeenCalledTimes(1);
     });
   });
 });
