@@ -10,6 +10,7 @@ const shared = require('../shared');
 const errorHandler = require('@tryghost/mw-error-handler');
 const { http } = require('@tryghost/api-framework');
 const api = require('../../api').endpoints;
+const bsmAdminProxy = require('../../services/bsm-admin-proxy');
 
 const accountRoutes = require('./account');
 const commentRouter = require('../comments');
@@ -179,6 +180,22 @@ module.exports = function setupMembersApp() {
     '/api/recommendations/:id/subscribed',
     middleware.loadMemberSession,
     http(api.recommendationsPublic.trackSubscribed),
+  );
+
+  // rbtnn: server-side admin proxy. Keeps the Ghost Admin API key out of the
+  // client bundle by issuing the (small set of) Admin API operations server-side,
+  // gated on the logged-in member's uuid being in bsmAdminProxy.memberUuids.
+  membersApp.post(
+    '/api/rbtnn-admin/posts',
+    bodyParser.json({limit: '50mb'}),
+    middleware.loadMemberSession,
+    bsmAdminProxy.createPost,
+  );
+  membersApp.post(
+    '/api/rbtnn-admin/invites',
+    bodyParser.json(),
+    middleware.loadMemberSession,
+    bsmAdminProxy.createInvite,
   );
 
   // Allow external systems to read public settings via the members api
