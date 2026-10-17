@@ -131,20 +131,21 @@ describe('AccountActions', () => {
   describe('Profile row heading', () => {
     const member = getMemberData({ name: 'Test User', email: 'test@example.com' });
 
-    test('is the member name on a site without custom fields', () => {
+    test('shows "Profile" as the heading, with the member name and email in the subtitle', () => {
       const { getByText } = render(<AccountActions />, {
         overrideContext: { site: getSiteData(), member },
       });
-      expect(getByText('Test User').tagName).toBe('H3');
+      expect(getByText('Profile').tagName).toBe('H3');
+      expect(getByText('Test User · test@example.com')).toBeInTheDocument();
     });
 
-    test('is Account on a site with custom fields, whatever the member is called', () => {
+    test('always uses "Profile" as the heading, whatever the member is called', () => {
       const site = getSiteData({ labs: { membersCustomFields: true } });
-      const { getByText, queryByText } = render(<AccountActions />, {
+      const { getByText } = render(<AccountActions />, {
         overrideContext: { site, member },
       });
-      expect(getByText('Account').tagName).toBe('H3');
-      expect(queryByText('Test User')).not.toBeInTheDocument();
+      expect(getByText('Profile').tagName).toBe('H3');
+      expect(getByText('Test User · test@example.com')).toBeInTheDocument();
     });
   });
 
@@ -165,7 +166,7 @@ describe('AccountActions', () => {
         overrideContext: { site, member },
       });
 
-      const profileRow = getByText('test@example.com').closest('section');
+      const profileRow = getByText('Test User · test@example.com').closest('section');
       expect(profileRow).toHaveAttribute('role', 'button');
       expect(profileRow).toHaveAttribute('tabindex', '0');
 
