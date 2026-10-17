@@ -40,7 +40,7 @@ const OfferSuccess: React.FC<{ id: string }> = ({ id }) => {
         break;
       case 'fixed':
         discount =
-          formatNumber(currencyToDecimal(offer?.amount), { maximumFractionDigits: 2 }) +
+          formatNumber(currencyToDecimal(offer?.amount, offer?.currency || 'JPY'), { maximumFractionDigits: 2 }) +
           ' ' +
           offer?.currency +
           ' discount';
