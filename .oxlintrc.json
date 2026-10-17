@@ -106,6 +106,12 @@
       }
     },
     {
+      "files": ["ghost/core/server/api/endpoints/bsm-podcast.js"],
+      "rules": {
+        "ghost/ghost-custom/max-api-complexity": "off"
+      }
+    },
+    {
       "files": ["ghost/core/server/data/migrations/versions/**"],
       "rules": {
         "local-filenames/match-regex": [

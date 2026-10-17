@@ -20,7 +20,19 @@ export default class AccountProfilePage extends React.Component {
       name,
       email,
       metafields: metafields?.custom || {},
+      // Incremented after a Gravatar avatar update so the (unchanged, email-derived)
+      // avatar URL is re-fetched with a cache-busting timestamp.
+      avatarRevision: 0,
     };
+    // Lazily-created Gravatar Quick Editor core instance.
+    this.quickEditor = null;
+  }
+
+  componentWillUnmount() {
+    // The Gravatar Quick Editor core binds a window 'message' listener; there is no
+    // public destroy method on the class, but letting the instance go out of scope
+    // after unmount keeps the feature self-contained.
+    this.quickEditor = null;
   }
 
   componentDidMount() {
@@ -116,27 +128,79 @@ export default class AccountProfilePage extends React.Component {
 
   renderUserAvatar() {
     const avatarImg = this.context.member && this.context.member.avatar_image;
+    const { avatarRevision } = this.state;
 
-    const avatarContainerStyle = {
-      position: 'relative',
-      display: 'flex',
-      width: '64px',
-      height: '64px',
-      marginBottom: '6px',
-      borderRadius: '100%',
-      boxShadow: '0 0 0 3px #fff',
-      border: '1px solid gray',
-      overflow: 'hidden',
-      justifyContent: 'center',
-      alignItems: 'center',
-    };
+    // The member avatar URL is derived from the member email and therefore does not
+    // change when the Gravatar is edited. Add a cache-busting timestamp so the
+    // freshly-edited avatar is fetched after an update.
+    const bustedAvatar =
+      avatarImg && avatarRevision > 0
+        ? `${avatarImg}${avatarImg.includes('?') ? '&' : '?'}t=${avatarRevision}`
+        : avatarImg;
 
+    // Render the avatar directly via MemberAvatar (as the account home header does);
+    // the gravatar figure itself is the circular clip, so the image always fills and
+    // centres within its circular frame. A dedicated outer wrapper would introduce a
+    // second, misaligned ring.
     return (
-      <div style={avatarContainerStyle}>
-        <MemberAvatar
-          gravatar={avatarImg}
-          style={{ userIcon: { color: 'black', width: '56px', height: '56px' } }}
-        />
+      <MemberAvatar
+        gravatar={bustedAvatar}
+        style={{ userIcon: { color: 'black', width: '56px', height: '56px' } }}
+      />
+    );
+  }
+
+  /**
+   * Lazily create a Gravatar Quick Editor core bound to the signed-in member's email.
+   * The popup lets members edit their Gravatar (avatar) from within the portal.
+   */
+  async getQuickEditor() {
+    if (!this.quickEditor) {
+      const { GravatarQuickEditorCore } = await import('@gravatar-com/quick-editor');
+      const email = this.context.member && this.context.member.email;
+      this.quickEditor = new GravatarQuickEditorCore({
+        email,
+        scope: ['avatars'],
+        locale: this.context.locale || undefined,
+        onProfileUpdated: (type) => {
+          if (type === 'avatar_updated') {
+            this.setState(({ avatarRevision }) => ({
+              avatarRevision: Number(avatarRevision || 0) + 1,
+            }));
+          }
+        },
+      });
+    }
+    return this.quickEditor;
+  }
+
+  async handleEditAvatar(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    const editor = await this.getQuickEditor();
+    editor.open();
+  }
+
+  renderAvatarEditor() {
+    return (
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          marginBottom: '16px',
+        }}
+      >
+        {this.renderUserAvatar()}
+        <button
+          type="button"
+          className="gh-portal-btn gh-portal-btn-text"
+          data-testid="edit-avatar-button"
+          onClick={(e) => this.handleEditAvatar(e)}
+          style={{ cursor: 'pointer', fontSize: '13px' }}
+        >
+          {t('Edit avatar')}
+        </button>
       </div>
     );
   }
@@ -230,6 +294,7 @@ export default class AccountProfilePage extends React.Component {
         <div className="gh-portal-content with-footer">
           {this.renderHeader()}
           <CloseButton />
+          {this.renderAvatarEditor()}
           <div className="gh-portal-section">{this.renderProfileData()}</div>
         </div>
         {this.renderAccountFooter()}
