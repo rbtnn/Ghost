@@ -12,7 +12,9 @@ export const formatQueryDate = (date: Moment) => {
 
 // Format cents to Dollars
 export const centsToDollars = (value: number) => {
-  return Math.round(value / 100);
+  // rbtnn: BSMはJPY(zero-decimal)通貨を扱うため、cents→金額の÷100を行わない。
+  // upstream版は常に÷100するが、JPYだと100分の1に誤表示されるため修正している。
+  return Math.round(value);
 };
 
 // Return today and startdate for charts

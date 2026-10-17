@@ -1262,6 +1262,52 @@ services:
         wrapper dependencies. Keep the existing API validation, statistics fallback, run history,
         tracking transactions and HTTP-owned add gates/soft count limit intact during migration;
         do not move further business policy into HTTP or make unrelated gaps pilot prerequisites.
+  bsm-admin-proxy:
+    kind: directory
+    disposition: retain
+    status: pending
+    entryPoints:
+      - bsm-admin-proxy/index.js
+    notes: >-
+      rbtnn server-side admin proxy. Keeps the Ghost Admin API key out of the client
+      bundle by issuing the small set of Admin API operations (create draft live/archive
+      post, invite author) server-side, gated on the logged-in member uuid being in
+      bsmAdminProxy.memberUuids. Thin controller; no startup work.
+    migration:
+      complexity: straightforward
+      modelImpact: fits
+      dependencies:
+        complexity: straightforward
+        reason: >-
+          Depends on the Ghost config (bsmAdminProxy) and the members session
+          (middleware.loadMemberSession); both already present and initialised by
+          the host, and only reachable at request time.
+        preparation:
+          - Verify the bsmAdminProxy key is applied in config.production.json
+        reviewedAt: 3d6b99c74572de662294cf731cdada00d6989c34
+        sources:
+          - core/shared/config/index.ts
+          - core/server/services/members/middleware.js
+      reason: >-
+        Standalone CommonJS controller registered on the members app; no DB schema,
+        lifecycle or shared-state obligations. Reads bsmAdminProxy from config and
+        relays to the Admin API with a short-lived JWT.
+      reviewedAt: 3d6b99c74572de662294cf731cdada00d6989c34
+      sources:
+        - core/server/services/bsm-admin-proxy/index.js
+        - core/server/web/members/app.js
+        - test/unit/server/services/bsm-admin-proxy.test.js
+    contracts: {}
+    unverified:
+      - exports
+      - construction
+      - consumers
+      - startup
+      - lifetime
+      - configuration
+      - resources
+      - failures
+    blockers: []
   comments:
     kind: directory
     disposition: retain
