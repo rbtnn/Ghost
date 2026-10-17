@@ -7,6 +7,7 @@
   "author": "Ghost Foundation",
   "repository": "https://github.com/TryGhost/Ghost",
   "scripts": {
+    "i": "git submodule update --init --recursive && yarn install --prefer-offline --frozen-lockfile",
     "archive": "pnpm nx run ghost:archive",
     "build": "pnpm nx run-many -t build",
     "dev": "nx run ghost-monorepo:dev:host",

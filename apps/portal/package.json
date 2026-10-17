@@ -30,6 +30,7 @@
     "prepublishOnly": "pnpm build"
   },
   "dependencies": {
+    "@gravatar-com/quick-editor": "0.8.0",
     "@tryghost/debug": "catalog:"
   },
   "devDependencies": {
